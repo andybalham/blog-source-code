@@ -132,18 +132,6 @@ export default class ProcessApplicationStack extends cdk.Stack {
     });
   }
 
-  private functionTask(
-    taskId: string,
-    performIdentityCheckFunction: lambda.Function,
-    props?: Omit<sfnTasks.LambdaInvokeProps, 'lambdaFunction'>
-  ): sfnTasks.LambdaInvoke {
-    const defaultProps = {
-      lambdaFunction: performIdentityCheckFunction,
-      payloadResponseOnly: true,
-    };
-    return new sfnTasks.LambdaInvoke(this, taskId, { ...defaultProps, ...props });
-  }
-
   private addFunction(functionName: string): lambda.Function {
     return new lambdaNodejs.NodejsFunction(this, `${functionName}Function`, {
       entry: functionEntry,

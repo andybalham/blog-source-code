@@ -1,5 +1,5 @@
 {
-  "name": "lambda-base",
+  "name": "step-functions-cdk",
   "version": "1.0.0",
   "description": "Base folder structure for Lambda projects",
   "main": "lambda.js",
