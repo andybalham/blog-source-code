@@ -1,0 +1,14 @@
+{
+  "application": {
+    "reference": "Refer-Case",
+    "loanAmount": 200000,
+    "applicants": [
+      {
+        "firstName": "Bobby",
+        "lastName": "Broccoli",
+        "email": "bobby.broccoli@broccoli-mail.com",
+        "income": 60000
+      }
+    ]
+  }
+}

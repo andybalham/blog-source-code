@@ -1,0 +1,18 @@
+{
+    "cSpell.language": "en-GB",
+    "cSpell.words": [
+        "ESNEXT",
+        "Meatpie",
+        "SFAWSTK",
+        "downlevel",
+        "linebreak",
+        "nanoid",
+        "sourcemap",
+        "tslib",
+        "typechecking",
+        "vars"
+    ],
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    }
+}
