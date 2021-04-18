@@ -1,2 +1,2 @@
-# Step Functions with AWS Toolkit for VS Code
-A project to showcase how the AWS Toolkit for VS Code can be used to help the development of AWS step functions.
+# Covert Step Functions to CDK
+A project to showcase how to convert step functions in SAM to use CDK.
