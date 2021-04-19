@@ -1,0 +1,20 @@
+{
+  "application": {
+    "reference": "Accept-Case",
+    "loanAmount": 200000,
+    "applicants": [
+      {
+        "firstName": "Gordon",
+        "lastName": "Meatpie",
+        "email": "gordon.meatpie@meatpie-mail.com",
+        "income": 50000
+      },
+      {
+        "firstName": "Georgina",
+        "lastName": "Meatpie",
+        "email": "georgina.meatpie@meatpie-mail.com",
+        "income": 50000
+      }
+    ]
+  }
+}
