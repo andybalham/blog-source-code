@@ -23,12 +23,6 @@ export default class ProcessApplicationStack extends cdk.Stack {
     const sendEmailFunction = this.addFunction('SendEmail');
     const notifyUnderwriterFunction = this.addFunction('NotifyUnderwriter');
 
-    // stateMachineType: sfn.StateMachineType.EXPRESS,
-    // logs: {
-    //   destination: new logs.LogGroup(this, 'ProcessApplicationLogGroup'),
-    //   level: sfn.LogLevel.ALL,
-    // },
-
     // State machine
 
     const performIdentityChecks = new sfn.Map(this, 'PerformIdentityChecks', {
@@ -108,6 +102,12 @@ export default class ProcessApplicationStack extends cdk.Stack {
       this,
       'ProcessApplicationStateMachine',
       {
+        // stateMachineType: sfn.StateMachineType.EXPRESS,
+        // logs: {
+        //   destination: new logs.LogGroup(this, 'ProcessApplicationLogGroup'),
+        //   level: sfn.LogLevel.ALL,
+        // },
+
         definition: sfn.Chain.start(
           performIdentityChecks
             .next(aggregateIdentityResults)

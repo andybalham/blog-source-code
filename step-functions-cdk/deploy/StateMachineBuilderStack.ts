@@ -5,27 +5,86 @@
 /* eslint-disable no-new */
 /* eslint-disable max-classes-per-file */
 import * as cdk from '@aws-cdk/core';
+import * as lambda from '@aws-cdk/aws-lambda';
+import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
+import path from 'path';
 import sfn = require('@aws-cdk/aws-stepfunctions');
+import sfnTasks = require('@aws-cdk/aws-stepfunctions-tasks');
 
-export class FlatStateMachineStack extends cdk.Stack {
+const functionEntry = path.join(__dirname, '..', 'src', 'functions', 'index.ts');
+
+export class StateMachineBuilderStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string) {
     super(scope, id);
 
-    const performIdentityCheck = new sfn.Pass(this, 'Id1');
-    const aggregateIdentityResults = new sfn.Pass(this, 'Id1');
+    // State machine functions
+
+    const performIdentityCheckFunction = this.addFunction('PerformIdentityCheck');
+    const performAffordabilityCheckFunction = this.addFunction('PerformAffordabilityCheck');
+    const sendEmailFunction = this.addFunction('SendEmail');
+    const notifyUnderwriterFunction = this.addFunction('NotifyUnderwriter');
+
+    const performIdentityCheck = new sfnTasks.LambdaInvoke(this, 'PerformIdentityCheck', {
+      lambdaFunction: performIdentityCheckFunction,
+      payloadResponseOnly: true,
+    });
+
+    const aggregateIdentityResults = new sfnTasks.EvaluateExpression(
+      this,
+      'AggregateIdentityResultsExpression',
+      {
+        expression: '($.identityResults).every((r) => r.success)',
+        resultPath: '$.overallIdentityResult',
+      }
+    );
+
     const overallIdentityResultIsFalse = sfn.Condition.booleanEquals(
       '$.overallIdentityResult',
       false
     );
 
-    const performAffordabilityCheck = new sfn.Pass(this, 'Id1');
+    const performAffordabilityCheck = new sfnTasks.LambdaInvoke(this, 'PerformAffordabilityCheck', {
+      lambdaFunction: performAffordabilityCheckFunction,
+      payloadResponseOnly: true,
+      inputPath: '$.application',
+      resultPath: '$.affordabilityResult',
+    });
+
     const affordabilityResultIsBad = sfn.Condition.stringEquals('$.affordabilityResult', 'BAD');
     const affordabilityResultIsPoor = sfn.Condition.stringEquals('$.affordabilityResult', 'POOR');
 
-    const sendAcceptEmail = new sfn.Pass(this, 'Id2');
-    const sendReferEmail = new sfn.Pass(this, 'Id2');
-    const notifyUnderwriter = new sfn.Pass(this, 'Id2');
-    const sendDeclineEmail = new sfn.Pass(this, 'Id3');
+    const sendAcceptEmail = new sfnTasks.LambdaInvoke(this, 'SendAcceptEmail', {
+      lambdaFunction: sendEmailFunction,
+      payloadResponseOnly: true,
+      payload: sfn.TaskInput.fromObject({
+        emailType: 'ACCEPT',
+        'application.$': '$.application',
+      }),
+    });
+
+    const sendReferEmail = new sfnTasks.LambdaInvoke(this, 'SendReferEmail', {
+      lambdaFunction: sendEmailFunction,
+      payloadResponseOnly: true,
+      payload: sfn.TaskInput.fromObject({
+        emailType: 'REFER',
+        'application.$': '$.application',
+      }),
+    });
+
+    const notifyUnderwriter = new sfnTasks.LambdaInvoke(this, 'NotifyUnderwriter', {
+      lambdaFunction: notifyUnderwriterFunction,
+      payloadResponseOnly: true,
+      inputPath: '$.application',
+    });
+
+    const sendDeclineEmail = new sfnTasks.LambdaInvoke(this, 'SendDeclineEmail', {
+      lambdaFunction: sendEmailFunction,
+      payloadResponseOnly: true,
+      payload: sfn.TaskInput.fromObject({
+        emailType: 'Decline',
+        'application.$': '$.application',
+      }),
+    });
 
     const processApplicationStateMachine = new sfn.StateMachine(
       this,
@@ -75,6 +134,13 @@ export class FlatStateMachineStack extends cdk.Stack {
           .build(this),
       }
     );
+  }
+
+  private addFunction(functionName: string): lambda.Function {
+    return new lambdaNodejs.NodejsFunction(this, `${functionName}Function`, {
+      entry: functionEntry,
+      handler: `handle${functionName}`,
+    });
   }
 }
 
