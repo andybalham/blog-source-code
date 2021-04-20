@@ -104,7 +104,13 @@ export class StateMachineBuilderStack extends cdk.Stack {
             choices: [{ when: overallIdentityResultIsFalse, goto: 'PerformDeclineTasks' }],
           })
 
-          .perform(performAffordabilityCheck)
+          .perform(performAffordabilityCheck, {
+            catch: [
+              { errors: ['ALL'], goto: 'ErrorHandler' },
+              { errors: ['ALL'], goto: 'ErrorHandler' },
+              { errors: ['ALL'], goto: 'ErrorHandler' },
+            ],
+          })
 
           .choice('EvaluateAffordabilityCheck', {
             choices: [
@@ -144,6 +150,14 @@ export class StateMachineBuilderStack extends cdk.Stack {
   }
 }
 
+interface CatchProps2 extends sfn.CatchProps {
+  goto: string;
+}
+
+interface PerformProps {
+  catch: CatchProps2[];
+}
+
 interface ChoiceCase {
   when: sfn.Condition;
   goto: string;
@@ -165,7 +179,7 @@ class StateMachineBuilder {
   // TODO 18Apr21: The following will need to store the details for each method, e.g. id & props
   private readonly allStates = new Array<sfn.State>();
 
-  perform(state: sfn.State): StateMachineBuilder {
+  perform(state: sfn.TaskStateBase, props?: PerformProps): StateMachineBuilder {
     this.allStates.push(state);
     return this;
   }
