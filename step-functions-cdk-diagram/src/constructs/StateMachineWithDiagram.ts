@@ -12,6 +12,8 @@ export interface StateMachineWithDiagramProps extends Omit<StateMachineProps, 'd
 
 export default class StateMachineWithDiagram extends sfn.StateMachine {
   //
+  readonly graphJson: string;
+
   constructor(scope: cdk.Construct, id: string, props: StateMachineWithDiagramProps) {
     //
     super(scope, id, {
@@ -23,6 +25,9 @@ export default class StateMachineWithDiagram extends sfn.StateMachine {
       props.getDefinition(new cdk.Stack()).startState,
       'Temporary graph to render to JSON'
     );
+
+    const graphJsonObject = stateGraph.toGraphJson();
+    this.graphJson = graphJsonObject as unknown as string;
 
     const stateMachinePath = path.join(__dirname, 'stateMachines');
 

@@ -5,12 +5,13 @@
 import * as cdk from '@aws-cdk/core';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
+// eslint-disable-next-line import/order
+import StateMachineWithGraph from '../src/constructs/StateMachineWithGraph-v3';
 // import * as logs from '@aws-cdk/aws-logs';
 import sfn = require('@aws-cdk/aws-stepfunctions');
 import sfnTasks = require('@aws-cdk/aws-stepfunctions-tasks');
-// eslint-disable-next-line import/first
-import { StateMachineWithDiagram } from '../src/constructs';
 
 const functionEntry = path.join(__dirname, '..', 'src', 'functions', 'index.ts');
 
@@ -35,7 +36,7 @@ export default class ProcessApplicationStack extends cdk.Stack {
 
     // State machine
 
-    const processApplicationStateMachine = new StateMachineWithDiagram(
+    const processApplicationStateMachine = new StateMachineWithGraph(
       this,
       'ProcessApplicationStateMachine',
       {
@@ -45,16 +46,32 @@ export default class ProcessApplicationStack extends cdk.Stack {
         //   level: sfn.LogLevel.ALL,
         // },
 
-        getDefinition: (s): sfn.IChainable => this.getProcessApplicationDefinition(s),
+        getDefinition: (definitionScope): sfn.IChainable =>
+          this.getProcessApplicationDefinition(definitionScope),
       }
     );
+
+    ProcessApplicationStack.writeGraphJson(processApplicationStateMachine);
 
     new cdk.CfnOutput(this, 'ProcessApplicationStateMachine.ARN', {
       value: processApplicationStateMachine.stateMachineArn,
     });
   }
 
+  private static writeGraphJson(stateMachine: StateMachineWithGraph): void {
+    //
+    const stateMachinePath = path.join(__dirname, 'stateMachines');
+
+    if (!fs.existsSync(stateMachinePath)) fs.mkdirSync(stateMachinePath);
+
+    fs.writeFileSync(
+      path.join(stateMachinePath, `${stateMachine.node.id}.asl.json`),
+      stateMachine.graphJson
+    );
+  }
+
   private getProcessApplicationDefinition(scope: cdk.Construct): sfn.IChainable {
+    //
     const performIdentityChecks = new sfn.Map(scope, 'PerformIdentityChecks', {
       inputPath: '$.application',
       itemsPath: '$.applicants',
