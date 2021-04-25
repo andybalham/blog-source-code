@@ -24,7 +24,7 @@
               }
             ],
             "Type": "Task",
-            "Resource": "${Token[TOKEN.99]}"
+            "Resource": "${Token[TOKEN.98]}"
           }
         }
       },
@@ -34,7 +34,7 @@
       "Next": "EvaluateIdentityResults",
       "Type": "Task",
       "ResultPath": "$.overallIdentityResult",
-      "Resource": "${Token[TOKEN.229]}",
+      "Resource": "${Token[TOKEN.228]}",
       "Parameters": {
         "expression": "($.identityResults).every((r) => r.success)",
         "expressionAttributeValues": {
@@ -70,7 +70,7 @@
       "Type": "Task",
       "InputPath": "$.application",
       "ResultPath": "$.affordabilityResult",
-      "Resource": "${Token[TOKEN.120]}"
+      "Resource": "${Token[TOKEN.119]}"
     },
     "EvaluateAffordabilityResult": {
       "Type": "Choice",
@@ -110,7 +110,7 @@
                 }
               ],
               "Type": "Task",
-              "Resource": "${Token[TOKEN.141]}",
+              "Resource": "${Token[TOKEN.140]}",
               "Parameters": {
                 "emailType": "ACCEPT",
                 "application.$": "$.application"
@@ -142,7 +142,7 @@
                 }
               ],
               "Type": "Task",
-              "Resource": "${Token[TOKEN.141]}",
+              "Resource": "${Token[TOKEN.140]}",
               "Parameters": {
                 "emailType": "Decline",
                 "application.$": "$.application"
@@ -174,7 +174,7 @@
                 }
               ],
               "Type": "Task",
-              "Resource": "${Token[TOKEN.141]}",
+              "Resource": "${Token[TOKEN.140]}",
               "Parameters": {
                 "emailType": "REFER",
                 "application.$": "$.application"
@@ -201,7 +201,7 @@
               ],
               "Type": "Task",
               "InputPath": "$.application",
-              "Resource": "${Token[TOKEN.162]}"
+              "Resource": "${Token[TOKEN.161]}"
             }
           }
         }
