@@ -6,7 +6,7 @@
 import * as cdk from '@aws-cdk/core';
 import sfnTasks = require('@aws-cdk/aws-stepfunctions-tasks');
 import sfn = require('@aws-cdk/aws-stepfunctions');
-import { StateMachineBuilder, StateMachineWithGraph } from '../src/constructs';
+import { StateMachineBuilder as Builder, StateMachineWithGraph } from '../src/constructs';
 import { writeGraphJson } from './utils';
 // import * as logs from '@aws-cdk/aws-logs';
 
@@ -78,17 +78,12 @@ export default class TwentyQuestionsBuilderStack extends cdk.Stack {
     const answerSnake = returnAnswer(scope, 'Snake');
     const answerHuman = returnAnswer(scope, 'Human');
     const answerDuck = returnAnswer(scope, 'Duck');
-    const answerDog = returnAnswer(scope, 'Dog');
+    const answerCat = returnAnswer(scope, 'Cat');
     const answerCow = returnAnswer(scope, 'Cow');
 
-    return new StateMachineBuilder()
+    return Builder.new()
+
       .perform(evaluateHasLegs)
-      .perform(evaluateHasScales)
-      .perform(evaluateHasMoreThanTwoLegs)
-      .perform(evaluateEatsHay)
-      .perform(evaluateCanFly)
-      .build(scope);
-    /*      
       .choice('HasLegs', {
         choices: [{ when: answerIsTrue, goto: evaluateHasMoreThanTwoLegs.id }],
       })
@@ -98,9 +93,10 @@ export default class TwentyQuestionsBuilderStack extends cdk.Stack {
         choices: [{ when: answerIsTrue, goto: answerSnake.id }],
       })
 
-      .perform(answerWorm)
+      .pass(answerWorm)
       .end()
-      .perform(answerSnake)
+
+      .pass(answerSnake)
       .end()
 
       .perform(evaluateHasMoreThanTwoLegs)
@@ -113,21 +109,23 @@ export default class TwentyQuestionsBuilderStack extends cdk.Stack {
         choices: [{ when: answerIsTrue, goto: answerDuck.id }],
       })
 
-      .perform(answerHuman)
+      .pass(answerHuman)
       .end()
-      .perform(answerDuck)
+
+      .pass(answerDuck)
       .end()
 
       .perform(evaluateEatsHay)
       .choice('EatsHay', {
-        choices: [{ when: answerIsTrue, goto: 'AnswerCow' }],
+        choices: [{ when: answerIsTrue, goto: answerCow.id }],
       })
 
-      .perform(answerDog)
+      .pass(answerCat)
       .end()
-      .perform(answerCow)
+
+      .pass(answerCow)
       .end()
-      .build(scope)
-*/
+
+      .build(scope);
   }
 }

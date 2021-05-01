@@ -1,23 +1,22 @@
 {
-  "StartAt": "EvaluateHasLegs",
+  "StartAt": "HasLegs",
   "States": {
-    "EvaluateHasLegs": {
-      "Next": "EvaluateHasScales",
-      "Type": "Task",
-      "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.236]}",
-      "Parameters": {
-        "expression": "($.animal.legCount) > 0",
-        "expressionAttributeValues": {
-          "$.animal.legCount.$": "$.animal.legCount"
+    "HasLegs": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.answer",
+          "BooleanEquals": true,
+          "Next": "EvaluateHasMoreThanTwoLegs"
         }
-      }
+      ],
+      "Default": "EvaluateHasScales"
     },
     "EvaluateHasScales": {
-      "Next": "EvaluateHasMoreThanTwoLegs",
+      "Next": "HasScales",
       "Type": "Task",
       "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.236]}",
+      "Resource": "${Token[TOKEN.167]}",
       "Parameters": {
         "expression": "($.animal.hasScales)",
         "expressionAttributeValues": {
@@ -25,11 +24,32 @@
         }
       }
     },
+    "HasScales": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.answer",
+          "BooleanEquals": true,
+          "Next": "AnswerSnake"
+        }
+      ],
+      "Default": "AnswerWorm"
+    },
+    "AnswerWorm": {
+      "Type": "Pass",
+      "Result": "Worm",
+      "End": true
+    },
+    "AnswerSnake": {
+      "Type": "Pass",
+      "Result": "Snake",
+      "End": true
+    },
     "EvaluateHasMoreThanTwoLegs": {
-      "Next": "EvaluateEatsHay",
+      "Next": "HasMoreThanTwoLegs",
       "Type": "Task",
       "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.236]}",
+      "Resource": "${Token[TOKEN.167]}",
       "Parameters": {
         "expression": "($.animal.legCount) > 2",
         "expressionAttributeValues": {
@@ -37,11 +57,55 @@
         }
       }
     },
-    "EvaluateEatsHay": {
-      "Next": "EvaluateCanFly",
+    "HasMoreThanTwoLegs": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.answer",
+          "BooleanEquals": true,
+          "Next": "EvaluateEatsHay"
+        }
+      ],
+      "Default": "EvaluateCanFly"
+    },
+    "EvaluateCanFly": {
+      "Next": "CanFly",
       "Type": "Task",
       "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.236]}",
+      "Resource": "${Token[TOKEN.167]}",
+      "Parameters": {
+        "expression": "($.animal.canFly)",
+        "expressionAttributeValues": {
+          "$.animal.canFly.$": "$.animal.canFly"
+        }
+      }
+    },
+    "CanFly": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.answer",
+          "BooleanEquals": true,
+          "Next": "AnswerDuck"
+        }
+      ],
+      "Default": "AnswerHuman"
+    },
+    "AnswerHuman": {
+      "Type": "Pass",
+      "Result": "Human",
+      "End": true
+    },
+    "AnswerDuck": {
+      "Type": "Pass",
+      "Result": "Duck",
+      "End": true
+    },
+    "EvaluateEatsHay": {
+      "Next": "EatsHay",
+      "Type": "Task",
+      "ResultPath": "$.answer",
+      "Resource": "${Token[TOKEN.167]}",
       "Parameters": {
         "expression": "($.animal.eatsHay)",
         "expressionAttributeValues": {
@@ -49,17 +113,26 @@
         }
       }
     },
-    "EvaluateCanFly": {
-      "End": true,
-      "Type": "Task",
-      "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.236]}",
-      "Parameters": {
-        "expression": "($.animal.canFly)",
-        "expressionAttributeValues": {
-          "$.animal.canFly.$": "$.animal.canFly"
+    "EatsHay": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.answer",
+          "BooleanEquals": true,
+          "Next": "AnswerCow"
         }
-      }
+      ],
+      "Default": "AnswerDog"
+    },
+    "AnswerDog": {
+      "Type": "Pass",
+      "Result": "Dog",
+      "End": true
+    },
+    "AnswerCow": {
+      "Type": "Pass",
+      "Result": "Cow",
+      "End": true
     }
   }
 }

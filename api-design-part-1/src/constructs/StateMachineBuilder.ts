@@ -40,6 +40,8 @@ interface BuilderStep {
 enum StepType {
   Perform = 'Perform',
   Choice = 'Choice',
+  End = 'End',
+  Pass = 'Pass',
 }
 
 class PerformStep implements BuilderStep {
@@ -54,11 +56,35 @@ class PerformStep implements BuilderStep {
   id: string;
 }
 
+class PassStep implements BuilderStep {
+  //
+  constructor(public state: sfn.Pass, public props?: sfn.PassProps) {
+    this.type = StepType.Pass;
+    this.id = state.id;
+  }
+
+  type: StepType;
+
+  id: string;
+}
+
 class ChoiceStep implements BuilderStep {
   //
   constructor(public id: string, public props: EvaluateChoiceProps) {
-    this.type = StepType.Perform;
+    this.type = StepType.Choice;
   }
+
+  type: StepType;
+}
+
+class EndStep implements BuilderStep {
+  //
+  constructor(suffix: number) {
+    this.type = StepType.End;
+    this.id = `End${suffix}`;
+  }
+
+  id: string;
 
   type: StepType;
 }
@@ -70,8 +96,17 @@ export class StateMachineBuilder {
 
   private stepIndexesById = new Map<string, number>();
 
+  static new(): StateMachineBuilder {
+    return new StateMachineBuilder();
+  }
+
   perform(state: sfn.TaskStateBase, props?: PerformProps): StateMachineBuilder {
     this.steps.push(new PerformStep(state, props));
+    return this;
+  }
+
+  pass(state: sfn.Pass, props?: sfn.PassProps): StateMachineBuilder {
+    this.steps.push(new PassStep(state, props));
     return this;
   }
 
@@ -97,6 +132,7 @@ export class StateMachineBuilder {
   }
 
   end(): StateMachineBuilder {
+    this.steps.push(new EndStep(this.steps.length));
     return this;
   }
 
@@ -108,7 +144,7 @@ export class StateMachineBuilder {
 
     this.stepIndexesById = this.getStepIndexesById();
 
-    return this.getStepChainable(0);
+    return this.getStepChainable(scope, 0);
   }
 
   private getStepIndexesById(): Map<string, number> {
@@ -131,19 +167,104 @@ export class StateMachineBuilder {
     return stepIndexesById;
   }
 
-  private getStepChainable(stepIndex: number): sfn.IChainable {
+  private readonly stepChainableByIndex = new Map<number, sfn.IChainable>();
+
+  private getStepChainable(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
     //
+    const existingStepChainable = this.stepChainableByIndex.get(stepIndex);
+
+    if (existingStepChainable !== undefined) {
+      return existingStepChainable;
+    }
+
     const step = this.steps[stepIndex];
+
+    let stepChainable: sfn.IChainable;
 
     switch (step.type) {
       //
       case StepType.Perform:
-        return stepIndex < this.steps.length - 1
-          ? (step as PerformStep).state.next(this.getStepChainable(stepIndex + 1))
-          : (step as PerformStep).state;
+        stepChainable = this.getPerformStepChainable(scope, stepIndex);
+        break;
+
+      case StepType.Pass:
+        stepChainable = this.getPassStepChainable(scope, stepIndex);
+        break;
+
+      case StepType.Choice:
+        stepChainable = this.getChoiceStepChainable(scope, stepIndex);
+        break;
 
       default:
         throw new Error(`Unhandled step type: ${step.type}`);
     }
+
+    this.stepChainableByIndex.set(stepIndex, stepChainable);
+
+    return stepChainable;
+  }
+
+  private getPerformStepChainable(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
+    //
+    const step = this.steps[stepIndex] as PerformStep;
+
+    const isNextStep = this.isNextStep(stepIndex);
+
+    const stepChainable = isNextStep
+      ? (step as PerformStep).state.next(this.getStepChainable(scope, stepIndex + 1))
+      : (step as PerformStep).state;
+
+    // TODO 01May21: Add catches
+
+    return stepChainable;
+  }
+
+  private getPassStepChainable(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
+    //
+    const step = this.steps[stepIndex] as PassStep;
+
+    const isNextStep = this.isNextStep(stepIndex);
+
+    const stepChainable = isNextStep
+      ? (step as PassStep).state.next(this.getStepChainable(scope, stepIndex + 1))
+      : (step as PassStep).state;
+
+    return stepChainable;
+  }
+
+  private isNextStep(stepIndex: number): boolean {
+    const isLastStep = stepIndex === this.steps.length - 1;
+    const isNextStepEnd = !isLastStep && this.steps[stepIndex + 1].type === StepType.End;
+    const isNextStep = !(isLastStep || isNextStepEnd);
+    return isNextStep;
+  }
+
+  private getChoiceStepChainable(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
+    //
+    const step = this.steps[stepIndex] as ChoiceStep;
+
+    const stepChainable = new sfn.Choice(scope, step.id, step.props);
+
+    step.props.choices.forEach((choice) => {
+      const gotoIndex = this.getStepIndexById(choice.goto);
+      stepChainable.when(choice.when, this.getStepChainable(scope, gotoIndex));
+    });
+
+    if (this.isNextStep(stepIndex)) {
+      stepChainable.otherwise(this.getStepChainable(scope, stepIndex + 1));
+    }
+
+    return stepChainable;
+  }
+
+  private getStepIndexById(id: string): number {
+    //
+    const stepIndex = this.stepIndexesById.get(id);
+
+    if (stepIndex === undefined) {
+      throw new Error(`Could not find index for id: ${id}`);
+    }
+
+    return stepIndex;
   }
 }
