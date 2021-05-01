@@ -1,0 +1,65 @@
+{
+  "StartAt": "EvaluateHasLegs",
+  "States": {
+    "EvaluateHasLegs": {
+      "Next": "EvaluateHasScales",
+      "Type": "Task",
+      "ResultPath": "$.answer",
+      "Resource": "${Token[TOKEN.236]}",
+      "Parameters": {
+        "expression": "($.animal.legCount) > 0",
+        "expressionAttributeValues": {
+          "$.animal.legCount.$": "$.animal.legCount"
+        }
+      }
+    },
+    "EvaluateHasScales": {
+      "Next": "EvaluateHasMoreThanTwoLegs",
+      "Type": "Task",
+      "ResultPath": "$.answer",
+      "Resource": "${Token[TOKEN.236]}",
+      "Parameters": {
+        "expression": "($.animal.hasScales)",
+        "expressionAttributeValues": {
+          "$.animal.hasScales.$": "$.animal.hasScales"
+        }
+      }
+    },
+    "EvaluateHasMoreThanTwoLegs": {
+      "Next": "EvaluateEatsHay",
+      "Type": "Task",
+      "ResultPath": "$.answer",
+      "Resource": "${Token[TOKEN.236]}",
+      "Parameters": {
+        "expression": "($.animal.legCount) > 2",
+        "expressionAttributeValues": {
+          "$.animal.legCount.$": "$.animal.legCount"
+        }
+      }
+    },
+    "EvaluateEatsHay": {
+      "Next": "EvaluateCanFly",
+      "Type": "Task",
+      "ResultPath": "$.answer",
+      "Resource": "${Token[TOKEN.236]}",
+      "Parameters": {
+        "expression": "($.animal.eatsHay)",
+        "expressionAttributeValues": {
+          "$.animal.eatsHay.$": "$.animal.eatsHay"
+        }
+      }
+    },
+    "EvaluateCanFly": {
+      "End": true,
+      "Type": "Task",
+      "ResultPath": "$.answer",
+      "Resource": "${Token[TOKEN.236]}",
+      "Parameters": {
+        "expression": "($.animal.canFly)",
+        "expressionAttributeValues": {
+          "$.animal.canFly.$": "$.animal.canFly"
+        }
+      }
+    }
+  }
+}

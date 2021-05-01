@@ -1,0 +1,211 @@
+{
+  "StartAt": "PerformIdentityChecks",
+  "States": {
+    "PerformIdentityChecks": {
+      "Type": "Map",
+      "ResultPath": "$.identityResults",
+      "Next": "AggregateIdentityResultsExpression",
+      "InputPath": "$.application",
+      "Iterator": {
+        "StartAt": "PerformIdentityCheck",
+        "States": {
+          "PerformIdentityCheck": {
+            "End": true,
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException"
+                ],
+                "IntervalSeconds": 2,
+                "MaxAttempts": 6,
+                "BackoffRate": 2
+              }
+            ],
+            "Type": "Task",
+            "Resource": "${Token[TOKEN.98]}"
+          }
+        }
+      },
+      "ItemsPath": "$.applicants"
+    },
+    "AggregateIdentityResultsExpression": {
+      "Next": "EvaluateIdentityResults",
+      "Type": "Task",
+      "ResultPath": "$.overallIdentityResult",
+      "Resource": "${Token[TOKEN.228]}",
+      "Parameters": {
+        "expression": "($.identityResults).every((r) => r.success)",
+        "expressionAttributeValues": {
+          "$.identityResults.$": "$.identityResults"
+        }
+      }
+    },
+    "EvaluateIdentityResults": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.overallIdentityResult",
+          "BooleanEquals": false,
+          "Next": "PerformDeclineTasks"
+        }
+      ],
+      "Default": "PerformAffordabilityCheck"
+    },
+    "PerformAffordabilityCheck": {
+      "Next": "EvaluateAffordabilityResult",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "Type": "Task",
+      "InputPath": "$.application",
+      "ResultPath": "$.affordabilityResult",
+      "Resource": "${Token[TOKEN.119]}"
+    },
+    "EvaluateAffordabilityResult": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.affordabilityResult",
+          "StringEquals": "BAD",
+          "Next": "PerformDeclineTasks"
+        },
+        {
+          "Variable": "$.affordabilityResult",
+          "StringEquals": "POOR",
+          "Next": "PerformReferTasks"
+        }
+      ],
+      "Default": "PerformAcceptTasks"
+    },
+    "PerformAcceptTasks": {
+      "Type": "Parallel",
+      "End": true,
+      "Branches": [
+        {
+          "StartAt": "SendAcceptEmail",
+          "States": {
+            "SendAcceptEmail": {
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "Type": "Task",
+              "Resource": "${Token[TOKEN.140]}",
+              "Parameters": {
+                "emailType": "ACCEPT",
+                "application.$": "$.application"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "PerformDeclineTasks": {
+      "Type": "Parallel",
+      "End": true,
+      "Branches": [
+        {
+          "StartAt": "SendDeclineEmail",
+          "States": {
+            "SendDeclineEmail": {
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "Type": "Task",
+              "Resource": "${Token[TOKEN.140]}",
+              "Parameters": {
+                "emailType": "Decline",
+                "application.$": "$.application"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "PerformReferTasks": {
+      "Type": "Parallel",
+      "End": true,
+      "Branches": [
+        {
+          "StartAt": "SendReferEmail",
+          "States": {
+            "SendReferEmail": {
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "Type": "Task",
+              "Resource": "${Token[TOKEN.140]}",
+              "Parameters": {
+                "emailType": "REFER",
+                "application.$": "$.application"
+              }
+            }
+          }
+        },
+        {
+          "StartAt": "NotifyUnderwriter",
+          "States": {
+            "NotifyUnderwriter": {
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "Type": "Task",
+              "InputPath": "$.application",
+              "Resource": "${Token[TOKEN.161]}"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

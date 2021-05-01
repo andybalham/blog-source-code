@@ -1,0 +1,14 @@
+{
+  "application": {
+    "reference": "Reject-Case",
+    "loanAmount": 200000,
+    "applicants": [
+      {
+        "firstName": "Trevor",
+        "lastName": "Potato",
+        "email": "trevor.potato@potato-mail.com",
+        "income": 100000
+      }
+    ]
+  }
+}

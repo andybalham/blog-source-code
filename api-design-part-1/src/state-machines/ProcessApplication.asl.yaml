@@ -1,0 +1,101 @@
+Comment: Processes an application for loan
+
+StartAt: PerformIdentityChecks
+
+States:
+
+  PerformIdentityChecks:
+    Type: Map
+    InputPath: "$.application"
+    ItemsPath: "$.applicants"
+    ResultPath: "$.identityResults"
+    Iterator:
+      StartAt: PerformIdentityCheck
+      States:
+        PerformIdentityCheck:
+          Type: Task
+          Resource: "${PerformIdentityCheckFunctionArn}"
+          End: true
+    Next: AggregateIdentityResults
+
+  AggregateIdentityResults:
+    Type: Task
+    Resource: "${AggregateIdentityResultsFunctionArn}"
+    InputPath: "$.identityResults"
+    ResultPath: "$.overallIdentityResult"
+    Next: EvaluateIdentityResults
+
+  EvaluateIdentityResults:
+    Type: Choice
+    Choices:
+    - Variable: "$.overallIdentityResult"
+      BooleanEquals: false
+      Next: PerformDeclineTasks
+    Default: PerformAffordabilityCheck
+
+  PerformAffordabilityCheck:
+    Type: Task
+    Resource: "${PerformAffordabilityCheckFunctionArn}"
+    InputPath: "$.application"
+    ResultPath: "$.affordabilityResult"
+    Next: EvaluateAffordabilityResult
+
+  EvaluateAffordabilityResult:
+    Type: Choice
+    Choices:
+    - Variable: "$.affordabilityResult"
+      StringEquals: POOR
+      Next: PerformReferTasks
+    - Variable: "$.affordabilityResult"
+      StringEquals: BAD
+      Next: PerformDeclineTasks
+    Default: PerformAcceptTasks
+
+  PerformAcceptTasks:
+    Type: Parallel
+    End: true
+    Branches:
+    - StartAt: SendAcceptEmail
+      States:
+        SendAcceptEmail:
+          Type: Task
+          Resource: "${SendEmailFunctionArn}"
+          Parameters:
+            emailType: Accept
+            application.$: "$.application"
+          End: true
+
+  PerformReferTasks:
+    Type: Parallel
+    End: true
+    Branches:
+    - StartAt: SendReferEmail
+      States:
+        SendReferEmail:
+          Type: Task
+          Resource: "${SendEmailFunctionArn}"
+          Parameters:
+            emailType: Refer
+            application.$: "$.application"
+          End: true
+    - StartAt: NotifyUnderwriter
+      States:
+        NotifyUnderwriter:
+          Type: Task
+          Resource: "${NotifyUnderwriterFunctionArn}"
+          InputPath: "$.application"
+          End: true
+
+  PerformDeclineTasks:
+    Type: Parallel
+    End: true
+    Branches:
+    - StartAt: SendDeclineEmail
+      States:
+        SendDeclineEmail:
+          Type: Task
+          Resource: "${SendEmailFunctionArn}"
+          Parameters:
+            emailType: Decline
+            application.$: "$.application"
+          End: true
