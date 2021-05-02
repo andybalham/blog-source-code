@@ -1,9 +1,8 @@
+/* eslint-disable no-new */
 /* eslint-disable import/order */
 // eslint-disable-next-line import/order
-import { StateMachineWithGraph } from '../src/constructs';
 import TwentyQuestionsBuilderStack from '../deploy/TwentyQuestionsBuilderStack';
 import cdk = require('@aws-cdk/core');
-import sfn = require('@aws-cdk/aws-stepfunctions');
 
 describe('StateMachineWithGraph', () => {
   // it('renders to graph JSON', async () => {
@@ -46,6 +45,6 @@ describe('StateMachineWithGraph', () => {
 
   it('renders to graph JSON', async () => {
     //
-    const stack = new TwentyQuestionsBuilderStack(new cdk.App(), 'Test');
+    new TwentyQuestionsBuilderStack(new cdk.App(), 'Test');
   });
 });

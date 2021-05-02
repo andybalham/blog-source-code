@@ -85,45 +85,50 @@ export default class TwentyQuestionsBuilderStack extends cdk.Stack {
 
       .perform(evaluateHasLegs)
       .choice('HasLegs', {
-        choices: [{ when: answerIsTrue, goto: evaluateHasMoreThanTwoLegs.id }],
+        choices: [{ when: answerIsTrue, next: evaluateHasMoreThanTwoLegs.id }],
+        otherwise: evaluateHasScales.id,
       })
-
-      .perform(evaluateHasScales)
-      .choice('HasScales', {
-        choices: [{ when: answerIsTrue, goto: answerSnake.id }],
-      })
-
-      .pass(answerWorm)
-      .end()
-
-      .pass(answerSnake)
-      .end()
 
       .perform(evaluateHasMoreThanTwoLegs)
       .choice('HasMoreThanTwoLegs', {
-        choices: [{ when: answerIsTrue, goto: evaluateEatsHay.id }],
+        choices: [{ when: answerIsTrue, next: evaluateEatsHay.id }],
+        otherwise: evaluateCanFly.id,
       })
-
-      .perform(evaluateCanFly)
-      .choice('CanFly', {
-        choices: [{ when: answerIsTrue, goto: answerDuck.id }],
-      })
-
-      .pass(answerHuman)
-      .end()
-
-      .pass(answerDuck)
-      .end()
 
       .perform(evaluateEatsHay)
       .choice('EatsHay', {
-        choices: [{ when: answerIsTrue, goto: answerCow.id }],
+        choices: [{ when: answerIsTrue, next: answerCow.id }],
+        otherwise: answerCat.id,
       })
 
-      .pass(answerCat)
+      .perform(answerCow)
       .end()
 
-      .pass(answerCow)
+      .perform(answerCat)
+      .end()
+
+      .perform(evaluateCanFly)
+      .choice('CanFly', {
+        choices: [{ when: answerIsTrue, next: answerDuck.id }],
+        otherwise: answerHuman.id,
+      })
+
+      .perform(answerDuck)
+      .end()
+
+      .perform(answerHuman)
+      .end()
+
+      .perform(evaluateHasScales)
+      .choice('HasScales', {
+        choices: [{ when: answerIsTrue, next: answerSnake.id }],
+        otherwise: answerWorm.id,
+      })
+
+      .perform(answerSnake)
+      .end()
+
+      .perform(answerWorm)
       .end()
 
       .build(scope);

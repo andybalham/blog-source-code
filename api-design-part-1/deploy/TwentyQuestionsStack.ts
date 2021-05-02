@@ -75,6 +75,13 @@ export default class TwentyQuestionsStack extends cdk.Stack {
       resultPath: '$.answer',
     });
 
+    const answerWorm = returnAnswer(scope, 'Worm');
+    const answerSnake = returnAnswer(scope, 'Snake');
+    const answerHuman = returnAnswer(scope, 'Human');
+    const answerDuck = returnAnswer(scope, 'Duck');
+    const answerCat = returnAnswer(scope, 'Cat');
+    const answerCow = returnAnswer(scope, 'Cow');
+
     return sfn.Chain.start(
       evaluateHasLegs.next(
         new sfn.Choice(scope, 'HasLegs')
@@ -86,15 +93,15 @@ export default class TwentyQuestionsStack extends cdk.Stack {
                   answerIsTrue,
                   evaluateEatsHay.next(
                     new sfn.Choice(scope, 'EatsHay')
-                      .when(answerIsTrue, returnAnswer(scope, 'Cow'))
-                      .otherwise(returnAnswer(scope, 'Dog'))
+                      .when(answerIsTrue, answerCow)
+                      .otherwise(answerCat)
                   )
                 )
                 .otherwise(
                   evaluateCanFly.next(
                     new sfn.Choice(scope, 'CanFly')
-                      .when(answerIsTrue, returnAnswer(scope, 'Duck'))
-                      .otherwise(returnAnswer(scope, 'Human'))
+                      .when(answerIsTrue, answerDuck)
+                      .otherwise(answerHuman)
                   )
                 )
             )
@@ -102,8 +109,8 @@ export default class TwentyQuestionsStack extends cdk.Stack {
           .otherwise(
             evaluateHasScales.next(
               new sfn.Choice(scope, 'HasScales')
-                .when(answerIsTrue, returnAnswer(scope, 'Snake'))
-                .otherwise(returnAnswer(scope, 'Worm'))
+                .when(answerIsTrue, answerSnake)
+                .otherwise(answerWorm)
             )
           )
       )

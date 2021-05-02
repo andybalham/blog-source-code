@@ -1,6 +1,18 @@
 {
-  "StartAt": "HasLegs",
+  "StartAt": "EvaluateHasLegs",
   "States": {
+    "EvaluateHasLegs": {
+      "Next": "HasLegs",
+      "Type": "Task",
+      "ResultPath": "$.answer",
+      "Resource": "${Token[TOKEN.234]}",
+      "Parameters": {
+        "expression": "($.animal.legCount) > 0",
+        "expressionAttributeValues": {
+          "$.animal.legCount.$": "$.animal.legCount"
+        }
+      }
+    },
     "HasLegs": {
       "Type": "Choice",
       "Choices": [
@@ -16,7 +28,7 @@
       "Next": "HasScales",
       "Type": "Task",
       "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.167]}",
+      "Resource": "${Token[TOKEN.234]}",
       "Parameters": {
         "expression": "($.animal.hasScales)",
         "expressionAttributeValues": {
@@ -49,7 +61,7 @@
       "Next": "HasMoreThanTwoLegs",
       "Type": "Task",
       "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.167]}",
+      "Resource": "${Token[TOKEN.234]}",
       "Parameters": {
         "expression": "($.animal.legCount) > 2",
         "expressionAttributeValues": {
@@ -72,7 +84,7 @@
       "Next": "CanFly",
       "Type": "Task",
       "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.167]}",
+      "Resource": "${Token[TOKEN.234]}",
       "Parameters": {
         "expression": "($.animal.canFly)",
         "expressionAttributeValues": {
@@ -105,7 +117,7 @@
       "Next": "EatsHay",
       "Type": "Task",
       "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.167]}",
+      "Resource": "${Token[TOKEN.234]}",
       "Parameters": {
         "expression": "($.animal.eatsHay)",
         "expressionAttributeValues": {
@@ -122,11 +134,11 @@
           "Next": "AnswerCow"
         }
       ],
-      "Default": "AnswerDog"
+      "Default": "AnswerCat"
     },
-    "AnswerDog": {
+    "AnswerCat": {
       "Type": "Pass",
-      "Result": "Dog",
+      "Result": "Cat",
       "End": true
     },
     "AnswerCow": {

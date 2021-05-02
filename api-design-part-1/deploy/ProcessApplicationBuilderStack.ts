@@ -9,7 +9,7 @@ import * as cdk from '@aws-cdk/core';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
 import path from 'path';
-import { StateMachineBuilder } from '../src/constructs';
+import { StateMachineBuilder } from '../src/constructs/StateMachineBuilder-Original';
 import sfn = require('@aws-cdk/aws-stepfunctions');
 import sfnTasks = require('@aws-cdk/aws-stepfunctions-tasks');
 
@@ -103,7 +103,7 @@ export class ProcessApplicationBuilderStack extends cdk.Stack {
           .perform(aggregateIdentityResults)
 
           .choice('EvaluateIdentityResults', {
-            choices: [{ when: overallIdentityResultIsFalse, goto: 'PerformDeclineTasks' }],
+            choices: [{ when: overallIdentityResultIsFalse, next: 'PerformDeclineTasks' }],
           })
 
           .perform(performAffordabilityCheck, {
@@ -116,8 +116,8 @@ export class ProcessApplicationBuilderStack extends cdk.Stack {
 
           .choice('EvaluateAffordabilityCheck', {
             choices: [
-              { when: affordabilityResultIsBad, goto: 'PerformDeclineTasks' },
-              { when: affordabilityResultIsPoor, goto: 'PerformReferTasks' },
+              { when: affordabilityResultIsBad, next: 'PerformDeclineTasks' },
+              { when: affordabilityResultIsPoor, next: 'PerformReferTasks' },
             ],
           })
 

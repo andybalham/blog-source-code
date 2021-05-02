@@ -1,36 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable import/prefer-default-export */
 /* eslint-disable import/no-extraneous-dependencies */
-/* eslint-disable @typescript-eslint/no-use-before-define */
-/* eslint-disable no-new */
 /* eslint-disable max-classes-per-file */
 import * as cdk from '@aws-cdk/core';
 import sfn = require('@aws-cdk/aws-stepfunctions');
-
-interface BuilderCatchProps extends sfn.CatchProps {
-  goto: string;
-}
-
-interface PerformProps {
-  catch: BuilderCatchProps[];
-}
-
-interface ChoiceCase {
-  when: sfn.Condition;
-  goto: string;
-}
-
-interface EvaluateChoiceProps extends sfn.ChoiceProps {
-  choices: ChoiceCase[];
-}
-
-interface PerformMapProps extends sfn.MapProps {
-  iterator: StateMachineBuilder;
-}
-
-interface PerformParallelProps extends sfn.ParallelProps {
-  branches: StateMachineBuilder[];
-}
 
 interface BuilderStep {
   type: StepType;
@@ -41,12 +12,13 @@ enum StepType {
   Perform = 'Perform',
   Choice = 'Choice',
   End = 'End',
-  Pass = 'Pass',
 }
+
+interface INextableState extends sfn.State, sfn.INextable {}
 
 class PerformStep implements BuilderStep {
   //
-  constructor(public state: sfn.TaskStateBase, public props?: PerformProps) {
+  constructor(public state: INextableState) {
     this.type = StepType.Perform;
     this.id = state.id;
   }
@@ -56,21 +28,19 @@ class PerformStep implements BuilderStep {
   id: string;
 }
 
-class PassStep implements BuilderStep {
-  //
-  constructor(public state: sfn.Pass, public props?: sfn.PassProps) {
-    this.type = StepType.Pass;
-    this.id = state.id;
-  }
+interface BuilderChoice {
+  when: sfn.Condition;
+  next: string;
+}
 
-  type: StepType;
-
-  id: string;
+interface BuilderChoiceProps extends sfn.ChoiceProps {
+  choices: BuilderChoice[];
+  otherwise: string;
 }
 
 class ChoiceStep implements BuilderStep {
   //
-  constructor(public id: string, public props: EvaluateChoiceProps) {
+  constructor(public id: string, public props: BuilderChoiceProps) {
     this.type = StepType.Choice;
   }
 
@@ -89,45 +59,25 @@ class EndStep implements BuilderStep {
   type: StepType;
 }
 
-export class StateMachineBuilder {
+export default class StateMachineBuilder {
   //
-  // TODO 18Apr21: The following will need to store the details for each method, e.g. id & props
   private readonly steps = new Array<BuilderStep>();
 
-  private stepIndexesById = new Map<string, number>();
+  private readonly stepIndexesById = new Map<string, number>();
+
+  private readonly stepChainableByIndex = new Map<number, sfn.IChainable>();
 
   static new(): StateMachineBuilder {
     return new StateMachineBuilder();
   }
 
-  perform(state: sfn.TaskStateBase, props?: PerformProps): StateMachineBuilder {
-    this.steps.push(new PerformStep(state, props));
+  perform(state: INextableState): StateMachineBuilder {
+    this.steps.push(new PerformStep(state));
     return this;
   }
 
-  pass(state: sfn.Pass, props?: sfn.PassProps): StateMachineBuilder {
-    this.steps.push(new PassStep(state, props));
-    return this;
-  }
-
-  map(id: string, props: PerformMapProps): StateMachineBuilder {
-    return this;
-  }
-
-  parallel(id: string, props: PerformParallelProps): StateMachineBuilder {
-    return this;
-  }
-
-  choice(id: string, props: EvaluateChoiceProps): StateMachineBuilder {
+  choice(id: string, props: BuilderChoiceProps): StateMachineBuilder {
     this.steps.push(new ChoiceStep(id, props));
-    return this;
-  }
-
-  goto(targetId: string): StateMachineBuilder {
-    return this;
-  }
-
-  label(id: string): StateMachineBuilder {
     return this;
   }
 
@@ -137,37 +87,41 @@ export class StateMachineBuilder {
   }
 
   build(scope: cdk.Construct): sfn.IChainable {
+    this.buildStepIndexesById();
+    return this.getStepChainable(scope, 0);
+  }
+
+  private buildStepIndexesById(): void {
     //
     if (this.steps.length === 0) {
       throw new Error(`No steps defined`);
     }
 
-    this.stepIndexesById = this.getStepIndexesById();
-
-    return this.getStepChainable(scope, 0);
-  }
-
-  private getStepIndexesById(): Map<string, number> {
-    //
-    const stepIndexesById = new Map<string, number>();
     const duplicateSteps = new Array<string>();
 
     this.steps.forEach((step, stepIndex) => {
-      if (stepIndexesById.has(step.id)) {
+      if (this.stepIndexesById.has(step.id)) {
         duplicateSteps.push(step.id);
       } else {
-        stepIndexesById.set(step.id, stepIndex);
+        this.stepIndexesById.set(step.id, stepIndex);
       }
     });
 
     if (duplicateSteps.length > 0) {
       throw new Error(`Duplicate steps found: ${JSON.stringify(duplicateSteps)}`);
     }
-
-    return stepIndexesById;
   }
 
-  private readonly stepChainableByIndex = new Map<number, sfn.IChainable>();
+  private getStepIndexById(id: string): number {
+    //
+    const stepIndex = this.stepIndexesById.get(id);
+
+    if (stepIndex === undefined) {
+      throw new Error(`Could not find index for id: ${id}`);
+    }
+
+    return stepIndex;
+  }
 
   private getStepChainable(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
     //
@@ -185,10 +139,6 @@ export class StateMachineBuilder {
       //
       case StepType.Perform:
         stepChainable = this.getPerformStepChainable(scope, stepIndex);
-        break;
-
-      case StepType.Pass:
-        stepChainable = this.getPassStepChainable(scope, stepIndex);
         break;
 
       case StepType.Choice:
@@ -214,28 +164,15 @@ export class StateMachineBuilder {
       ? (step as PerformStep).state.next(this.getStepChainable(scope, stepIndex + 1))
       : (step as PerformStep).state;
 
-    // TODO 01May21: Add catches
-
-    return stepChainable;
-  }
-
-  private getPassStepChainable(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
-    //
-    const step = this.steps[stepIndex] as PassStep;
-
-    const isNextStep = this.isNextStep(stepIndex);
-
-    const stepChainable = isNextStep
-      ? (step as PassStep).state.next(this.getStepChainable(scope, stepIndex + 1))
-      : (step as PassStep).state;
-
     return stepChainable;
   }
 
   private isNextStep(stepIndex: number): boolean {
+    //
     const isLastStep = stepIndex === this.steps.length - 1;
     const isNextStepEnd = !isLastStep && this.steps[stepIndex + 1].type === StepType.End;
     const isNextStep = !(isLastStep || isNextStepEnd);
+
     return isNextStep;
   }
 
@@ -246,25 +183,14 @@ export class StateMachineBuilder {
     const stepChainable = new sfn.Choice(scope, step.id, step.props);
 
     step.props.choices.forEach((choice) => {
-      const gotoIndex = this.getStepIndexById(choice.goto);
+      const gotoIndex = this.getStepIndexById(choice.next);
       stepChainable.when(choice.when, this.getStepChainable(scope, gotoIndex));
     });
 
-    if (this.isNextStep(stepIndex)) {
-      stepChainable.otherwise(this.getStepChainable(scope, stepIndex + 1));
-    }
+    const otherwiseStepIndex = this.getStepIndexById(step.props.otherwise);
+
+    stepChainable.otherwise(this.getStepChainable(scope, otherwiseStepIndex));
 
     return stepChainable;
-  }
-
-  private getStepIndexById(id: string): number {
-    //
-    const stepIndex = this.stepIndexesById.get(id);
-
-    if (stepIndex === undefined) {
-      throw new Error(`Could not find index for id: ${id}`);
-    }
-
-    return stepIndex;
   }
 }
