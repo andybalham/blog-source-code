@@ -16,6 +16,7 @@ import { writeGraphJson } from './utils';
 const functionEntry = path.join(__dirname, '..', 'src', 'functions', 'index.ts');
 
 export default class ProcessApplicationStack extends cdk.Stack {
+  //
   private performIdentityCheckFunction: lambda.Function;
 
   private performAffordabilityCheckFunction: lambda.Function;
@@ -60,16 +61,10 @@ export default class ProcessApplicationStack extends cdk.Stack {
 
   private getProcessApplicationDefinition(scope: cdk.Construct): sfn.IChainable {
     //
-    const performIdentityChecks = new sfn.Map(scope, 'PerformIdentityChecks', {
-      inputPath: '$.application',
-      itemsPath: '$.applicants',
-      resultPath: '$.identityResults',
-    }).iterator(
-      new sfnTasks.LambdaInvoke(scope, 'PerformIdentityCheck', {
-        lambdaFunction: this.performIdentityCheckFunction,
-        payloadResponseOnly: true,
-      })
-    );
+    const performIdentityCheck = new sfnTasks.LambdaInvoke(scope, 'PerformIdentityCheck', {
+      lambdaFunction: this.performIdentityCheckFunction,
+      payloadResponseOnly: true,
+    });
 
     const aggregateIdentityResults = new sfnTasks.EvaluateExpression(
       scope,
@@ -99,42 +94,58 @@ export default class ProcessApplicationStack extends cdk.Stack {
     const affordabilityResultIsBad = sfn.Condition.stringEquals('$.affordabilityResult', 'BAD');
     const affordabilityResultIsPoor = sfn.Condition.stringEquals('$.affordabilityResult', 'POOR');
 
+    const sendAcceptEmail = new sfnTasks.LambdaInvoke(scope, 'SendAcceptEmail', {
+      lambdaFunction: this.sendEmailFunction,
+      payloadResponseOnly: true,
+      payload: sfn.TaskInput.fromObject({
+        emailType: 'ACCEPT',
+        'application.$': '$.application',
+      }),
+    });
+
+    const sendReferEmail = new sfnTasks.LambdaInvoke(scope, 'SendReferEmail', {
+      lambdaFunction: this.sendEmailFunction,
+      payloadResponseOnly: true,
+      payload: sfn.TaskInput.fromObject({
+        emailType: 'REFER',
+        'application.$': '$.application',
+      }),
+    });
+
+    const notifyUnderwriter = new sfnTasks.LambdaInvoke(scope, 'NotifyUnderwriter', {
+      lambdaFunction: this.notifyUnderwriterFunction,
+      payloadResponseOnly: true,
+      inputPath: '$.application',
+    });
+
+    const sendDeclineEmail = new sfnTasks.LambdaInvoke(scope, 'SendDeclineEmail', {
+      lambdaFunction: this.sendEmailFunction,
+      payloadResponseOnly: true,
+      payload: sfn.TaskInput.fromObject({
+        emailType: 'Decline',
+        'application.$': '$.application',
+      }),
+    });
+    
+    const performIdentityChecks = new sfn.Map(scope, 'PerformIdentityChecks', {
+      inputPath: '$.application',
+      itemsPath: '$.applicants',
+      resultPath: '$.identityResults',
+    }).iterator(
+      performIdentityCheck
+    );
+
     const performAcceptTasks = new sfn.Parallel(scope, 'PerformAcceptTasks').branch(
-      new sfnTasks.LambdaInvoke(scope, 'SendAcceptEmail', {
-        lambdaFunction: this.sendEmailFunction,
-        payloadResponseOnly: true,
-        payload: sfn.TaskInput.fromObject({
-          emailType: 'ACCEPT',
-          'application.$': '$.application',
-        }),
-      })
+      sendAcceptEmail
     );
 
     const performReferTasks = new sfn.Parallel(scope, 'PerformReferTasks').branch(
-      new sfnTasks.LambdaInvoke(scope, 'SendReferEmail', {
-        lambdaFunction: this.sendEmailFunction,
-        payloadResponseOnly: true,
-        payload: sfn.TaskInput.fromObject({
-          emailType: 'REFER',
-          'application.$': '$.application',
-        }),
-      }),
-      new sfnTasks.LambdaInvoke(scope, 'NotifyUnderwriter', {
-        lambdaFunction: this.notifyUnderwriterFunction,
-        payloadResponseOnly: true,
-        inputPath: '$.application',
-      })
+      sendReferEmail,
+      notifyUnderwriter
     );
 
     const performDeclineTasks = new sfn.Parallel(scope, 'PerformDeclineTasks').branch(
-      new sfnTasks.LambdaInvoke(scope, 'SendDeclineEmail', {
-        lambdaFunction: this.sendEmailFunction,
-        payloadResponseOnly: true,
-        payload: sfn.TaskInput.fromObject({
-          emailType: 'Decline',
-          'application.$': '$.application',
-        }),
-      })
+      sendDeclineEmail
     );
 
     return sfn.Chain.start(

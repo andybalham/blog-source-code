@@ -9,7 +9,7 @@ import * as cdk from '@aws-cdk/core';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
 import path from 'path';
-import { StateMachineBuilder } from '../src/constructs/StateMachineBuilder-Original';
+import StateMachineBuilder from '../src/constructs/StateMachineBuilder-Design';
 import sfn = require('@aws-cdk/aws-stepfunctions');
 import sfnTasks = require('@aws-cdk/aws-stepfunctions-tasks');
 
@@ -101,24 +101,18 @@ export class ProcessApplicationBuilderStack extends cdk.Stack {
             iterator: new StateMachineBuilder().perform(performIdentityCheck),
           })
           .perform(aggregateIdentityResults)
-
           .choice('EvaluateIdentityResults', {
             choices: [{ when: overallIdentityResultIsFalse, next: 'PerformDeclineTasks' }],
+            otherwise: 'PerformAffordabilityCheck',
           })
 
-          .perform(performAffordabilityCheck, {
-            catch: [
-              { errors: ['ALL'], goto: 'ErrorHandler' },
-              { errors: ['ALL'], goto: 'ErrorHandler' },
-              { errors: ['ALL'], goto: 'ErrorHandler' },
-            ],
-          })
-
+          .perform(performAffordabilityCheck)
           .choice('EvaluateAffordabilityCheck', {
             choices: [
               { when: affordabilityResultIsBad, next: 'PerformDeclineTasks' },
               { when: affordabilityResultIsPoor, next: 'PerformReferTasks' },
             ],
+            otherwise: 'PerformAcceptTasks',
           })
 
           .parallel('PerformAcceptTasks', {
