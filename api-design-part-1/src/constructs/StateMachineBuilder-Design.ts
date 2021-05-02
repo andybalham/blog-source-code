@@ -3,6 +3,10 @@
 import * as cdk from '@aws-cdk/core';
 import sfn = require('@aws-cdk/aws-stepfunctions');
 
+interface BuilderPerformProps {
+  end?: boolean;
+}
+
 interface BuilderChoice {
   when: sfn.Condition;
   next: string;
@@ -23,7 +27,7 @@ interface BuilderMapProps extends sfn.MapProps {
 
 export default class StateMachineBuilder {
   //
-  perform(state: sfn.State): StateMachineBuilder {
+  perform(state: sfn.State, props?: BuilderPerformProps): StateMachineBuilder {
     return this;
   }
 
