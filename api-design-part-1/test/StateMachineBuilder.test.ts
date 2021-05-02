@@ -62,7 +62,7 @@ describe('StateMachineWithGraph', () => {
     writeGraphJson(builderStateMachine);
   });
 
-  it.only('renders multiple choices', async () => {
+  it('renders multiple choices', async () => {
     //
     const cdkStack = new cdk.Stack();
 
@@ -103,38 +103,109 @@ describe('StateMachineWithGraph', () => {
         const state3 = new sfn.Pass(definitionScope, 'State3');
         const state4 = new sfn.Pass(definitionScope, 'State4');
 
-        return (
-          new StateMachineBuilder()
+        return new StateMachineBuilder()
 
-            .choice('Choice1', {
-              choices: [{ when: sfn.Condition.booleanEquals('$.var1', true), next: 'Choice2' }],
-              otherwise: 'Choice3',
-            })
+          .choice('Choice1', {
+            choices: [{ when: sfn.Condition.booleanEquals('$.var1', true), next: 'Choice2' }],
+            otherwise: 'Choice3',
+          })
 
-            .choice('Choice2', {
-              choices: [{ when: sfn.Condition.booleanEquals('$.var2', true), next: 'State1' }],
-              otherwise: 'State2',
-            })
+          .choice('Choice2', {
+            choices: [{ when: sfn.Condition.booleanEquals('$.var2', true), next: 'State1' }],
+            otherwise: 'State2',
+          })
 
-            .choice('Choice3', {
-              choices: [{ when: sfn.Condition.booleanEquals('$.var3', true), next: 'Choice3' }],
-              otherwise: 'Choice4',
-            })
+          .choice('Choice3', {
+            choices: [{ when: sfn.Condition.booleanEquals('$.var3', true), next: 'Choice3' }],
+            otherwise: 'Choice4',
+          })
 
-            .perform(state1)
-            .end()
+          .perform(state1)
+          .end()
 
-            .perform(state2)
-            .end()
+          .perform(state2)
+          .end()
 
-            .perform(state3)
-            .end()
+          .perform(state3)
+          .end()
 
-            .perform(state4)
-            .end()
+          .perform(state4)
+          .end()
 
-            .build(definitionScope)
+          .build(definitionScope);
+      },
+    });
+
+    writeGraphJson(builderStateMachine);
+  });
+
+  it.only('renders iterators', async () => {
+    //
+    const cdkStack = new cdk.Stack();
+
+    const cdkStateMachine = new StateMachineWithGraph(cdkStack, 'Iterators-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const state1 = new sfn.Pass(definitionScope, 'State1');
+        const state2 = new sfn.Pass(definitionScope, 'State2');
+        const state3 = new sfn.Pass(definitionScope, 'State3');
+        const state4 = new sfn.Pass(definitionScope, 'State4');
+        const state5 = new sfn.Pass(definitionScope, 'State5');
+        const state6 = new sfn.Pass(definitionScope, 'State6');
+        const state7 = new sfn.Pass(definitionScope, 'State7');
+        const state8 = new sfn.Pass(definitionScope, 'State8');
+
+        return sfn.Chain.start(
+          new sfn.Map(definitionScope, 'Map1', {
+            itemsPath: '$.Items1',
+          })
+            .iterator(state1.next(state2.next(state3.next(state4))))
+            .next(
+              new sfn.Map(definitionScope, 'Map2', {
+                itemsPath: '$.Items2',
+              }).iterator(state5.next(state6.next(state7.next(state8))))
+            )
         );
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStack = new cdk.Stack();
+
+    const builderStateMachine = new StateMachineWithGraph(builderStack, 'Iterators-Builder', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const state1 = new sfn.Pass(definitionScope, 'State1');
+        const state2 = new sfn.Pass(definitionScope, 'State2');
+        const state3 = new sfn.Pass(definitionScope, 'State3');
+        const state4 = new sfn.Pass(definitionScope, 'State4');
+        const state5 = new sfn.Pass(definitionScope, 'State5');
+        const state6 = new sfn.Pass(definitionScope, 'State6');
+        const state7 = new sfn.Pass(definitionScope, 'State7');
+        const state8 = new sfn.Pass(definitionScope, 'State8');
+
+        return new StateMachineBuilder()
+
+          .map('Map1', {
+            itemsPath: '$.Items1',
+            iterator: new StateMachineBuilder()
+              .perform(state1)
+              .perform(state2)
+              .perform(state3)
+              .perform(state4),
+          })
+
+          .map('Map2', {
+            itemsPath: '$.Items2',
+            iterator: new StateMachineBuilder()
+              .perform(state5)
+              .perform(state6)
+              .perform(state7)
+              .perform(state8),
+          })
+
+          .build(definitionScope);
       },
     });
 
