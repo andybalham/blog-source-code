@@ -10,11 +10,11 @@ import sfn = require('@aws-cdk/aws-stepfunctions');
 
 describe('StateMachineWithGraph', () => {
   //
-  it.skip('renders Twenty Questions', async () => {
+  it('renders Twenty Questions', async () => {
     new TwentyQuestionsBuilderStack(new cdk.App(), 'Test');
   });
 
-  it.skip('renders simple chain', async () => {
+  it('renders simple chain', async () => {
     //
     const cdkStack = new cdk.Stack();
 
@@ -62,7 +62,7 @@ describe('StateMachineWithGraph', () => {
     writeGraphJson(builderStateMachine);
   });
 
-  it('renders multiple choices', async () => {
+  it.only('renders multiple choices', async () => {
     //
     const cdkStack = new cdk.Stack();
 
@@ -103,29 +103,38 @@ describe('StateMachineWithGraph', () => {
         const state3 = new sfn.Pass(definitionScope, 'State3');
         const state4 = new sfn.Pass(definitionScope, 'State4');
 
-        return new StateMachineBuilder()
+        return (
+          new StateMachineBuilder()
 
-          .choice('Choice1', {
-            choices: [{ when: sfn.Condition.booleanEquals('$.var1', true), next: 'Choice2' }],
-            otherwise: 'Choice3',
-          })
+            .choice('Choice1', {
+              choices: [{ when: sfn.Condition.booleanEquals('$.var1', true), next: 'Choice2' }],
+              otherwise: 'Choice3',
+            })
 
-          .choice('Choice2', {
-            choices: [{ when: sfn.Condition.booleanEquals('$.var2', true), next: 'State1' }],
-            otherwise: 'State2',
-          })
+            .choice('Choice2', {
+              choices: [{ when: sfn.Condition.booleanEquals('$.var2', true), next: 'State1' }],
+              otherwise: 'State2',
+            })
 
-          .choice('Choice3', {
-            choices: [{ when: sfn.Condition.booleanEquals('$.var3', true), next: 'Choice3' }],
-            otherwise: 'Choice4',
-          })
+            .choice('Choice3', {
+              choices: [{ when: sfn.Condition.booleanEquals('$.var3', true), next: 'Choice3' }],
+              otherwise: 'Choice4',
+            })
 
-          .perform(state1, { end: true })
-          .perform(state2, { end: true })
-          .perform(state3, { end: true })
-          .perform(state4, { end: true })
+            .perform(state1)
+            .end()
 
-          .build(definitionScope);
+            .perform(state2)
+            .end()
+
+            .perform(state3)
+            .end()
+
+            .perform(state4)
+            .end()
+
+            .build(definitionScope)
+        );
       },
     });
 
