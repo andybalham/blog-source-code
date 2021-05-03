@@ -1,0 +1,8 @@
+{
+  "StartAt": "TODO",
+  "States": {
+    "TODO": {
+      "Type": "Succeed"
+    }
+  }
+}

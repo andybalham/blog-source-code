@@ -139,11 +139,11 @@ describe('StateMachineWithGraph', () => {
     writeGraphJson(builderStateMachine);
   });
 
-  it.only('renders iterators', async () => {
+  it('renders maps', async () => {
     //
     const cdkStack = new cdk.Stack();
 
-    const cdkStateMachine = new StateMachineWithGraph(cdkStack, 'Iterators-CDK', {
+    const cdkStateMachine = new StateMachineWithGraph(cdkStack, 'Maps-CDK', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const state1 = new sfn.Pass(definitionScope, 'State1');
@@ -173,7 +173,7 @@ describe('StateMachineWithGraph', () => {
 
     const builderStack = new cdk.Stack();
 
-    const builderStateMachine = new StateMachineWithGraph(builderStack, 'Iterators-Builder', {
+    const builderStateMachine = new StateMachineWithGraph(builderStack, 'Maps-Builder', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const state1 = new sfn.Pass(definitionScope, 'State1');
@@ -203,6 +203,74 @@ describe('StateMachineWithGraph', () => {
               .perform(state6)
               .perform(state7)
               .perform(state8),
+          })
+
+          .build(definitionScope);
+      },
+    });
+
+    writeGraphJson(builderStateMachine);
+  });
+
+  it('renders parallels', async () => {
+    //
+    const cdkStack = new cdk.Stack();
+
+    const cdkStateMachine = new StateMachineWithGraph(cdkStack, 'Parallels-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const state1 = new sfn.Pass(definitionScope, 'State1');
+        const state2 = new sfn.Pass(definitionScope, 'State2');
+        const state3 = new sfn.Pass(definitionScope, 'State3');
+        const state4 = new sfn.Pass(definitionScope, 'State4');
+        const state5 = new sfn.Pass(definitionScope, 'State5');
+        const state6 = new sfn.Pass(definitionScope, 'State6');
+        const state7 = new sfn.Pass(definitionScope, 'State7');
+        const state8 = new sfn.Pass(definitionScope, 'State8');
+
+        return sfn.Chain.start(
+          new sfn.Parallel(definitionScope, 'Parallel1')
+            .branch(state1.next(state2))
+            .branch(state3.next(state4))
+            .next(
+              new sfn.Parallel(definitionScope, 'Parallel2')
+                .branch(state5.next(state6))
+                .branch(state7.next(state8))
+            )
+        );
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStack = new cdk.Stack();
+
+    const builderStateMachine = new StateMachineWithGraph(builderStack, 'Parallels-Builder', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const state1 = new sfn.Pass(definitionScope, 'State1');
+        const state2 = new sfn.Pass(definitionScope, 'State2');
+        const state3 = new sfn.Pass(definitionScope, 'State3');
+        const state4 = new sfn.Pass(definitionScope, 'State4');
+        const state5 = new sfn.Pass(definitionScope, 'State5');
+        const state6 = new sfn.Pass(definitionScope, 'State6');
+        const state7 = new sfn.Pass(definitionScope, 'State7');
+        const state8 = new sfn.Pass(definitionScope, 'State8');
+
+        return new StateMachineBuilder()
+
+          .parallel('Parallel1', {
+            branches: [
+              new StateMachineBuilder().perform(state1).perform(state2),
+              new StateMachineBuilder().perform(state3).perform(state4),
+            ],
+          })
+
+          .parallel('Parallel2', {
+            branches: [
+              new StateMachineBuilder().perform(state5).perform(state6),
+              new StateMachineBuilder().perform(state7).perform(state8),
+            ],
           })
 
           .build(definitionScope);
