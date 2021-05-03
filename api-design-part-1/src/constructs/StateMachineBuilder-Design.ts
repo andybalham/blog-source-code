@@ -15,15 +15,25 @@ interface BuilderChoiceProps extends sfn.ChoiceProps {
 
 interface BuilderParallelProps extends sfn.ParallelProps {
   branches: StateMachineBuilder[];
+  catches?: BuilderCatchProps[];
 }
 
 interface BuilderMapProps extends sfn.MapProps {
   iterator: StateMachineBuilder;
+  catches?: BuilderCatchProps[];
+}
+
+interface BuilderCatchProps extends sfn.CatchProps {
+  handler: string;
+}
+
+interface BuilderPerformProps {
+  catches?: BuilderCatchProps[];
 }
 
 export default class StateMachineBuilder {
   //
-  perform(state: sfn.State): StateMachineBuilder {
+  perform(state: sfn.State, props?: BuilderPerformProps): StateMachineBuilder {
     return this;
   }
 

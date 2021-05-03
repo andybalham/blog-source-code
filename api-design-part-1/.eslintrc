@@ -7,9 +7,10 @@
   "plugins": ["@typescript-eslint", "prettier"],
   "extends": [
     "airbnb-typescript",
-    "prettier",
     "plugin:@typescript-eslint/eslint-recommended",
-    "plugin:@typescript-eslint/recommended"
+    "plugin:@typescript-eslint/recommended",
+    "prettier", 
+    "prettier/@typescript-eslint"
   ],
   "settings": {
     "react": {

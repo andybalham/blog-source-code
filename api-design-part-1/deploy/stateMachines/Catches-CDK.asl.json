@@ -1,0 +1,137 @@
+{
+  "StartAt": "Function1",
+  "States": {
+    "Function1": {
+      "Next": "Function2",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.Timeout"
+          ],
+          "Next": "Catch1"
+        },
+        {
+          "ErrorEquals": [
+            "States.All"
+          ],
+          "Next": "Catch2"
+        }
+      ],
+      "Type": "Task",
+      "Resource": "${Token[TOKEN.155]}",
+      "Parameters": {
+        "expression": "$.Var1 > 0",
+        "expressionAttributeValues": {
+          "$.Var1.$": "$.Var1"
+        }
+      }
+    },
+    "Function2": {
+      "Next": "Map1",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.Timeout"
+          ],
+          "Next": "Catch3"
+        },
+        {
+          "ErrorEquals": [
+            "States.All"
+          ],
+          "Next": "Catch4"
+        }
+      ],
+      "Type": "Task",
+      "Resource": "${Token[TOKEN.155]}",
+      "Parameters": {
+        "expression": "$.Var1 > 0",
+        "expressionAttributeValues": {
+          "$.Var1.$": "$.Var1"
+        }
+      }
+    },
+    "Map1": {
+      "Type": "Map",
+      "Next": "Parallel1",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Catch5"
+        }
+      ],
+      "Iterator": {
+        "StartAt": "State1",
+        "States": {
+          "State1": {
+            "Type": "Pass",
+            "Next": "State2"
+          },
+          "State2": {
+            "Type": "Pass",
+            "End": true
+          }
+        }
+      },
+      "ItemsPath": "$.Items1"
+    },
+    "Parallel1": {
+      "Type": "Parallel",
+      "End": true,
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Catch6"
+        }
+      ],
+      "Branches": [
+        {
+          "StartAt": "State3",
+          "States": {
+            "State3": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "State4",
+          "States": {
+            "State4": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        }
+      ]
+    },
+    "Catch6": {
+      "Type": "Pass",
+      "End": true
+    },
+    "Catch5": {
+      "Type": "Pass",
+      "End": true
+    },
+    "Catch3": {
+      "Type": "Pass",
+      "End": true
+    },
+    "Catch4": {
+      "Type": "Pass",
+      "End": true
+    },
+    "Catch1": {
+      "Type": "Pass",
+      "End": true
+    },
+    "Catch2": {
+      "Type": "Pass",
+      "End": true
+    }
+  }
+}

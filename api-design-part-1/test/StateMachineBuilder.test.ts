@@ -1,6 +1,5 @@
 /* eslint-disable no-new */
-/* eslint-disable import/order */
-// eslint-disable-next-line import/order
+import sfnTasks = require('@aws-cdk/aws-stepfunctions-tasks');
 import TwentyQuestionsBuilderStack from '../deploy/TwentyQuestionsBuilderStack';
 import { StateMachineWithGraph } from '../src/constructs';
 import { writeGraphJson } from '../deploy/utils';
@@ -272,6 +271,139 @@ describe('StateMachineWithGraph', () => {
               new StateMachineBuilder().perform(state7).perform(state8),
             ],
           })
+
+          .build(definitionScope);
+      },
+    });
+
+    writeGraphJson(builderStateMachine);
+  });
+
+  it.only('renders catches', async () => {
+    //
+    const cdkStack = new cdk.Stack();
+
+    const cdkStateMachine = new StateMachineWithGraph(cdkStack, 'Catches-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const function1 = new sfnTasks.EvaluateExpression(definitionScope, 'Function1', {
+          expression: '$.Var1 > 0',
+        });
+        const function2 = new sfnTasks.EvaluateExpression(definitionScope, 'Function2', {
+          expression: '$.Var1 > 0',
+        });
+
+        const catch1 = new sfn.Pass(definitionScope, 'Catch1');
+        const catch2 = new sfn.Pass(definitionScope, 'Catch2');
+        const catch3 = new sfn.Pass(definitionScope, 'Catch3');
+        const catch4 = new sfn.Pass(definitionScope, 'Catch4');
+        const catch5 = new sfn.Pass(definitionScope, 'Catch5');
+        const catch6 = new sfn.Pass(definitionScope, 'Catch6');
+
+        const state1 = new sfn.Pass(definitionScope, 'State1');
+        const state2 = new sfn.Pass(definitionScope, 'State2');
+        const state3 = new sfn.Pass(definitionScope, 'State3');
+        const state4 = new sfn.Pass(definitionScope, 'State4');
+
+        return sfn.Chain.start(
+          function1
+            .addCatch(catch1, { errors: ['States.Timeout'] })
+            .addCatch(catch2, { errors: ['States.All'] })
+            .next(
+              function2
+                .addCatch(catch3, { errors: ['States.Timeout'] })
+                .addCatch(catch4, { errors: ['States.All'] })
+                .next(
+                  new sfn.Map(definitionScope, 'Map1', {
+                    itemsPath: '$.Items1',
+                  })
+                    .iterator(state1.next(state2))
+                    .addCatch(catch5)
+                    .next(
+                      new sfn.Parallel(definitionScope, 'Parallel1')
+                        .branch(state3, state4)
+                        .addCatch(catch6)
+                    )
+                )
+            )
+        );
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStack = new cdk.Stack();
+
+    const builderStateMachine = new StateMachineWithGraph(builderStack, 'Catches-Builder', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const function1 = new sfnTasks.EvaluateExpression(definitionScope, 'Function1', {
+          expression: '$.Var1 > 0',
+        });
+        const function2 = new sfnTasks.EvaluateExpression(definitionScope, 'Function2', {
+          expression: '$.Var1 > 0',
+        });
+
+        const catch1 = new sfn.Pass(definitionScope, 'Catch1');
+        const catch2 = new sfn.Pass(definitionScope, 'Catch2');
+        const catch3 = new sfn.Pass(definitionScope, 'Catch3');
+        const catch4 = new sfn.Pass(definitionScope, 'Catch4');
+        const catch5 = new sfn.Pass(definitionScope, 'Catch5');
+        const catch6 = new sfn.Pass(definitionScope, 'Catch6');
+
+        const state1 = new sfn.Pass(definitionScope, 'State1');
+        const state2 = new sfn.Pass(definitionScope, 'State2');
+        const state3 = new sfn.Pass(definitionScope, 'State3');
+        const state4 = new sfn.Pass(definitionScope, 'State4');
+
+        return new StateMachineBuilder()
+
+          .perform(function1, {
+            catches: [
+              { errors: ['States.Timeout'], handler: 'Catch1' },
+              { errors: ['States.All'], handler: 'Catch2' },
+            ],
+          })
+
+          .perform(function2, {
+            catches: [
+              { errors: ['States.Timeout'], handler: 'Catch3' },
+              { errors: ['States.All'], handler: 'Catch4' },
+            ],
+          })
+
+          .map('Map1', {
+            iterator: new StateMachineBuilder().perform(state1).perform(state2),
+            catches: [{ handler: 'Catch5' }],
+          })
+
+          .parallel('Parallel1', {
+            branches: [
+              new StateMachineBuilder().perform(state3),
+              new StateMachineBuilder().perform(state4),
+            ],
+            catches: [{ handler: 'Catch6' }],
+          })
+
+          .end()
+
+          .perform(catch1)
+          .end()
+
+          .perform(catch2)
+          .end()
+
+          .perform(catch3)
+          .end()
+
+          .perform(catch4)
+          .end()
+
+          .perform(catch5)
+          .end()
+
+          .perform(catch6)
+          .end()
 
           .build(definitionScope);
       },
