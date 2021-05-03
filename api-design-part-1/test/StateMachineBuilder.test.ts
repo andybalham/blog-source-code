@@ -27,9 +27,11 @@ describe('StateMachineWithGraph', () => {
         const state5 = new sfn.Pass(definitionScope, 'State5');
         const state6 = new sfn.Pass(definitionScope, 'State6');
 
-        return sfn.Chain.start(
+        const definition = sfn.Chain.start(
           state1.next(state2.next(state3.next(state4.next(state5.next(state6)))))
         );
+
+        return definition;
       },
     });
 
@@ -47,14 +49,18 @@ describe('StateMachineWithGraph', () => {
         const state5 = new sfn.Pass(definitionScope, 'State5');
         const state6 = new sfn.Pass(definitionScope, 'State6');
 
-        return new StateMachineBuilder()
+        const definition = new StateMachineBuilder()
+
           .perform(state1)
           .perform(state2)
           .perform(state3)
           .perform(state4)
           .perform(state5)
           .perform(state6)
+
           .build(definitionScope);
+
+        return definition;
       },
     });
 
@@ -73,7 +79,7 @@ describe('StateMachineWithGraph', () => {
         const state3 = new sfn.Pass(definitionScope, 'State3');
         const state4 = new sfn.Pass(definitionScope, 'State4');
 
-        return sfn.Chain.start(
+        const definition = sfn.Chain.start(
           new sfn.Choice(definitionScope, 'Choice1')
             .when(
               sfn.Condition.booleanEquals('$.var1', true),
@@ -87,6 +93,8 @@ describe('StateMachineWithGraph', () => {
                 .otherwise(state4)
             )
         );
+
+        return definition;
       },
     });
 
@@ -102,7 +110,7 @@ describe('StateMachineWithGraph', () => {
         const state3 = new sfn.Pass(definitionScope, 'State3');
         const state4 = new sfn.Pass(definitionScope, 'State4');
 
-        return new StateMachineBuilder()
+        const definition = new StateMachineBuilder()
 
           .choice('Choice1', {
             choices: [{ when: sfn.Condition.booleanEquals('$.var1', true), next: 'Choice2' }],
@@ -132,6 +140,8 @@ describe('StateMachineWithGraph', () => {
           .end()
 
           .build(definitionScope);
+
+        return definition;
       },
     });
 
@@ -154,7 +164,7 @@ describe('StateMachineWithGraph', () => {
         const state7 = new sfn.Pass(definitionScope, 'State7');
         const state8 = new sfn.Pass(definitionScope, 'State8');
 
-        return sfn.Chain.start(
+        const definition = sfn.Chain.start(
           new sfn.Map(definitionScope, 'Map1', {
             itemsPath: '$.Items1',
           })
@@ -165,6 +175,8 @@ describe('StateMachineWithGraph', () => {
               }).iterator(state5.next(state6.next(state7.next(state8))))
             )
         );
+
+        return definition;
       },
     });
 
@@ -184,8 +196,7 @@ describe('StateMachineWithGraph', () => {
         const state7 = new sfn.Pass(definitionScope, 'State7');
         const state8 = new sfn.Pass(definitionScope, 'State8');
 
-        return new StateMachineBuilder()
-
+        const definition = new StateMachineBuilder()
           .map('Map1', {
             itemsPath: '$.Items1',
             iterator: new StateMachineBuilder()
@@ -194,7 +205,6 @@ describe('StateMachineWithGraph', () => {
               .perform(state3)
               .perform(state4),
           })
-
           .map('Map2', {
             itemsPath: '$.Items2',
             iterator: new StateMachineBuilder()
@@ -203,8 +213,9 @@ describe('StateMachineWithGraph', () => {
               .perform(state7)
               .perform(state8),
           })
-
           .build(definitionScope);
+
+        return definition;
       },
     });
 
@@ -227,7 +238,7 @@ describe('StateMachineWithGraph', () => {
         const state7 = new sfn.Pass(definitionScope, 'State7');
         const state8 = new sfn.Pass(definitionScope, 'State8');
 
-        return sfn.Chain.start(
+        const definition = sfn.Chain.start(
           new sfn.Parallel(definitionScope, 'Parallel1')
             .branch(state1.next(state2))
             .branch(state3.next(state4))
@@ -237,6 +248,8 @@ describe('StateMachineWithGraph', () => {
                 .branch(state7.next(state8))
             )
         );
+
+        return definition;
       },
     });
 
@@ -256,7 +269,7 @@ describe('StateMachineWithGraph', () => {
         const state7 = new sfn.Pass(definitionScope, 'State7');
         const state8 = new sfn.Pass(definitionScope, 'State8');
 
-        return new StateMachineBuilder()
+        const definition = new StateMachineBuilder()
 
           .parallel('Parallel1', {
             branches: [
@@ -273,6 +286,8 @@ describe('StateMachineWithGraph', () => {
           })
 
           .build(definitionScope);
+
+        return definition;
       },
     });
 
@@ -305,7 +320,7 @@ describe('StateMachineWithGraph', () => {
         const state3 = new sfn.Pass(definitionScope, 'State3');
         const state4 = new sfn.Pass(definitionScope, 'State4');
 
-        return sfn.Chain.start(
+        const definition = sfn.Chain.start(
           function1
             .addCatch(catch1, { errors: ['States.Timeout'] })
             .addCatch(catch2, { errors: ['States.All'] })
@@ -327,6 +342,8 @@ describe('StateMachineWithGraph', () => {
                 )
             )
         );
+
+        return definition;
       },
     });
 
@@ -356,7 +373,7 @@ describe('StateMachineWithGraph', () => {
         const state3 = new sfn.Pass(definitionScope, 'State3');
         const state4 = new sfn.Pass(definitionScope, 'State4');
 
-        return new StateMachineBuilder()
+        const definition = new StateMachineBuilder()
 
           .perform(function1, {
             catches: [
@@ -406,9 +423,13 @@ describe('StateMachineWithGraph', () => {
           .end()
 
           .build(definitionScope);
+
+        return definition;
       },
     });
 
     writeGraphJson(builderStateMachine);
   });
+
+  // TODO 03May21: Common states?
 });

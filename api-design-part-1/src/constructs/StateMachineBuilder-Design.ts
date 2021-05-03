@@ -13,6 +13,14 @@ interface BuilderChoiceProps extends sfn.ChoiceProps {
   otherwise: string;
 }
 
+interface BuilderCatchProps extends sfn.CatchProps {
+  handler: string;
+}
+
+interface BuilderPerformProps {
+  catches?: BuilderCatchProps[];
+}
+
 interface BuilderParallelProps extends sfn.ParallelProps {
   branches: StateMachineBuilder[];
   catches?: BuilderCatchProps[];
@@ -20,14 +28,6 @@ interface BuilderParallelProps extends sfn.ParallelProps {
 
 interface BuilderMapProps extends sfn.MapProps {
   iterator: StateMachineBuilder;
-  catches?: BuilderCatchProps[];
-}
-
-interface BuilderCatchProps extends sfn.CatchProps {
-  handler: string;
-}
-
-interface BuilderPerformProps {
   catches?: BuilderCatchProps[];
 }
 
