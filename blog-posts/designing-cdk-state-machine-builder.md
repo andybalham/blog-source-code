@@ -33,7 +33,7 @@ const definition = new StateMachineBuilder()
 
 The idea here is that we add states sequentially to the instantiated `StateMachineBuilder`, and when complete we call the `build` method to return a definition. The advantage is that we can easily see the states and their order, we can easily reorder them, and that [Prettier](https://prettier.io/) will format nicely for us.
 
-To get the code to compile, I started to create a skeleton implementation for `StateMachineBuilder`.
+To get the code to compile, I created a skeleton implementation for `StateMachineBuilder`.
 
 ```TypeScript
 export default class StateMachineBuilder {
@@ -47,9 +47,9 @@ export default class StateMachineBuilder {
 }
 ```
 
-At this moment of the development, I am not overly concerned about fleshing out the implementation. For me, the danger of doing adding implementation at this stage is that you make it harder for you to rework the API as you explore the problem space. This runs the risk of tying yourself into abstractions and syntax that you have to live with forever, and that may well have benefitted from refinement.
+At this moment of the development, I was not overly concerned about fleshing out the implementation. For me, the danger of doing adding implementation at this stage is that you make it harder for you to rework the API as you explore the problem space. This runs the risk of tying yourself into abstractions and syntax that you have to live with forever, and that may well have benefitted from refinement.
 
-At this stage, I am content if I can envisage how the implementation would work. In this case, I can envisage the `StateMachineBuilder` accumulating the states, and then wiring them up when `build` is called. Given this, I was happy to proceed to the next example, choices.
+At this stage, I was content if I can envisage how the implementation would work. In this case, I envisaged the `StateMachineBuilder` accumulating the states, and then wiring them up when `build` is called. Given this, I was happy to proceed to the next example, choices.
 
 For this, I created a CDK definition for the following flow:
 
@@ -74,7 +74,7 @@ const definition = sfn.Chain.start(
 );
 ```
 
-On the readability front, I find the distance between the `when` and `otherwise` for `Choice1` to be less than ideal. However, at least [Prettier](https://prettier.io/) has done a decent job with providing meaningful indentation in this case. On the maintainability front, nothing jumps out for the example.
+On the readability front, I found the distance between the `when` and `otherwise` for `Choice1` to be less than ideal. However, at least [Prettier](https://prettier.io/) had done a decent job with providing meaningful indentation in this case.
 
 Using the fluent builder approach, I played around with various syntaxes and settled on the following approach: 
 
@@ -115,9 +115,9 @@ The first big choice (no pun intended) was to have the builder instantiate the `
 
 The next choice was how to do the branching. In contrast to the CDK approach, I decided on using references to the `id` values of the states. Whilst this could lead to errors, I could envisage the `build` method doing validation and picking these up. Given this, I was happy to go with this approach, as it avoids the problem of ever-increasing indentation as the branches get more and more nested.
 
-I originally went with the approach that the `choice` would drop through to the next step in the flow. However, after experimenting with writing a few mock examples, I felt that having an explicit `otherwise` made the code more readable, whilst also having the benefit of matching the terminology of CDK.
+I originally went with the approach that the `choice` would drop through to the next step in the flow. However, after experimenting with writing a few mock examples, I felt that having an explicit `otherwise` made the code more readable, whilst also having the benefit of matching the terminology of CDK. This reworking was very straightforward, as I had yet to write any implementation. All I needed to write, was just enough code to make the examples compile.
 
-This example brought to light the need for an `end` method. This will indicate to the `StateMachineBuilder` that the previous state is a terminal one. With this, the resulting skeleton implementation for `StateMachineBuilder` became the following:
+To facilitate this, I needed to extend the CDK `ChoiceProps` to allow the `choice` to be defined with the core CDK properties, along with an array of choices and the alternative.
 
 ```TypeScript
 interface BuilderChoice {
@@ -129,27 +129,15 @@ interface BuilderChoiceProps extends sfn.ChoiceProps {
   choices: BuilderChoice[];
   otherwise: string;
 }
-
-export default class StateMachineBuilder {
-  // Snip
-
-  choice(id: string, props: BuilderChoiceProps): StateMachineBuilder {
-    return this;
-  }
-
-  end(): StateMachineBuilder {
-    return this;
-  }
-
-  build(scope: cdk.Construct): sfn.IChainable {
-    return new sfn.Succeed(scope, 'TODO');
-  }
-}
 ```
 
-TODO: Maps
+This example brought to light the need for an `end` method. This indicates to the `StateMachineBuilder` that the previous state is a terminal one. 
+
+Another state machine control structure is the `Map` state. This state selects an array of items from the input and invokes an inner state machine for each item. I considered the following example, where two `Map` states each invokes inner state machines with four sequential steps.
 
 TODO: Image
+
+Using raw CDK, this is defined as:
 
 ```TypeScript
 const definition = sfn.Chain.start(
@@ -165,7 +153,9 @@ const definition = sfn.Chain.start(
 );
 ```
 
-TODO: Becomes
+In this case, I felt that [Prettier](https://prettier.io/) was not helping and the result was difficult to read. For me, it was hard to see that the `iterator` was part of the `Map`, and that there were two `Map` states chained together.
+
+A bit of experimentation with various syntaxes later, I settled on defining this scenario as follows:
 
 ```TypeScript
 const definition = new StateMachineBuilder()
@@ -188,25 +178,21 @@ const definition = new StateMachineBuilder()
   .build(definitionScope);
 ```
 
-TODO: `StateMachineBuilder`
+In this case, [Prettier](https://prettier.io/) has done a splendid job for us and, IMHO, it is very clear as to what is going on. If we needed to reorder the steps, then that would be very straightforward indeed. The key to this was supplying the `map` method with a `BuilderMapProps` instance.
 
 ```TypeScript
 interface BuilderMapProps extends sfn.MapProps {
   iterator: StateMachineBuilder;
 }
-
-export default class StateMachineBuilder {
-  // Snip
-
-  map(id: string, props: BuilderMapProps): StateMachineBuilder {
-    return this;
-  }
-}
 ```
 
-TODO: Parallels
+The question that I had to consider was whether I could make the implementation work. I could envisage the outer `build` method traversing the states and, for `Map` states, invoking the `build` method on any `iterator` values with the scope passed to it. This would give us the definition to supply to the CDK `iterator` method. Confident this would probably work, I moved onto how to implement `Parallel` states.
+
+One of the very nice features of step functions is that you can easily set up tasks to be performed in parallel, with the infrastructure taking care of the heavy lifting for you. Consider the following state machine, where we have two `Parallel` states that each have two branches to be executed in parallel.
 
 TODO: Image
+
+In CDK, and formatted by [Prettier](https://prettier.io/), the resulting definition is as follows:
 
 ```TypeScript
 const definition = sfn.Chain.start(
@@ -221,7 +207,7 @@ const definition = sfn.Chain.start(
 );
 ```
 
-TODO: Becomes
+As with the `Map` example, [Prettier](https://prettier.io/) doesn't do a great job with readability. For the syntax, I took inspiration from the approach for `map` and came up with the following.
 
 ```TypeScript
 const definition = new StateMachineBuilder()
@@ -240,37 +226,48 @@ const definition = new StateMachineBuilder()
   .build(definitionScope);
 ```
 
-TODO: `StateMachineBuilder`
+This approach resulted in the `branches` being clearly nested within the parent `parallel` methods. As with `map`, I needed to provide an extended properties instance to define them.
 
 ```TypeScript
 interface BuilderParallelProps extends sfn.ParallelProps {
   branches: StateMachineBuilder[];
 }
-
-export default class StateMachineBuilder {
-  // Snip
-
-  parallel(id: string, props: BuilderParallelProps): StateMachineBuilder {
-    return this;
-  }
-}
 ```
 
-TODO: Catches
+The final step function control structure to tackle was `catch` blocks. These allow errors generated by states to be caught, and then the flow of the state machine routed to recovery processing. Consider the following flow where the all the states have `catch` blocks to recover from a variety of errors.
 
 TODO: Image
 
-```TypeScript
-
-```
-
-TODO: Becomes
+This is expressed in CDK as follows:
 
 ```TypeScript
-
+const definition = sfn.Chain.start(
+  function1
+    .addCatch(catch1, { errors: ['States.Timeout'] })
+    .addCatch(catch2, { errors: ['States.All'] })
+    .next(
+      function2
+        .addCatch(catch3, { errors: ['States.Timeout'] })
+        .addCatch(catch4, { errors: ['States.All'] })
+        .next(
+          new sfn.Map(definitionScope, 'Map1', {
+            itemsPath: '$.Items1',
+          })
+            .iterator(state1.next(state2))
+            .addCatch(catch5)
+            .next(
+              new sfn.Parallel(definitionScope, 'Parallel1')
+                .branch(state3, state4)
+                .addCatch(catch6)
+            )
+        )
+    )
+);
 ```
 
-TODO: `StateMachineBuilder`
+As with some of the other examples, I felt that [Prettier](https://prettier.io/) had resulted in the essence of the flow being lost. It certainly wasn't clear to me that, at the top level, there were four sequential states, each with error handlers. I imagined trying to re-order them and hoping to get the brackets right.
+
+It made sense to me to have the handlers as properties of the state. With this in mind, I created `BuilderCatchProps` and added it to the properties for the `perform`, `map`, and `parallel` methods.
 
 ```TypeScript
 interface BuilderCatchProps extends sfn.CatchProps {
@@ -290,16 +287,61 @@ interface BuilderMapProps extends sfn.MapProps {
   iterator: StateMachineBuilder;
   catches?: BuilderCatchProps[];
 }
-
-export default class StateMachineBuilder {
-  // Snip
-
-  perform(state: sfn.State, props?: BuilderPerformProps): StateMachineBuilder {
-    return this;
-  }
-}
 ```
 
-Conclusion: In theory, we have an alternative way of defining state machines in CDK. It is more verbose, that is for sure, but the hope is that it is more readable, more maintainable, and plays nicer with [Prettier](https://prettier.io/).
+Now we could rewrite the CDK version as the following.
 
-In the next post, we shall see how we get on with implementing the theory.
+```TypeScript
+const definition = new StateMachineBuilder()
+
+  .perform(function1, {
+    catches: [
+      { errors: ['States.Timeout'], handler: 'Catch1' },
+      { errors: ['States.All'], handler: 'Catch2' },
+    ],
+  })
+  .perform(function2, {
+    catches: [
+      { errors: ['States.Timeout'], handler: 'Catch3' },
+      { errors: ['States.All'], handler: 'Catch4' },
+    ],
+  })
+  .map('Map1', {
+    iterator: new StateMachineBuilder().perform(state1).perform(state2),
+    catches: [{ handler: 'Catch5' }],
+  })
+  .parallel('Parallel1', {
+    branches: [
+      new StateMachineBuilder().perform(state3),
+      new StateMachineBuilder().perform(state4),
+    ],
+    catches: [{ handler: 'Catch6' }],
+  })
+  .end()
+
+  .perform(catch1)
+  .end()
+
+  .perform(catch2)
+  .end()
+
+  .perform(catch3)
+  .end()
+
+  .perform(catch4)
+  .end()
+
+  .perform(catch5)
+  .end()
+
+  .perform(catch6)
+  .end()
+
+  .build(definitionScope);
+```
+
+Whilst the definition is considerably lengthier than the CDK version, I felt that the essence of the flow was well-separated from the exception handling. It also led me to consider a `performAndEnd` method, with the aim of making the definition a bit briefer. However, at this stage I felt that keeping the syntax simple was the way to go.
+
+At this point, I had an alternative way of defining state machines in CDK. At least in theory. It is more verbose, that is for sure, but - IMHO - it is more readable, more maintainable, and plays nicer with [Prettier](https://prettier.io/). This API was developed with the implementation in mind, but without committing to one. This allowed me to iterate very quickly over different ways of expressing the problem with code, until I found one that I felt was as good as I could make it.
+
+In the next post, we shall see how I get on with implementing the theory.
