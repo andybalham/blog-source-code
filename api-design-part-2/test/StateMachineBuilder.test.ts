@@ -72,7 +72,7 @@ describe('StateMachineWithGraph', () => {
     );
   });
 
-  it.only('renders multiple choices', async () => {
+  it('renders multiple choices', async () => {
     //
     const cdkStack = new cdk.Stack();
 
@@ -94,7 +94,7 @@ describe('StateMachineWithGraph', () => {
             )
             .otherwise(
               new sfn.Choice(definitionScope, 'Choice3')
-                .when(sfn.Condition.booleanEquals('$.var2', true), state3)
+                .when(sfn.Condition.booleanEquals('$.var3', true), state3)
                 .otherwise(state4)
             )
         );
@@ -105,7 +105,7 @@ describe('StateMachineWithGraph', () => {
 
     writeGraphJson(cdkStateMachine);
 
-    const builderStack = new cdk.Stack();
+    const builderStack = new cdk.Stack(new cdk.App(), 'XXX');
 
     const builderStateMachine = new StateMachineWithGraph(builderStack, 'MultipleChoice-Builder', {
       getDefinition: (definitionScope): sfn.IChainable => {
@@ -128,8 +128,8 @@ describe('StateMachineWithGraph', () => {
           })
 
           .choice('Choice3', {
-            choices: [{ when: sfn.Condition.booleanEquals('$.var3', true), next: 'Choice3' }],
-            otherwise: 'Choice4',
+            choices: [{ when: sfn.Condition.booleanEquals('$.var3', true), next: 'State3' }],
+            otherwise: 'State4',
           })
 
           .perform(state1)
@@ -206,22 +206,22 @@ describe('StateMachineWithGraph', () => {
         const state8 = new sfn.Pass(definitionScope, 'State8');
 
         const definition = new StateMachineBuilder()
-          // .map('Map1', {
-          //   itemsPath: '$.Items1',
-          //   iterator: new StateMachineBuilder()
-          //     .perform(state1)
-          //     .perform(state2)
-          //     .perform(state3)
-          //     .perform(state4),
-          // })
-          // .map('Map2', {
-          //   itemsPath: '$.Items2',
-          //   iterator: new StateMachineBuilder()
-          //     .perform(state5)
-          //     .perform(state6)
-          //     .perform(state7)
-          //     .perform(state8),
-          // })
+          .map('Map1', {
+            itemsPath: '$.Items1',
+            iterator: new StateMachineBuilder()
+              .perform(state1)
+              .perform(state2)
+              .perform(state3)
+              .perform(state4),
+          })
+          .map('Map2', {
+            itemsPath: '$.Items2',
+            iterator: new StateMachineBuilder()
+              .perform(state5)
+              .perform(state6)
+              .perform(state7)
+              .perform(state8),
+          })
           .build(definitionScope);
 
         return definition;
@@ -229,6 +229,10 @@ describe('StateMachineWithGraph', () => {
     });
 
     writeGraphJson(builderStateMachine);
+
+    expect(JSON.parse(builderStateMachine.graphJson)).to.deep.equal(
+      JSON.parse(cdkStateMachine.graphJson)
+    );
   });
 
   it('renders parallels', async () => {
@@ -280,19 +284,19 @@ describe('StateMachineWithGraph', () => {
 
         const definition = new StateMachineBuilder()
 
-          // .parallel('Parallel1', {
-          //   branches: [
-          //     new StateMachineBuilder().perform(state1).perform(state2),
-          //     new StateMachineBuilder().perform(state3).perform(state4),
-          //   ],
-          // })
+          .parallel('Parallel1', {
+            branches: [
+              new StateMachineBuilder().perform(state1).perform(state2),
+              new StateMachineBuilder().perform(state3).perform(state4),
+            ],
+          })
 
-          // .parallel('Parallel2', {
-          //   branches: [
-          //     new StateMachineBuilder().perform(state5).perform(state6),
-          //     new StateMachineBuilder().perform(state7).perform(state8),
-          //   ],
-          // })
+          .parallel('Parallel2', {
+            branches: [
+              new StateMachineBuilder().perform(state5).perform(state6),
+              new StateMachineBuilder().perform(state7).perform(state8),
+            ],
+          })
 
           .build(definitionScope);
 
@@ -301,9 +305,13 @@ describe('StateMachineWithGraph', () => {
     });
 
     writeGraphJson(builderStateMachine);
+
+    expect(JSON.parse(builderStateMachine.graphJson)).to.deep.equal(
+      JSON.parse(cdkStateMachine.graphJson)
+    );
   });
 
-  it('renders catches', async () => {
+  it.only('renders catches', async () => {
     //
     const cdkStack = new cdk.Stack();
 
@@ -384,52 +392,53 @@ describe('StateMachineWithGraph', () => {
 
         const definition = new StateMachineBuilder()
 
-          // .perform(function1, {
-          //   catches: [
-          //     { errors: ['States.Timeout'], handler: 'Catch1' },
-          //     { errors: ['States.All'], handler: 'Catch2' },
-          //   ],
-          // })
+          .tryPerform(function1, {
+            catches: [
+              { errors: ['States.Timeout'], handler: 'Catch1' },
+              { errors: ['States.All'], handler: 'Catch2' },
+            ],
+          })
 
-          // .perform(function2, {
-          //   catches: [
-          //     { errors: ['States.Timeout'], handler: 'Catch3' },
-          //     { errors: ['States.All'], handler: 'Catch4' },
-          //   ],
-          // })
+          .tryPerform(function2, {
+            catches: [
+              { errors: ['States.Timeout'], handler: 'Catch3' },
+              { errors: ['States.All'], handler: 'Catch4' },
+            ],
+          })
 
-          // .map('Map1', {
-          //   iterator: new StateMachineBuilder().perform(state1).perform(state2),
-          //   catches: [{ handler: 'Catch5' }],
-          // })
+          .map('Map1', {
+            itemsPath: '$.Items1',
+            iterator: new StateMachineBuilder().perform(state1).perform(state2),
+            catches: [{ handler: 'Catch5' }],
+          })
 
-          // .parallel('Parallel1', {
-          //   branches: [
-          //     new StateMachineBuilder().perform(state3),
-          //     new StateMachineBuilder().perform(state4),
-          //   ],
-          //   catches: [{ handler: 'Catch6' }],
-          // })
+          .parallel('Parallel1', {
+            branches: [
+              new StateMachineBuilder().perform(state3),
+              new StateMachineBuilder().perform(state4),
+            ],
+            catches: [{ handler: 'Catch6' }],
+          })
 
-          // .end()
+          .end()
 
-          // .perform(catch1)
-          // .end()
+          .perform(catch1)
+          .end()
 
-          // .perform(catch2)
-          // .end()
+          .perform(catch2)
+          .end()
 
-          // .perform(catch3)
-          // .end()
+          .perform(catch3)
+          .end()
 
-          // .perform(catch4)
-          // .end()
+          .perform(catch4)
+          .end()
 
-          // .perform(catch5)
-          // .end()
+          .perform(catch5)
+          .end()
 
-          // .perform(catch6)
-          // .end()
+          .perform(catch6)
+          .end()
 
           .build(definitionScope);
 
@@ -438,7 +447,21 @@ describe('StateMachineWithGraph', () => {
     });
 
     writeGraphJson(builderStateMachine);
+
+    expect(getComparableGraph(builderStateMachine)).to.deep.equal(
+      getComparableGraph(cdkStateMachine)
+    );
   });
 
   // TODO 03May21: Common states?
 });
+
+function getComparableGraph(builderStateMachine: StateMachineWithGraph) {
+  //
+  const graphJson = builderStateMachine.graphJson;
+
+  const comparableGraphJson = graphJson.replace(/\[TOKEN\.[0-9]+\]/g, '[TOKEN.n]');
+
+  return JSON.parse(comparableGraphJson);
+}
+

@@ -1,8 +1,54 @@
 {
-  "StartAt": "TODO",
+  "StartAt": "Choice1",
   "States": {
-    "TODO": {
-      "Type": "Succeed"
+    "Choice1": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.var1",
+          "BooleanEquals": true,
+          "Next": "Choice2"
+        }
+      ],
+      "Default": "Choice3"
+    },
+    "Choice3": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.var3",
+          "BooleanEquals": true,
+          "Next": "State3"
+        }
+      ],
+      "Default": "State4"
+    },
+    "State4": {
+      "Type": "Pass",
+      "End": true
+    },
+    "State3": {
+      "Type": "Pass",
+      "End": true
+    },
+    "Choice2": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.var2",
+          "BooleanEquals": true,
+          "Next": "State1"
+        }
+      ],
+      "Default": "State2"
+    },
+    "State2": {
+      "Type": "Pass",
+      "End": true
+    },
+    "State1": {
+      "Type": "Pass",
+      "End": true
     }
   }
 }

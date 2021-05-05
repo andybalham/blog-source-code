@@ -1,0 +1,57 @@
+{
+  "StartAt": "Map1",
+  "States": {
+    "Map1": {
+      "Type": "Map",
+      "Next": "Map2",
+      "Iterator": {
+        "StartAt": "State1",
+        "States": {
+          "State1": {
+            "Type": "Pass",
+            "Next": "State2"
+          },
+          "State2": {
+            "Type": "Pass",
+            "Next": "State3"
+          },
+          "State3": {
+            "Type": "Pass",
+            "Next": "State4"
+          },
+          "State4": {
+            "Type": "Pass",
+            "End": true
+          }
+        }
+      },
+      "ItemsPath": "$.Items1"
+    },
+    "Map2": {
+      "Type": "Map",
+      "End": true,
+      "Iterator": {
+        "StartAt": "State5",
+        "States": {
+          "State5": {
+            "Type": "Pass",
+            "Next": "State6"
+          },
+          "State6": {
+            "Type": "Pass",
+            "Next": "State7"
+          },
+          "State7": {
+            "Type": "Pass",
+            "Next": "State8"
+          },
+          "State8": {
+            "Type": "Pass",
+            "End": true
+          }
+        }
+      },
+      "ItemsPath": "$.Items2"
+    }
+  }
+}

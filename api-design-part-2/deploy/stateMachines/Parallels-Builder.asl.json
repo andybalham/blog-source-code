@@ -1,8 +1,69 @@
 {
-  "StartAt": "TODO",
+  "StartAt": "Parallel1",
   "States": {
-    "TODO": {
-      "Type": "Succeed"
+    "Parallel1": {
+      "Type": "Parallel",
+      "Next": "Parallel2",
+      "Branches": [
+        {
+          "StartAt": "State1",
+          "States": {
+            "State1": {
+              "Type": "Pass",
+              "Next": "State2"
+            },
+            "State2": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "State3",
+          "States": {
+            "State3": {
+              "Type": "Pass",
+              "Next": "State4"
+            },
+            "State4": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        }
+      ]
+    },
+    "Parallel2": {
+      "Type": "Parallel",
+      "End": true,
+      "Branches": [
+        {
+          "StartAt": "State5",
+          "States": {
+            "State5": {
+              "Type": "Pass",
+              "Next": "State6"
+            },
+            "State6": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "State7",
+          "States": {
+            "State7": {
+              "Type": "Pass",
+              "Next": "State8"
+            },
+            "State8": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        }
+      ]
     }
   }
 }

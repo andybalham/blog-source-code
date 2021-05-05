@@ -16,7 +16,7 @@
       "Type": "Choice",
       "Choices": [
         {
-          "Variable": "$.var2",
+          "Variable": "$.var3",
           "BooleanEquals": true,
           "Next": "State3"
         }
