@@ -398,20 +398,17 @@ describe('StateMachineWithGraph', () => {
               { errors: ['States.All'], handler: 'Catch2' },
             ],
           })
-
           .tryPerform(function2, {
             catches: [
               { errors: ['States.Timeout'], handler: 'Catch3' },
               { errors: ['States.All'], handler: 'Catch4' },
             ],
           })
-
           .map('Map1', {
             itemsPath: '$.Items1',
             iterator: new StateMachineBuilder().perform(state1).perform(state2),
             catches: [{ handler: 'Catch5' }],
           })
-
           .parallel('Parallel1', {
             branches: [
               new StateMachineBuilder().perform(state3),
@@ -419,7 +416,6 @@ describe('StateMachineWithGraph', () => {
             ],
             catches: [{ handler: 'Catch6' }],
           })
-
           .end()
 
           .perform(catch1)
@@ -464,4 +460,3 @@ function getComparableGraph(builderStateMachine: StateMachineWithGraph) {
 
   return JSON.parse(comparableGraphJson);
 }
-
