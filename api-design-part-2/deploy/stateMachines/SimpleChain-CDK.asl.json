@@ -1,0 +1,29 @@
+{
+  "StartAt": "State1",
+  "States": {
+    "State1": {
+      "Type": "Pass",
+      "Next": "State2"
+    },
+    "State2": {
+      "Type": "Pass",
+      "Next": "State3"
+    },
+    "State3": {
+      "Type": "Pass",
+      "Next": "State4"
+    },
+    "State4": {
+      "Type": "Pass",
+      "Next": "State5"
+    },
+    "State5": {
+      "Type": "Pass",
+      "Next": "State6"
+    },
+    "State6": {
+      "Type": "Pass",
+      "End": true
+    }
+  }
+}

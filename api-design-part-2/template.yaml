@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  A project to showcase how the AWS Toolkit for VS Code can be used to help the development of AWS step functions.
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Runtime: nodejs12.x
+    CodeUri: dist/src/functions/
+    Timeout: 3
+
+Parameters:
+  AppPrefix:
+    Type: String
+    Default: SFAWSTK
+
+Resources:
+  PerformIdentityCheck:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AppPrefix}-PerformIdentityCheck
+      Handler: index.handlePerformIdentityCheck
+
+  AggregateIdentityResults:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AppPrefix}-AggregateIdentityResults
+      Handler: index.handleAggregateIdentityResults
+
+  PerformAffordabilityCheck:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AppPrefix}-PerformAffordabilityCheck
+      Handler: index.handlePerformAffordabilityCheck
+
+  SendEmail:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AppPrefix}-SendEmail
+      Handler: index.handleSendEmail
+
+  NotifyUnderwriter:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AppPrefix}-NotifyUnderwriter
+      Handler: index.handleNotifyUnderwriter
+
+  ProcessApplicationStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub ${AppPrefix}-ProcessApplication
+      DefinitionUri: src/state-machines/ProcessApplication.asl.json
+      DefinitionSubstitutions:
+        PerformIdentityCheckFunctionArn: !GetAtt PerformIdentityCheck.Arn
+        AggregateIdentityResultsFunctionArn: !GetAtt AggregateIdentityResults.Arn
+        PerformAffordabilityCheckFunctionArn: !GetAtt PerformAffordabilityCheck.Arn
+        SendEmailFunctionArn: !GetAtt SendEmail.Arn
+        NotifyUnderwriterFunctionArn: !GetAtt NotifyUnderwriter.Arn
+      Policies:
+        - AWSLambdaRole
+
+Outputs:
+  ProcessApplicationStateMachineArn:
+    Description: "Process Application state machine ARN"
+    Value: !GetAtt ProcessApplicationStateMachine.Arn

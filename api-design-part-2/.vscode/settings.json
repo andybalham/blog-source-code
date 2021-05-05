@@ -1,0 +1,33 @@
+{
+    "cSpell.language": "en-GB",
+    "cSpell.words": [
+        "Chainable",
+        "ESNEXT",
+        "Meatpie",
+        "Nextable",
+        "SFAWSTK",
+        "downlevel",
+        "linebreak",
+        "nanoid",
+        "sourcemap",
+        "tslib",
+        "typechecking",
+        "vars"
+    ],
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    },
+    "cSpell.ignoreWords": [
+        "aws",
+        "cdk",
+        "deploy",
+        "esbuild",
+        "exts",
+        "index",
+        "node",
+        "npx",
+        "prefer",
+        "stepfunctions",
+        "ts"
+    ]
+}
