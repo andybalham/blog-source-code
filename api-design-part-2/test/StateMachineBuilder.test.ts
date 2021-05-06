@@ -311,7 +311,7 @@ describe('StateMachineWithGraph', () => {
     );
   });
 
-  it.only('renders catches', async () => {
+  it('renders catches', async () => {
     //
     const cdkStack = new cdk.Stack();
 
