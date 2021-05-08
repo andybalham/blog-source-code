@@ -114,6 +114,8 @@ export default class StateMachineBuilder {
   //
   private readonly steps = new Array<BuilderStep>();
 
+  private readonly stepStateByIndex = new Map<number, sfn.State>();
+
   static new(): StateMachineBuilder {
     return new StateMachineBuilder();
   }
@@ -154,6 +156,12 @@ export default class StateMachineBuilder {
 
   private getStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
     //
+    const visitedStepState = this.stepStateByIndex.get(stepIndex);
+
+    if (visitedStepState !== undefined) {
+      return visitedStepState;
+    }
+
     const step = this.steps[stepIndex];
 
     let stepChain: sfn.IChainable;
@@ -193,6 +201,8 @@ export default class StateMachineBuilder {
 
     const stepState = (step as PerformStep).state;
 
+    this.stepStateByIndex.set(stepIndex, stepState);
+
     const stepChain = this.hasNextStep(stepIndex)
       ? stepState.next(this.getStepChain(scope, stepIndex + 1))
       : stepState;
@@ -226,6 +236,8 @@ export default class StateMachineBuilder {
 
     const stepState = (step as TryPerformStep).state;
 
+    this.stepStateByIndex.set(stepIndex, stepState);
+
     step.props.catches.forEach((catchProps) => {
       //
       const handlerStepIndex = this.getStepIndexById(catchProps.handler);
@@ -245,27 +257,31 @@ export default class StateMachineBuilder {
     //
     const step = this.steps[stepIndex] as ChoiceStep;
 
-    const stepChain = new sfn.Choice(scope, step.id, step.props);
+    const stepState = new sfn.Choice(scope, step.id, step.props);
+
+    this.stepStateByIndex.set(stepIndex, stepState);
 
     step.props.choices.forEach((choice) => {
-      const gotoIndex = this.getStepIndexById(choice.next);
-      stepChain.when(choice.when, this.getStepChain(scope, gotoIndex));
+      const nextIndex = this.getStepIndexById(choice.next);
+      stepState.when(choice.when, this.getStepChain(scope, nextIndex));
     });
 
     const otherwiseStepIndex = this.getStepIndexById(step.props.otherwise);
 
-    stepChain.otherwise(this.getStepChain(scope, otherwiseStepIndex));
+    stepState.otherwise(this.getStepChain(scope, otherwiseStepIndex));
 
-    return stepChain;
+    return stepState;
   }
 
   private getMapStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
     //
     const step = this.steps[stepIndex] as MapStep;
 
-    const map = new sfn.Map(scope, step.id, step.props);
+    const stepState = new sfn.Map(scope, step.id, step.props);
 
-    map.iterator(step.props.iterator.build(scope));
+    this.stepStateByIndex.set(stepIndex, stepState);
+
+    stepState.iterator(step.props.iterator.build(scope));
 
     if (step.props?.catches) {
       step.props.catches.forEach((catchProps) => {
@@ -273,13 +289,13 @@ export default class StateMachineBuilder {
         const handlerStepIndex = this.getStepIndexById(catchProps.handler);
         const handlerChainable = this.getStepChain(scope, handlerStepIndex);
 
-        map.addCatch(handlerChainable, catchProps);
+        stepState.addCatch(handlerChainable, catchProps);
       });
     }
 
     const hasNextStep = this.hasNextStep(stepIndex);
 
-    const stepChain = hasNextStep ? map.next(this.getStepChain(scope, stepIndex + 1)) : map;
+    const stepChain = hasNextStep ? stepState.next(this.getStepChain(scope, stepIndex + 1)) : stepState;
 
     return stepChain;
   }
@@ -288,10 +304,12 @@ export default class StateMachineBuilder {
     //
     const step = this.steps[stepIndex] as ParallelStep;
 
-    const parallel = new sfn.Parallel(scope, step.id, step.props);
+    const stepState = new sfn.Parallel(scope, step.id, step.props);
+
+    this.stepStateByIndex.set(stepIndex, stepState);
 
     step.props.branches.forEach((branch) => {
-      parallel.branch(branch.build(scope));
+      stepState.branch(branch.build(scope));
     });
 
     if (step.props?.catches) {
@@ -300,15 +318,15 @@ export default class StateMachineBuilder {
         const handlerStepIndex = this.getStepIndexById(catchProps.handler);
         const handlerChainable = this.getStepChain(scope, handlerStepIndex);
 
-        parallel.addCatch(handlerChainable, catchProps);
+        stepState.addCatch(handlerChainable, catchProps);
       });
     }
 
     const hasNextStep = this.hasNextStep(stepIndex);
 
     const stepChain = hasNextStep
-      ? parallel.next(this.getStepChain(scope, stepIndex + 1))
-      : parallel;
+      ? stepState.next(this.getStepChain(scope, stepIndex + 1))
+      : stepState;
 
     return stepChain;
   }

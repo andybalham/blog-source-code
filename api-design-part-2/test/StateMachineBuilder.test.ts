@@ -3,7 +3,7 @@ import sfnTasks = require('@aws-cdk/aws-stepfunctions-tasks');
 import TwentyQuestionsBuilderStack from '../deploy/TwentyQuestionsBuilderStack';
 import { StateMachineWithGraph } from '../src/constructs';
 import { writeGraphJson } from '../deploy/utils';
-import StateMachineBuilder from '../src/constructs/StateMachineBuilder-v1';
+import { StateMachineBuilder } from '../src/constructs';
 import cdk = require('@aws-cdk/core');
 import sfn = require('@aws-cdk/aws-stepfunctions');
 import { expect } from 'chai';
@@ -446,6 +446,132 @@ describe('StateMachineWithGraph', () => {
 
     expect(getComparableGraph(builderStateMachine)).to.deep.equal(
       getComparableGraph(cdkStateMachine)
+    );
+  });
+
+  it('renders common state', async () => {
+    //
+    const cdkStack = new cdk.Stack(new cdk.App(), 'CommonState-CDK');
+
+    const cdkStateMachine = new StateMachineWithGraph(cdkStack, 'CommonState-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const state1 = new sfn.Pass(definitionScope, 'State1');
+        const state2 = new sfn.Pass(definitionScope, 'State2');
+        const state3 = new sfn.Pass(definitionScope, 'State3');
+
+        state2.next(state3);
+
+        const definition = sfn.Chain.start(
+          new sfn.Choice(definitionScope, 'Choice1')
+            .when(sfn.Condition.booleanEquals('$.var1', true), state2)
+            .otherwise(
+              new sfn.Choice(definitionScope, 'Choice2')
+                .when(sfn.Condition.booleanEquals('$.var2', true), state2)
+                .otherwise(state1)
+            )
+        );
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStack = new cdk.Stack(new cdk.App(), 'CommonState-Builder');
+
+    const builderStateMachine = new StateMachineWithGraph(builderStack, 'CommonState-Builder', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const state1 = new sfn.Pass(definitionScope, 'State1');
+        const state2 = new sfn.Pass(definitionScope, 'State2');
+        const state3 = new sfn.Pass(definitionScope, 'State3');
+
+        const definition = new StateMachineBuilder()
+
+          .choice('Choice1', {
+            choices: [{ when: sfn.Condition.booleanEquals('$.var1', true), next: 'State2' }],
+            otherwise: 'Choice2',
+          })
+
+          .choice('Choice2', {
+            choices: [{ when: sfn.Condition.booleanEquals('$.var2', true), next: 'State2' }],
+            otherwise: 'State1',
+          })
+
+          .perform(state1)
+          .end()
+
+          .perform(state2)
+          .perform(state3)
+          .end()
+
+          .build(definitionScope);
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(builderStateMachine);
+
+    expect(JSON.parse(builderStateMachine.graphJson)).to.deep.equal(
+      JSON.parse(cdkStateMachine.graphJson)
+    );
+  });
+
+  it('renders backwards loop', async () => {
+    //
+    const cdkStack = new cdk.Stack();
+
+    const cdkStateMachine = new StateMachineWithGraph(cdkStack, 'BackwardsLoop-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const state1 = new sfn.Pass(definitionScope, 'State1');
+        const state2 = new sfn.Pass(definitionScope, 'State2');
+
+        const definition = sfn.Chain.start(
+          state1.next(
+            new sfn.Choice(definitionScope, 'Choice1')
+              .when(sfn.Condition.booleanEquals('$.var1', true), state1)
+              .otherwise(state2)
+          )
+        );
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStack = new cdk.Stack(new cdk.App(), 'BackwardsLoop-Builder');
+
+    const builderStateMachine = new StateMachineWithGraph(builderStack, 'BackwardsLoop-Builder', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const state1 = new sfn.Pass(definitionScope, 'State1');
+        const state2 = new sfn.Pass(definitionScope, 'State2');
+
+        const definition = new StateMachineBuilder()
+
+          .perform(state1)
+
+          .choice('Choice1', {
+            choices: [{ when: sfn.Condition.booleanEquals('$.var1', true), next: 'State1' }],
+            otherwise: 'State2',
+          })
+
+          .perform(state2)
+
+          .build(definitionScope);
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(builderStateMachine);
+
+    expect(JSON.parse(builderStateMachine.graphJson)).to.deep.equal(
+      JSON.parse(cdkStateMachine.graphJson)
     );
   });
 

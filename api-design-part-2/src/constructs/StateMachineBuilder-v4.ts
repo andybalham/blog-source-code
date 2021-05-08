@@ -114,6 +114,8 @@ export default class StateMachineBuilder {
   //
   private readonly steps = new Array<BuilderStep>();
 
+  private readonly stepStateByIndex = new Map<number, sfn.State>();
+
   static new(): StateMachineBuilder {
     return new StateMachineBuilder();
   }
@@ -154,54 +156,88 @@ export default class StateMachineBuilder {
 
   private getStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
     //
+    const visitedStepState = this.stepStateByIndex.get(stepIndex);
+
+    if (visitedStepState !== undefined) {
+      return visitedStepState;
+    }
+
     const step = this.steps[stepIndex];
 
-    let stepChain: sfn.IChainable;
+    let stepState: sfn.State = this.getStepState(scope, step);
+
+    this.stepStateByIndex.set(stepIndex, stepState);
+
+    this.addSubChains(scope, step, stepState);
+
+    const stepChain = this.hasNextStep(stepIndex)
+      ? ((stepState as unknown) as sfn.INextable).next(this.getStepChain(scope, stepIndex + 1))
+      : stepState;
+
+    return stepChain;
+  }
+
+  private addSubChains(scope: cdk.Construct, step: BuilderStep, stepState: sfn.State) {
+    //
+    switch (step.type) {
+      //
+      case StepType.TryPerform:
+        this.addCatches(scope, step as TryPerformStep, stepState as sfn.TaskStateBase);
+        break;
+
+      case StepType.Choice:
+        this.addChoices(scope, step as ChoiceStep, stepState as sfn.Choice);
+        break;
+
+      case StepType.Map:
+        this.addIteratorAndCatches(scope, step as MapStep, stepState as sfn.Map);
+        break;
+
+      case StepType.Parallel:
+        this.addBranchesAndCatches(scope, step as ParallelStep, stepState as sfn.Parallel);
+        break;
+    }
+  }
+
+  private getStepState(scope: cdk.Construct, step: BuilderStep) {
+    //
+    let stepState: sfn.State;
 
     switch (step.type) {
       //
       case StepType.Perform:
-        stepChain = this.getPerformStepChain(scope, stepIndex);
+        stepState = (step as PerformStep).state;
         break;
 
       case StepType.TryPerform:
-        stepChain = this.getTryPerformStepChain(scope, stepIndex);
+        stepState = (step as TryPerformStep).state;
         break;
 
       case StepType.Choice:
-        stepChain = this.getChoiceStepChain(scope, stepIndex);
+        stepState = new sfn.Choice(scope, step.id, (step as ChoiceStep).props);
         break;
 
       case StepType.Map:
-        stepChain = this.getMapStepChain(scope, stepIndex);
+        stepState = new sfn.Map(scope, step.id, (step as MapStep).props);
         break;
 
       case StepType.Parallel:
-        stepChain = this.getParallelStepChain(scope, stepIndex);
+        stepState = new sfn.Parallel(scope, step.id, (step as ParallelStep).props);
         break;
 
       default:
         throw new Error(`Unhandled step type: ${JSON.stringify(step)}`);
     }
 
-    return stepChain;
-  }
-
-  private getPerformStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
-    //
-    const step = this.steps[stepIndex] as PerformStep;
-
-    const stepState = (step as PerformStep).state;
-
-    const stepChain = this.hasNextStep(stepIndex)
-      ? stepState.next(this.getStepChain(scope, stepIndex + 1))
-      : stepState;
-
-    return stepChain;
+    return stepState;
   }
 
   private hasNextStep(stepIndex: number): boolean {
     //
+    if (this.steps[stepIndex].type === StepType.Choice) {
+      return false;
+    }
+
     const isLastStep = stepIndex === this.steps.length - 1;
     const isNextStepEnd = !isLastStep && this.steps[stepIndex + 1].type === StepType.End;
     const hasNextStep = !(isLastStep || isNextStepEnd);
@@ -220,96 +256,65 @@ export default class StateMachineBuilder {
     return stepIndex;
   }
 
-  private getTryPerformStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
+  private addCatches(
+    scope: cdk.Construct,
+    step: TryPerformStep,
+    stepState: sfn.TaskStateBase
+  ): void {
     //
-    const step = this.steps[stepIndex] as TryPerformStep;
-
-    const stepState = (step as TryPerformStep).state;
-
     step.props.catches.forEach((catchProps) => {
       //
       const handlerStepIndex = this.getStepIndexById(catchProps.handler);
-      const handlerChainable = this.getStepChain(scope, handlerStepIndex);
+      const handlerChain = this.getStepChain(scope, handlerStepIndex);
 
-      stepState.addCatch(handlerChainable, catchProps);
+      stepState.addCatch(handlerChain, catchProps);
     });
-
-    const stepChain = this.hasNextStep(stepIndex)
-      ? stepState.next(this.getStepChain(scope, stepIndex + 1))
-      : stepState;
-
-    return stepChain;
   }
 
-  private getChoiceStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
+  private addChoices(scope: cdk.Construct, step: ChoiceStep, stepState: sfn.Choice): void {
     //
-    const step = this.steps[stepIndex] as ChoiceStep;
-
-    const stepChain = new sfn.Choice(scope, step.id, step.props);
-
     step.props.choices.forEach((choice) => {
-      const gotoIndex = this.getStepIndexById(choice.next);
-      stepChain.when(choice.when, this.getStepChain(scope, gotoIndex));
+      const nextIndex = this.getStepIndexById(choice.next);
+      stepState.when(choice.when, this.getStepChain(scope, nextIndex));
     });
 
     const otherwiseStepIndex = this.getStepIndexById(step.props.otherwise);
-
-    stepChain.otherwise(this.getStepChain(scope, otherwiseStepIndex));
-
-    return stepChain;
+    stepState.otherwise(this.getStepChain(scope, otherwiseStepIndex));
   }
 
-  private getMapStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
+  private addIteratorAndCatches(scope: cdk.Construct, step: MapStep, stepState: sfn.Map): void {
     //
-    const step = this.steps[stepIndex] as MapStep;
-
-    const map = new sfn.Map(scope, step.id, step.props);
-
-    map.iterator(step.props.iterator.build(scope));
+    stepState.iterator(step.props.iterator.build(scope));
 
     if (step.props?.catches) {
       step.props.catches.forEach((catchProps) => {
         //
         const handlerStepIndex = this.getStepIndexById(catchProps.handler);
-        const handlerChainable = this.getStepChain(scope, handlerStepIndex);
+        const handlerChain = this.getStepChain(scope, handlerStepIndex);
 
-        map.addCatch(handlerChainable, catchProps);
+        stepState.addCatch(handlerChain, catchProps);
       });
     }
-
-    const hasNextStep = this.hasNextStep(stepIndex);
-
-    const stepChain = hasNextStep ? map.next(this.getStepChain(scope, stepIndex + 1)) : map;
-
-    return stepChain;
   }
 
-  private getParallelStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
+  private addBranchesAndCatches(
+    scope: cdk.Construct,
+    step: ParallelStep,
+    stepState: sfn.Parallel
+  ): void {
     //
-    const step = this.steps[stepIndex] as ParallelStep;
-
-    const parallel = new sfn.Parallel(scope, step.id, step.props);
-
     step.props.branches.forEach((branch) => {
-      parallel.branch(branch.build(scope));
+      stepState.branch(branch.build(scope));
     });
 
     if (step.props?.catches) {
       step.props.catches.forEach((catchProps) => {
         //
         const handlerStepIndex = this.getStepIndexById(catchProps.handler);
-        const handlerChainable = this.getStepChain(scope, handlerStepIndex);
+        const handlerChain = this.getStepChain(scope, handlerStepIndex);
 
-        parallel.addCatch(handlerChainable, catchProps);
+        stepState.addCatch(handlerChain, catchProps);
       });
     }
-
-    const hasNextStep = this.hasNextStep(stepIndex);
-
-    const stepChain = hasNextStep
-      ? parallel.next(this.getStepChain(scope, stepIndex + 1))
-      : parallel;
-
-    return stepChain;
   }
 }

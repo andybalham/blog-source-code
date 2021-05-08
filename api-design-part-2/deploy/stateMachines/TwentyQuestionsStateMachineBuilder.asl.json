@@ -5,7 +5,7 @@
       "Next": "HasLegs",
       "Type": "Task",
       "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.166]}",
+      "Resource": "${Token[TOKEN.163]}",
       "Parameters": {
         "expression": "($.animal.legCount) > 0",
         "expressionAttributeValues": {
@@ -28,7 +28,7 @@
       "Next": "HasScales",
       "Type": "Task",
       "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.166]}",
+      "Resource": "${Token[TOKEN.163]}",
       "Parameters": {
         "expression": "($.animal.hasScales)",
         "expressionAttributeValues": {
@@ -61,7 +61,7 @@
       "Next": "HasMoreThanTwoLegs",
       "Type": "Task",
       "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.166]}",
+      "Resource": "${Token[TOKEN.163]}",
       "Parameters": {
         "expression": "($.animal.legCount) > 2",
         "expressionAttributeValues": {
@@ -84,7 +84,7 @@
       "Next": "CanFly",
       "Type": "Task",
       "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.166]}",
+      "Resource": "${Token[TOKEN.163]}",
       "Parameters": {
         "expression": "($.animal.canFly)",
         "expressionAttributeValues": {
@@ -117,7 +117,7 @@
       "Next": "EatsHay",
       "Type": "Task",
       "ResultPath": "$.answer",
-      "Resource": "${Token[TOKEN.166]}",
+      "Resource": "${Token[TOKEN.163]}",
       "Parameters": {
         "expression": "($.animal.eatsHay)",
         "expressionAttributeValues": {

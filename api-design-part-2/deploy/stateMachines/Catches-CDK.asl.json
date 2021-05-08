@@ -18,7 +18,7 @@
         }
       ],
       "Type": "Task",
-      "Resource": "${Token[TOKEN.393]}",
+      "Resource": "${Token[TOKEN.390]}",
       "Parameters": {
         "expression": "$.Var1 > 0",
         "expressionAttributeValues": {
@@ -43,7 +43,7 @@
         }
       ],
       "Type": "Task",
-      "Resource": "${Token[TOKEN.393]}",
+      "Resource": "${Token[TOKEN.390]}",
       "Parameters": {
         "expression": "$.Var1 > 0",
         "expressionAttributeValues": {

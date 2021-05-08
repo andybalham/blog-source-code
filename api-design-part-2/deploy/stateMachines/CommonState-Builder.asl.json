@@ -1,0 +1,39 @@
+{
+  "StartAt": "Choice1",
+  "States": {
+    "Choice1": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.var1",
+          "BooleanEquals": true,
+          "Next": "State2"
+        }
+      ],
+      "Default": "Choice2"
+    },
+    "Choice2": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.var2",
+          "BooleanEquals": true,
+          "Next": "State2"
+        }
+      ],
+      "Default": "State1"
+    },
+    "State1": {
+      "Type": "Pass",
+      "End": true
+    },
+    "State2": {
+      "Type": "Pass",
+      "Next": "State3"
+    },
+    "State3": {
+      "Type": "Pass",
+      "End": true
+    }
+  }
+}

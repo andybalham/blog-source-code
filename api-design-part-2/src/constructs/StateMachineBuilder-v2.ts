@@ -114,6 +114,8 @@ export default class StateMachineBuilder {
   //
   private readonly steps = new Array<BuilderStep>();
 
+  private readonly stepChainByIndex = new Map<number, sfn.IChainable>();
+
   static new(): StateMachineBuilder {
     return new StateMachineBuilder();
   }
@@ -154,6 +156,12 @@ export default class StateMachineBuilder {
 
   private getStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
     //
+    const visitedStepChain = this.stepChainByIndex.get(stepIndex);
+
+    if (visitedStepChain !== undefined) {
+      return visitedStepChain;
+    }
+
     const step = this.steps[stepIndex];
 
     let stepChain: sfn.IChainable;
@@ -183,6 +191,8 @@ export default class StateMachineBuilder {
       default:
         throw new Error(`Unhandled step type: ${JSON.stringify(step)}`);
     }
+
+    this.stepChainByIndex.set(stepIndex, stepChain);
 
     return stepChain;
   }
