@@ -119,7 +119,7 @@ export default class StateMachineBuilder {
   }
 
   perform(state: INextableState): StateMachineBuilder {
-    this.steps.push(new PerformStep(state));
+    // this.steps.push(new PerformStep(state));
     return this;
   }
 
@@ -149,7 +149,8 @@ export default class StateMachineBuilder {
   }
 
   build(scope: cdk.Construct): sfn.IChainable {
-    return this.getStepChain(scope, 0);
+    // return this.getStepChain(scope, 0);
+    return new sfn.Pass(scope, 'TODO');
   }
 
   private getStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {

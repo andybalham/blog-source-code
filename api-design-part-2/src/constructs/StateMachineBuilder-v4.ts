@@ -164,7 +164,7 @@ export default class StateMachineBuilder {
 
     const step = this.steps[stepIndex];
 
-    let stepState: sfn.State = this.getStepState(scope, step);
+    const stepState = this.getStepState(scope, step);
 
     this.stepStateByIndex.set(stepIndex, stepState);
 
@@ -175,28 +175,6 @@ export default class StateMachineBuilder {
       : stepState;
 
     return stepChain;
-  }
-
-  private addSubChains(scope: cdk.Construct, step: BuilderStep, stepState: sfn.State) {
-    //
-    switch (step.type) {
-      //
-      case StepType.TryPerform:
-        this.addCatches(scope, step as TryPerformStep, stepState as sfn.TaskStateBase);
-        break;
-
-      case StepType.Choice:
-        this.addChoices(scope, step as ChoiceStep, stepState as sfn.Choice);
-        break;
-
-      case StepType.Map:
-        this.addIteratorAndCatches(scope, step as MapStep, stepState as sfn.Map);
-        break;
-
-      case StepType.Parallel:
-        this.addBranchesAndCatches(scope, step as ParallelStep, stepState as sfn.Parallel);
-        break;
-    }
   }
 
   private getStepState(scope: cdk.Construct, step: BuilderStep) {
@@ -256,7 +234,29 @@ export default class StateMachineBuilder {
     return stepIndex;
   }
 
-  private addCatches(
+  private addSubChains(scope: cdk.Construct, step: BuilderStep, stepState: sfn.State) {
+    //
+    switch (step.type) {
+      //
+      case StepType.TryPerform:
+        this.addTryPerformSubChains(scope, step as TryPerformStep, stepState as sfn.TaskStateBase);
+        break;
+
+      case StepType.Choice:
+        this.addChoiceSubChains(scope, step as ChoiceStep, stepState as sfn.Choice);
+        break;
+
+      case StepType.Map:
+        this.addMapSubChains(scope, step as MapStep, stepState as sfn.Map);
+        break;
+
+      case StepType.Parallel:
+        this.addParallelSubChains(scope, step as ParallelStep, stepState as sfn.Parallel);
+        break;
+    }
+  }
+
+  private addTryPerformSubChains(
     scope: cdk.Construct,
     step: TryPerformStep,
     stepState: sfn.TaskStateBase
@@ -271,7 +271,7 @@ export default class StateMachineBuilder {
     });
   }
 
-  private addChoices(scope: cdk.Construct, step: ChoiceStep, stepState: sfn.Choice): void {
+  private addChoiceSubChains(scope: cdk.Construct, step: ChoiceStep, stepState: sfn.Choice): void {
     //
     step.props.choices.forEach((choice) => {
       const nextIndex = this.getStepIndexById(choice.next);
@@ -282,7 +282,7 @@ export default class StateMachineBuilder {
     stepState.otherwise(this.getStepChain(scope, otherwiseStepIndex));
   }
 
-  private addIteratorAndCatches(scope: cdk.Construct, step: MapStep, stepState: sfn.Map): void {
+  private addMapSubChains(scope: cdk.Construct, step: MapStep, stepState: sfn.Map): void {
     //
     stepState.iterator(step.props.iterator.build(scope));
 
@@ -297,7 +297,7 @@ export default class StateMachineBuilder {
     }
   }
 
-  private addBranchesAndCatches(
+  private addParallelSubChains(
     scope: cdk.Construct,
     step: ParallelStep,
     stepState: sfn.Parallel

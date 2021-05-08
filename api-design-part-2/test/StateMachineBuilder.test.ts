@@ -14,11 +14,9 @@ describe('StateMachineWithGraph', () => {
     new TwentyQuestionsBuilderStack(new cdk.App(), 'Test');
   });
 
-  it('renders simple chain', async () => {
+  it.only('renders simple chain', async () => {
     //
-    const cdkStack = new cdk.Stack();
-
-    const cdkStateMachine = new StateMachineWithGraph(cdkStack, 'SimpleChain-CDK', {
+    const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'SimpleChain-CDK', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const state1 = new sfn.Pass(definitionScope, 'State1');
@@ -38,9 +36,7 @@ describe('StateMachineWithGraph', () => {
 
     writeGraphJson(cdkStateMachine);
 
-    const builderStack = new cdk.Stack();
-
-    const builderStateMachine = new StateMachineWithGraph(builderStack, 'SimpleChain-Builder', {
+    const builderStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'SimpleChain-Builder', {
       getDefinition: (definitionScope): sfn.IChainable => {
         //
         const state1 = new sfn.Pass(definitionScope, 'State1');
@@ -67,9 +63,10 @@ describe('StateMachineWithGraph', () => {
 
     writeGraphJson(builderStateMachine);
 
-    expect(JSON.parse(builderStateMachine.graphJson)).to.deep.equal(
-      JSON.parse(cdkStateMachine.graphJson)
-    );
+    const cdkGraph = JSON.parse(cdkStateMachine.graphJson);
+    const builderGraph = JSON.parse(builderStateMachine.graphJson);
+
+    expect(builderGraph).to.deep.equal(cdkGraph);
   });
 
   it('renders multiple choices', async () => {
