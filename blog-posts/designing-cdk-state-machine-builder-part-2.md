@@ -69,11 +69,6 @@ The first method to implement was `perform`, where we supply a state to be added
 ```TypeScript
 enum StepType {
   Perform = 'Perform',
-  TryPerform = 'TryPerform',
-  Choice = 'Choice',
-  End = 'End',
-  Map = 'Map',
-  Parallel = 'Parallel',
 }
 
 interface BuilderStep {
@@ -181,4 +176,161 @@ It turned out that the `next` method lives on a separate interface. What I wante
 interface INextableState extends sfn.State, sfn.INextable {}
 ```
 
-With this, I could replace the references to `State` and the problem with `next` went away. When I re-ran the unit test, all was good. We now had an alternative way of defining state machines in CDK. The only caveat being, they can only consist of a sequence of states. Not that useful, the next thing to look at was implementing choices.
+With this, I could replace the references to `State` and the problem with `next` went away. When I re-ran the unit test, all was good. We now had an alternative way of defining state machines in CDK. The only caveat being, they can only consist of a sequence of states. Good, but not that useful, so the next thing to look at was implementing choices.
+
+In [Part 1](https://www.10printiamcool.com/designing-a-cdk-state-machine-builder-part-1), we designed the API to define a choice as follows.
+
+```TypeScript
+.choice('Choice1', {
+  choices: [{ when: sfn.Condition.booleanEquals('$.var1', true), next: 'Choice2' }],
+  otherwise: 'Choice3',
+})
+```
+
+As with `perform`, we need to capture these details in the `choices` method. To do this, I extended the `StepType` enumeration, created a `ChoiceStep` class, and amended the `choice` method to store a `ChoiceStep` instance in the `steps` property of `StateMachineBuilder`.
+
+```TypeScript
+enum StepType {
+  // Snip
+  Choice = 'Choice',
+}
+
+class ChoiceStep implements BuilderStep {
+  //
+  constructor(public id: string, public props: BuilderChoiceProps) {
+    this.type = StepType.Choice;
+  }
+
+  type: StepType;
+}
+
+export default class StateMachineBuilder {
+  // Snip
+
+  choice(id: string, props: BuilderChoiceProps): StateMachineBuilder {
+    this.steps.push(new ChoiceStep(id, props));
+    return this;
+  }
+}
+```
+
+With this in place, I could extend the `getStepChain` method to handle the `Choice` step type and call a new `getChoiceStepChain` method.
+
+```TypeScript
+switch (step.type) {
+  // Snip
+  
+  case StepType.Choice:
+    stepChain = this.getChoiceStepChain(scope, stepIndex);
+    break;
+```
+
+For the implementation of the `getChoiceStepChain` method, I implement the following. 
+
+* Create a `Choice` instance with the properties specified in the `choice` method.
+* For each `choice` property value:
+  * Use the `id` to look up the step index
+  * Recursively call `getStepChain` with the index to get an `IChainable` instance
+  * Invoke the `when` method on the `Choice` instance
+* For the `otherwise` property value:
+  * Use the `id` to look up the step index
+  * Recursively call `getStepChain` with the index to get an `IChainable` instance
+  * Invoke the `otherwise` method on the `Choice` instance
+
+```TypeScript
+private getStepIndexById(id: string): number {
+  //
+  const stepIndex = this.steps.findIndex((s) => s.id === id);
+
+  if (stepIndex === -1) {
+    throw new Error(`Could not find index for id: ${id}`);
+  }
+
+  return stepIndex;
+}
+
+private getChoiceStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
+  //
+  const step = this.steps[stepIndex] as ChoiceStep;
+
+  const stepChain = new sfn.Choice(scope, step.id, step.props);
+
+  step.props.choices.forEach((choice) => {
+    const nextStepIndex = this.getStepIndexById(choice.next);
+    const nextStepChain = this.getStepChain(scope, nextStepIndex);
+    stepChain.when(choice.when, nextStepChain);
+  });
+
+  const otherwiseStepIndex = this.getStepIndexById(step.props.otherwise);
+  const otherwiseStepChain = this.getStepChain(scope, otherwiseStepIndex);
+  stepChain.otherwise(otherwiseStepChain);
+
+  return stepChain;
+}
+```
+
+In the `getStepIndexById` method, I made sure to shout loudly and clearly when the the `id` could not be found. In my experience, you will thank yourself if you throw informative errors when an unhandled value is encountered.
+
+We were nearly there, but one thing 
+TODO: End state
+
+```TypeScript
+.perform(state1)
+.end()
+```
+
+```TypeScript
+enum StepType {
+  // Snip
+  End = 'End',
+}
+
+class EndStep implements BuilderStep {
+  //
+  constructor() {
+    this.type = StepType.End;
+  }
+
+  id: string;
+
+  type: StepType;
+}
+
+export default class StateMachineBuilder {
+  // Snip
+
+  end(): StateMachineBuilder {
+    this.steps.push(new EndStep());
+    return this;
+  }
+}
+```
+
+TODO
+
+```TypeScript
+
+export default class StateMachineBuilder {
+  // Snip
+
+  private hasNextStep(stepIndex: number): boolean {
+    //
+    const isLastStep = stepIndex === this.steps.length - 1;
+    const isNextStepEnd = !isLastStep && this.steps[stepIndex + 1].type === StepType.End;
+    const hasNextStep = !(isLastStep || isNextStepEnd);
+
+    return hasNextStep;
+  }
+
+  private getPerformStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
+    // Snip
+
+    const stepChain = this.hasNextStep(stepIndex)
+      ? stepState.next(this.getStepChain(scope, stepIndex + 1))
+      : stepState;
+
+    return stepChain;
+  }
+}
+```
+

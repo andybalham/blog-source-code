@@ -14,7 +14,7 @@ describe('StateMachineWithGraph', () => {
     new TwentyQuestionsBuilderStack(new cdk.App(), 'Test');
   });
 
-  it.only('renders simple chain', async () => {
+  it('renders simple chain', async () => {
     //
     const cdkStateMachine = new StateMachineWithGraph(new cdk.Stack(), 'SimpleChain-CDK', {
       getDefinition: (definitionScope): sfn.IChainable => {
@@ -69,7 +69,7 @@ describe('StateMachineWithGraph', () => {
     expect(builderGraph).to.deep.equal(cdkGraph);
   });
 
-  it('renders multiple choices', async () => {
+  it.only('renders multiple choices', async () => {
     //
     const cdkStack = new cdk.Stack();
 

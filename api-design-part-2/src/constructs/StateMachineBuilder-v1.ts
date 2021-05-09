@@ -100,9 +100,8 @@ class ParallelStep implements BuilderStep {
 
 class EndStep implements BuilderStep {
   //
-  constructor(suffix: number) {
+  constructor() {
     this.type = StepType.End;
-    this.id = `End${suffix}`;
   }
 
   id: string;
@@ -123,18 +122,13 @@ export default class StateMachineBuilder {
     return this;
   }
 
-  tryPerform(state: sfn.TaskStateBase, props: BuilderTryPerformProps): StateMachineBuilder {
-    // this.steps.push(new TryPerformStep(state, props));
-    return this;
-  }
-
   choice(id: string, props: BuilderChoiceProps): StateMachineBuilder {
-    // this.steps.push(new ChoiceStep(id, props));
+    this.steps.push(new ChoiceStep(id, props));
     return this;
   }
 
   end(): StateMachineBuilder {
-    // this.steps.push(new EndStep(this.steps.length));
+    this.steps.push(new EndStep());
     return this;
   }
 
@@ -145,6 +139,11 @@ export default class StateMachineBuilder {
 
   parallel(id: string, props: BuilderParallelProps): StateMachineBuilder {
     // this.steps.push(new ParallelStep(id, props));
+    return this;
+  }
+
+  tryPerform(state: sfn.TaskStateBase, props: BuilderTryPerformProps): StateMachineBuilder {
+    // this.steps.push(new TryPerformStep(state, props));
     return this;
   }
 
@@ -248,13 +247,14 @@ export default class StateMachineBuilder {
     const stepChain = new sfn.Choice(scope, step.id, step.props);
 
     step.props.choices.forEach((choice) => {
-      const gotoIndex = this.getStepIndexById(choice.next);
-      stepChain.when(choice.when, this.getStepChain(scope, gotoIndex));
+      const nextStepIndex = this.getStepIndexById(choice.next);
+      const nextStepChain = this.getStepChain(scope, nextStepIndex);
+      stepChain.when(choice.when, nextStepChain);
     });
 
     const otherwiseStepIndex = this.getStepIndexById(step.props.otherwise);
-
-    stepChain.otherwise(this.getStepChain(scope, otherwiseStepIndex));
+    const otherwiseStepChain = this.getStepChain(scope, otherwiseStepIndex);
+    stepChain.otherwise(otherwiseStepChain);
 
     return stepChain;
   }
