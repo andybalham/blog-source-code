@@ -33,11 +33,6 @@ interface BuilderParallelProps extends sfn.ParallelProps {
   catches?: BuilderCatchProps[];
 }
 
-interface BuilderStep {
-  type: StepType;
-  id: string;
-}
-
 enum StepType {
   Perform = 'Perform',
   TryPerform = 'TryPerform',
@@ -45,6 +40,11 @@ enum StepType {
   End = 'End',
   Map = 'Map',
   Parallel = 'Parallel',
+}
+
+interface BuilderStep {
+  type: StepType;
+  id: string;
 }
 
 class PerformStep implements BuilderStep {
@@ -119,38 +119,37 @@ export default class StateMachineBuilder {
   }
 
   perform(state: INextableState): StateMachineBuilder {
-    // this.steps.push(new PerformStep(state));
+    this.steps.push(new PerformStep(state));
     return this;
   }
 
   tryPerform(state: sfn.TaskStateBase, props: BuilderTryPerformProps): StateMachineBuilder {
-    this.steps.push(new TryPerformStep(state, props));
+    // this.steps.push(new TryPerformStep(state, props));
     return this;
   }
 
   choice(id: string, props: BuilderChoiceProps): StateMachineBuilder {
-    this.steps.push(new ChoiceStep(id, props));
+    // this.steps.push(new ChoiceStep(id, props));
     return this;
   }
 
   end(): StateMachineBuilder {
-    this.steps.push(new EndStep(this.steps.length));
+    // this.steps.push(new EndStep(this.steps.length));
     return this;
   }
 
   map(id: string, props: BuilderMapProps): StateMachineBuilder {
-    this.steps.push(new MapStep(id, props));
+    // this.steps.push(new MapStep(id, props));
     return this;
   }
 
   parallel(id: string, props: BuilderParallelProps): StateMachineBuilder {
-    this.steps.push(new ParallelStep(id, props));
+    // this.steps.push(new ParallelStep(id, props));
     return this;
   }
 
   build(scope: cdk.Construct): sfn.IChainable {
-    // return this.getStepChain(scope, 0);
-    return new sfn.Pass(scope, 'TODO');
+    return this.getStepChain(scope, 0);
   }
 
   private getStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
