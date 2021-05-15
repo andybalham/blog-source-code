@@ -1,5 +1,7 @@
 In [Part 1](https://www.10printiamcool.com/designing-a-cdk-state-machine-builder-part-1) of this series, I went through my process of designing an alternative API for defining state machines using [CDK](https://aws.amazon.com/cdk/). In this part, I document my trials and tribulations of implementing that API.
 
+All the code for this post can be found in this [GitHub repo](https://github.com/andybalham/blog-source-code/tree/master/api-design-part-2).
+
 One question I always ask myself before writing any code is how am I going to test it. That is, how can I have any confidence that the code is running as I expect? I might not take a full-blown [Test-driven development (TDD)](https://en.wikipedia.org/wiki/Test-driven_development) approach, but I need to have some sort of plan of how I am going to execute the code and verify the results. Ideally, this plan involves a straightforward way to both create and repeat those tests.
 
 In [Part 1](https://www.10printiamcool.com/designing-a-cdk-state-machine-builder-part-1), I created a set of examples covering different aspects of defining state machines using CDK. In [Visualising a CDK State Machine using a custom Construct](https://www.10printiamcool.com/visualising-a-cdk-state-machine-using-a-custom-construct), I created a custom construct that outputs the graph JSON for such definitions. It seemed logical to me to combine the two; use the examples as test cases and compare the graph objects from the two implementations to verify. The result is shown below.
@@ -108,7 +110,7 @@ build(scope: cdk.Construct): sfn.IChainable {
 }
 
 private getStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
-  // TODO
+  // TODO: Recursively call getStepChain
 }
 ```
 
@@ -135,13 +137,15 @@ private getStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
 }
 ```
 
-The `getPerformStepChain` method is the place where the real work was to be done. I.e., the place where the states would be wired together to build the state machine.
+The `getPerformStepChain` method is the place where the real work was to be done. I.e., the place where the states would be wired together to build the state machine. The logic I had in mind was as follows.
 
 - Get the state for the current step
 - If there is a next step:
   - Invoke the `next` method on the current step state, passing in the chain for the next step
 - Else
   - Return the current step state
+
+This was implemented as below.
 
 ```TypeScript
 private getPerformStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
@@ -187,7 +191,7 @@ In [Part 1](https://www.10printiamcool.com/designing-a-cdk-state-machine-builder
 })
 ```
 
-As with `perform`, we need to capture these details in the `choices` method. To do this, I extended the `StepType` enumeration, created a `ChoiceStep` class, and amended the `choice` method to store a `ChoiceStep` instance in the `steps` property of `StateMachineBuilder`.
+As with `perform`, we need to capture these details in the `choices` method. To do this, I extended the `StepType` enumeration, created a `ChoiceStep` class, and amended the `choice` method to store a `ChoiceStep` instance containing the captured values.
 
 ```TypeScript
 enum StepType {
@@ -224,18 +228,9 @@ switch (step.type) {
     stepChain = this.getChoiceStepChain(scope, stepIndex);
     break;
 ```
+The implementation of the `getChoiceStepChain` required a slightly different approach, as it needed to instantiate the `State` as well as invoking the appropriate methods on it. It was for this reason that we added the `scope` parameter to the `build` method.
 
-For the implementation of the `getChoiceStepChain` method, I implement the following. 
-
-* Create a `Choice` instance with the properties specified in the `choice` method.
-* For each `choice` property value:
-  * Use the `id` to look up the step index
-  * Recursively call `getStepChain` with the index to get an `IChainable` instance
-  * Invoke the `when` method on the `Choice` instance
-* For the `otherwise` property value:
-  * Use the `id` to look up the step index
-  * Recursively call `getStepChain` with the index to get an `IChainable` instance
-  * Invoke the `otherwise` method on the `Choice` instance
+To build the resulting `Choice` state, I needed to invoke the `when` and `otherwise` methods with `IChainable` values. However, the `choices` method only captures the string `id` values. The solution was straightforward and was to create a `getStepIndexById` method to covert one to the other. I went with a simple linear lookup for now, but if performance was paramount, then a indexed lookup could be implemented. 
 
 ```TypeScript
 private getStepIndexById(id: string): number {
@@ -271,13 +266,17 @@ private getChoiceStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChaina
 
 In the `getStepIndexById` method, I made sure to shout loudly and clearly when the the `id` could not be found. In my experience, you will thank yourself if you throw informative errors when an unhandled value is encountered.
 
-We were nearly there, but one thing 
-TODO: End state
+We were nearly there, but there was still one more piece of the `choices` puzzle. To separate the various end states of the state machine, we have calls to the `end` method as follows.
 
 ```TypeScript
 .perform(state1)
 .end()
+
+.perform(state2)
+.end()
 ```
+
+Our intention here was to tell the `build` method to stop recursing and so make the previous state an 'end' state. To do this, I needed to create a new `BuilderStep` and amend the `end` method to add an instance to steps captured.
 
 ```TypeScript
 enum StepType {
@@ -306,7 +305,7 @@ export default class StateMachineBuilder {
 }
 ```
 
-TODO
+In `getPerformStepChain` we had a test for whether we should continue and recursively add a 'next' state. This test relied on the last state being the last state in the `steps` array. With the existence of the `end` states, this assumption was no longer true. To cater for this, I extended the test to check ahead for an 'end' state created and encapsulated the test in a `hasNextStep` method.
 
 ```TypeScript
 
@@ -333,4 +332,6 @@ export default class StateMachineBuilder {
   }
 }
 ```
+
+With this in place, I re-ran the unit tests and was met with unalloyed success. In the next part, I look to implement the `map` and `parallel` methods, and to implement functionality to add error handlers too.
 

@@ -133,17 +133,17 @@ export default class StateMachineBuilder {
   }
 
   map(id: string, props: BuilderMapProps): StateMachineBuilder {
-    // this.steps.push(new MapStep(id, props));
+    this.steps.push(new MapStep(id, props));
     return this;
   }
 
   parallel(id: string, props: BuilderParallelProps): StateMachineBuilder {
-    // this.steps.push(new ParallelStep(id, props));
+    this.steps.push(new ParallelStep(id, props));
     return this;
   }
 
   tryPerform(state: sfn.TaskStateBase, props: BuilderTryPerformProps): StateMachineBuilder {
-    // this.steps.push(new TryPerformStep(state, props));
+    this.steps.push(new TryPerformStep(state, props));
     return this;
   }
 
@@ -226,10 +226,8 @@ export default class StateMachineBuilder {
     const stepState = (step as TryPerformStep).state;
 
     step.props.catches.forEach((catchProps) => {
-      //
       const handlerStepIndex = this.getStepIndexById(catchProps.handler);
       const handlerChainable = this.getStepChain(scope, handlerStepIndex);
-
       stepState.addCatch(handlerChainable, catchProps);
     });
 

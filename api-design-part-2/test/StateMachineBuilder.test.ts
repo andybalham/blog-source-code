@@ -69,7 +69,7 @@ describe('StateMachineWithGraph', () => {
     expect(builderGraph).to.deep.equal(cdkGraph);
   });
 
-  it.only('renders multiple choices', async () => {
+  it('renders multiple choices', async () => {
     //
     const cdkStack = new cdk.Stack();
 
@@ -516,7 +516,7 @@ describe('StateMachineWithGraph', () => {
     );
   });
 
-  it('renders backwards loop', async () => {
+  it.only('renders backwards loop', async () => {
     //
     const cdkStack = new cdk.Stack();
 
