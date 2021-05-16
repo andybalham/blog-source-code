@@ -516,7 +516,7 @@ describe('StateMachineWithGraph', () => {
     );
   });
 
-  it.only('renders backwards loop', async () => {
+  it('renders backwards loop', async () => {
     //
     const cdkStack = new cdk.Stack();
 
@@ -572,7 +572,74 @@ describe('StateMachineWithGraph', () => {
     );
   });
 
-  // TODO 03May21: Common states?
+  it.only('renders multiple backwards loop', async () => {
+    //
+    const cdkStack = new cdk.Stack();
+
+    const cdkStateMachine = new StateMachineWithGraph(cdkStack, 'MultipleBackwardsLoop-CDK', {
+      getDefinition: (definitionScope): sfn.IChainable => {
+        //
+        const state1 = new sfn.Pass(definitionScope, 'State1');
+        const state2 = new sfn.Pass(definitionScope, 'State2');
+
+        const definition = sfn.Chain.start(
+          state1.next(
+            new sfn.Choice(definitionScope, 'Choice1')
+              .when(sfn.Condition.booleanEquals('$.var1', true), state1)
+              .otherwise(
+                new sfn.Choice(definitionScope, 'Choice2')
+                  .when(sfn.Condition.booleanEquals('$.var2', true), state1)
+                  .otherwise(state2)
+              )
+          )
+        );
+
+        return definition;
+      },
+    });
+
+    writeGraphJson(cdkStateMachine);
+
+    const builderStack = new cdk.Stack(new cdk.App(), 'MultipleBackwardsLoop-Builder');
+
+    const builderStateMachine = new StateMachineWithGraph(
+      builderStack,
+      'MultipleBackwardsLoop-Builder',
+      {
+        getDefinition: (definitionScope): sfn.IChainable => {
+          //
+          const state1 = new sfn.Pass(definitionScope, 'State1');
+          const state2 = new sfn.Pass(definitionScope, 'State2');
+
+          const definition = new StateMachineBuilder()
+
+            .perform(state1)
+
+            .choice('Choice1', {
+              choices: [{ when: sfn.Condition.booleanEquals('$.var1', true), next: state1.id }],
+              otherwise: 'Choice2',
+            })
+
+            .choice('Choice2', {
+              choices: [{ when: sfn.Condition.booleanEquals('$.var2', true), next: state1.id }],
+              otherwise: state2.id,
+            })
+
+            .perform(state2)
+
+            .build(definitionScope);
+
+          return definition;
+        },
+      }
+    );
+
+    writeGraphJson(builderStateMachine);
+
+    expect(JSON.parse(builderStateMachine.graphJson)).to.deep.equal(
+      JSON.parse(cdkStateMachine.graphJson)
+    );
+  });
 });
 
 function getComparableGraph(builderStateMachine: StateMachineWithGraph) {

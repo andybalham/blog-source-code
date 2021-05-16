@@ -1,9 +1,16 @@
-* Mention previous post
-* Mention remaining implementations
-* Mention tricky scenarios
-* Mention repo
+In my [previous post](https://www.10printiamcool.com/designing-a-cdk-state-machine-builder-part-2), I started to implement my alternative API for defining state machines in CDK. In this post, I continue this and, after a few bumps in the road, get a usable version finished and tested.
 
-`Map` states are defined as follows.
+The code for this post can be found in the GitHub repo [here](https://github.com/andybalham/blog-source-code/tree/master/api-design-part-2).
+
+As we left in in [Part 2](https://www.10printiamcool.com/designing-a-cdk-state-machine-builder-part-2), we still had the following functionality to implement.
+
+* Map states
+* Parallel states
+* Error handlers
+
+Unbeknownst to me at this point, there would also be other challenges when I started to consider some of the more involved state machine scenarios.
+
+If you recall, in our design, `Map` states are defined as follows.
 
 ```TypeScript
 .map('Map1', {
@@ -16,7 +23,7 @@
 })
 ```
 
-With `Parallel` states like this.
+With `Parallel` states defined like this.
 
 ```TypeScript
 .parallel('Parallel2', {
@@ -41,7 +48,7 @@ class ParallelStep implements BuilderStep {
 }
 ```
 
-With these in place, I could amend the following methods to store the steps for later.
+With these in place, I could amend the following methods to store the steps for later use by the `build` method.
 
 ```TypeScript
 map(id: string, props: BuilderMapProps): StateMachineBuilder {
@@ -55,7 +62,7 @@ parallel(id: string, props: BuilderParallelProps): StateMachineBuilder {
 }
 ```
 
-TODO `getStepChain`
+With the new step types being added, I needed to extend the `switch` in `getStepChain` to call new methods that return an appropriate `IChainable` instance.
 
 ```TypeScript
 case StepType.Map:
@@ -67,7 +74,14 @@ case StepType.Parallel:
   break;
 ```
 
-TODO Talk about the similarity in approach, invoking `build` on the sub-states and passing in the `scope`.
+Implementing `getMapStepChain` and `getParallelStepChain` required a very similar approach. In both cases, the `build` method is called on TODO
+
+* Create the state
+* Create the sub-state by invoking `build` with the `scope`
+* Add the sub-state to the current state
+* Wire up the next state, if there is one
+
+The difference between the two being that the `Parallel` state can have multiple sub-states.
 
 ```TypeScript
 private getMapStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
@@ -103,7 +117,9 @@ private getParallelStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChai
 }
 ```
 
-TODO: Catches
+Using the examples created in [Part 1](https://www.10printiamcool.com/designing-a-cdk-state-machine-builder-part-1) and the testing approach in [Part 2](https://www.10printiamcool.com/designing-a-cdk-state-machine-builder-part-2), I was able to verify that `StateMachineBuilder`was behaving as expected and outputting the equivalent definition.
+
+The final part in the puzzle, or so I thought, was to implement error handlers. The API design for defining these was for a `catches` array on the appropriate `props` passed in to each method, an example of which is shown below.
 
 ```TypeScript
 .perform(function1, {
@@ -126,24 +142,7 @@ TODO: Catches
 })
 ```
 
-TODO Created `PerformProps`:
-
-```TypeScript
-interface BuilderPerformProps {
-  catches: BuilderCatchProps[];
-}
-
-export default class StateMachineBuilder {
-  // Snip
-
-  tryPerform(state: INextableState, props: BuilderPerformProps): StateMachineBuilder {
-    this.steps.push(new PerformStep(state, props));
-    return this;
-  }
-}
-```
-
-TODO: No `addCatch` on INextable
+All looking pretty straightforward I thought, all I needed to do was iterate over the `catches` and invoke the `addCatch` method with with the `IChainable` for the handler state.
 
 ```TypeScript
 private getPerformStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
@@ -165,14 +164,13 @@ private getPerformStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChain
   return stepChain;
 }
 ```
-
-The problem being:
+However, there was one snag as shown below.
 
 ```
 Property 'addCatch' does not exist on type 'INextableState'. Did you mean '_addCatch'?
 ```
 
-TODO Solution to create a new method `tryPerform` that takes `TryPerformProps` a `TaskStateBase` and adds a `TryPerformStep`.
+It turned out that `addCatch` is only on `TaskStateBase`. My solution was to remove `PerformProps` from the `perform` method and rename it to `TryPerformProps`. I then created a new method called `tryPerform` that takes a `TaskStateBase` instead.
 
 ```TypeScript
 tryPerform(state: sfn.TaskStateBase, props: BuilderTryPerformProps): StateMachineBuilder {
@@ -181,7 +179,7 @@ tryPerform(state: sfn.TaskStateBase, props: BuilderTryPerformProps): StateMachin
 }
 ```
 
-The pattern could then be repeated for `map` and `parallel`, but taking into account optionality.
+I could then use my original approach for a new `getTryPerformStepChain` method, and was able to call the `addCatch` method as intended. The same pattern could then be repeated for `map` and `parallel`, but taking into account the fact that the catches are optional in these cases.
 
 ```TypeScript
 export default class StateMachineBuilder {
@@ -217,7 +215,7 @@ export default class StateMachineBuilder {
 }
 ```
 
-Running the unit tests comparing the output TODO
+All was looking promising, but running the unit tests resulted in the following failure.
 
 ```
 + expected - actual
@@ -232,7 +230,7 @@ Running the unit tests comparing the output TODO
      }
 ```
 
-TODO Created `getComparableGraph`
+As far as I understand it, the issue here is down to the way that CDK generates placeholders in the definition to link to resources later on. For our purposes, we do not care what resource this will point to. Given this, I wrote the following method to replace all token references with a generic value.
 
 ```TypeScript
 function getComparableGraph(builderStateMachine: StateMachineWithGraph) {
@@ -242,7 +240,7 @@ function getComparableGraph(builderStateMachine: StateMachineWithGraph) {
 }
 ```
 
-Now we can compare with generic placeholder values:
+In the unit tests, I amended to comparison to use the new method to compare the results.
 
 ```TypeScript
 expect(getComparableGraph(builderStateMachine)).to.deep.equal(
@@ -250,9 +248,11 @@ expect(getComparableGraph(builderStateMachine)).to.deep.equal(
 );
 ```
 
-TODO: Common states
+With this changes, all the unit tests were passing and I felt pretty good. However, I thought about other state machine scenarios and, in particular, the scenario where there is a common downstream state as shown below.
 
 TODO: Common state image
+
+This scenario is simple enough to define using our API.
 
 ```TypeScript
 const definition = new StateMachineBuilder()
@@ -275,7 +275,7 @@ const definition = new StateMachineBuilder()
   .end()
 ```
 
-We get the following error.
+However, when testing I got the following error.
 
 ```
 Error: State 'State2' already has a next state
@@ -284,6 +284,8 @@ Error: State 'State2' already has a next state
     at StateMachineBuilder.getPerformStepChain (src\constructs\StateMachineBuilder-v1.ts:196:19)
     at StateMachineBuilder.getStepChain (src\constructs\StateMachineBuilder-v1.ts:163:26)
 ```
+
+Thinking about it, this made sense. The code would have already traversed one path to `State2` through a branch of `Choice1` and invoked the `next` method. Given this, my thought was to cache the `IChainable` values for all visited steps. We could then return the cached instance and avoid multiple calls to `next`.
 
 TODO Solution:
 
@@ -354,4 +356,42 @@ const definition = sfn.Chain.start(
 );
 ```
 
-The `when` is being invoked on the `Choice` __before__ the `next`
+Here, the `when` is being invoked on the `Choice` __before__ the `next` is invoked on `state1`. In `StateMachineBuilder`, the `when` was being invoked __after__ the `next`. The underlying code must be traversing the `next` link and trying to add `Choice1` state for a second time.
+
+The solution was store the `State` instances in a lookup, before recursively calling `getStepChain`. With this lookup in place, the `getStepChain` method could resolve a step to a visited state, but before it had been wired up to any others.
+
+```TypeScript
+export default class StateMachineBuilder {
+  // Snip
+
+  private readonly stepStateByIndex = new Map<number, sfn.State>();
+
+  private getStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
+    //
+    const visitedStepState = this.stepStateByIndex.get(stepIndex);
+
+    if (visitedStepState !== undefined) {
+      return visitedStepState;
+    }
+
+    // Snip
+  }
+
+  private getPerformStepChain(scope: cdk.Construct, stepIndex: number): sfn.IChainable {
+    //
+    const step = this.steps[stepIndex] as PerformStep;
+
+    const stepState = (step as PerformStep).state;
+
+    this.stepStateByIndex.set(stepIndex, stepState);
+
+    const stepChain = this.hasNextStep(stepIndex)
+      ? stepState.next(this.getStepChain(scope, stepIndex + 1))
+      : stepState;
+
+    return stepChain;
+  }
+
+  // Snip
+}
+```
