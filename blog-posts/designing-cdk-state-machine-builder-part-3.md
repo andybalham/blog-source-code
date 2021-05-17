@@ -230,7 +230,7 @@ All was looking promising, but running the unit tests resulted in the following 
      }
 ```
 
-As far as I understand it, the issue here is down to the way that CDK generates placeholders in the definition to link to resources later on. For our purposes, we do not care what resource this will point to. Given this, I wrote the following method to replace all token references with a generic value.
+As far as I understand it, the issue here is down to the way that CDK generates placeholders in the definition to link to resources later on. For our purposes, we do not care what resource this will point to. Given this, I wrote the following method to replace all token references, such as `[TOKEN.241]`, with the generic value `[TOKEN.n]`.
 
 ```TypeScript
 function getComparableGraph(builderStateMachine: StateMachineWithGraph) {
@@ -250,7 +250,7 @@ expect(getComparableGraph(builderStateMachine)).to.deep.equal(
 
 With this changes, all the unit tests were passing and I felt pretty good. However, I thought about other state machine scenarios and, in particular, the scenario where there is a common downstream state as shown below.
 
-TODO: Common state image
+![CommonStates.png](https://cdn.hashnode.com/res/hashnode/image/upload/v1621275513847/H7TYCkRJW.png)
 
 This scenario is simple enough to define using our API.
 
@@ -285,9 +285,7 @@ Error: State 'State2' already has a next state
     at StateMachineBuilder.getStepChain (src\constructs\StateMachineBuilder-v1.ts:163:26)
 ```
 
-Thinking about it, this made sense. The code would have already traversed one path to `State2` through a branch of `Choice1` and invoked the `next` method. Given this, my thought was to cache the `IChainable` values for all visited steps. We could then return the cached instance and avoid multiple calls to `next`.
-
-TODO Solution:
+Thinking about it, this made sense. The code would have already traversed one path to `State2` through a branch of `Choice1`, and then invoked the `next` method. Given this, my thought was to cache the `IChainable` values for all visited steps. We could then return the cached instance and avoid multiple calls to `next`.
 
 ```TypeScript
 export default class StateMachineBuilder {
@@ -316,9 +314,11 @@ export default class StateMachineBuilder {
 }
 ```
 
-TODO Success! But what about loops?
+Re-running the unit tests resulted in smiles all round, as the fix had done its job. However, another scenario came to mind, that of loops. I quickly put together another unit test, this time featuring a `Choice` state that looped back to higher up the state machine.
 
-TODO: Loops image
+![Loops.png](https://cdn.hashnode.com/res/hashnode/image/upload/v1621275529639/LhwHfFfUZ.png)
+
+Again, it was quite simple to replicate the state machine using our API.
 
 ```TypeScript
 const definition = new StateMachineBuilder()
@@ -333,7 +333,7 @@ const definition = new StateMachineBuilder()
   .perform(state2)
 ```
 
-TODO But we get the error:
+What was not quite so simple, was the following error.
 
 ```
 Error: There is already a Construct with name 'Choice1' in Stack [BackwardsLoop-Builder]
@@ -344,7 +344,7 @@ Error: There is already a Construct with name 'Choice1' in Stack [BackwardsLoop-
     at StateMachineBuilder.getStepChain (src\constructs\StateMachineBuilder-v2.ts:180:26)
 ```
 
-TODO: The solution was to look at the CDK version:
+This had me stumped for a bit. The solution came from looking at the CDK version.
 
 ```TypeScript
 const definition = sfn.Chain.start(
@@ -395,3 +395,5 @@ export default class StateMachineBuilder {
   // Snip
 }
 ```
+
+This pattern was then repeated in the other methods and the tests were re-run. The result was success, but I was not quite convinced. I added a few more tests, but all seemed well. It appeared we had a working API. One other thing did bug me though, as I was aware of quite a bit of repeated code. As a result, I did a bit of refactoring whilst continuing to run the unit tests. The result can be found [here](https://github.com/andybalham/blog-source-code/blob/master/api-design-part-2/src/constructs/StateMachineBuilder-v4.ts).
