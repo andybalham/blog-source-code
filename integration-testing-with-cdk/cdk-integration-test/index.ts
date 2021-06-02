@@ -3,12 +3,12 @@
 import * as cdk from '@aws-cdk/core';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
-// import TestApi from './TestRestApi';
-// import TestStateDynamoDBTable from './TestStateDynamoDBTable';
-// import TestRunner, { TestPollResponse } from './TestRunner';
-// import TestStarterFunction from './TestStarterFunction';
-// import TestPollerFunction from './TestPollerFunction';
-// import TestStateRepository from './TestStateRepository';
+import TestApi from './TestApi';
+import TestStateDynamoDBTable from './TestStateDynamoDBTable';
+import TestRunner, { TestPollResponse } from './TestRunner';
+import TestStarterFunction from './TestStarterFunction';
+import TestPollerFunction from './TestPollerFunction';
+import TestStateRepository from './TestStateRepository';
 
 const newTestFunction = ({
   scope,
@@ -36,11 +36,11 @@ const newTestFunction = ({
 
 export {
   newTestFunction,
-  // TestRunner,
-  // TestApi,
-  // TestStarterFunction,
-  // TestPollerFunction,
-  // TestPollResponse,
-  // TestStateDynamoDBTable,
-  // TestStateRepository,
+  TestRunner,
+  TestApi,
+  TestStarterFunction,
+  TestPollerFunction,
+  TestPollResponse,
+  TestStateDynamoDBTable,
+  TestStateRepository,
 };
