@@ -80,3 +80,14 @@ The final part of the system is the calculator. The `Body updates` SQS queue sub
 
 Not one part of the system we have designed is particularly complicated. In fact, the Lambda functions are going to be very simple indeed. So simple in fact, that we might query the value in building and maintaining unit tests for them. The system functionality emerges from the interaction between the various simple resources, so it seems reasonable to target our testing on verifying that those resources work together as expected.
 
+One way to approach this is to break the system down as follows:
+
+* Event publisher: subscribes to events from an S3 bucket, reads the file contents, and raises change events to an SNS topic
+* Header index: subscribes to change events from an SNS topic, reads an S3 bucket, and exposes an API for listing the file headers
+* Result calculator: subscribes to change events from an SNS topic, uses an API to list the file headers, reads files from an S3 bucket, calculates the results and puts them in the S3 bucket
+
+![affordability-grouped.jpg](https://cdn.hashnode.com/res/hashnode/image/upload/v1622908044613/rBhYP9RB8.jpeg)
+
+With the system broken down like this, we can create CDK [constructs](https://docs.aws.amazon.com/cdk/latest/guide/constructs.html) for each part and then create individual test [stacks](https://docs.aws.amazon.com/cdk/latest/guide/stacks.html) to deploy them for testing in isolation. 
+
+Let us first consider the `Event publisher`. 
