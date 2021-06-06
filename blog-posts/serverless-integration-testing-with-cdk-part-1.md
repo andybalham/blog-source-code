@@ -90,4 +90,66 @@ One way to approach this is to break the system down as follows:
 
 With the system broken down like this, we can create CDK [constructs](https://docs.aws.amazon.com/cdk/latest/guide/constructs.html) for each part and then create individual test [stacks](https://docs.aws.amazon.com/cdk/latest/guide/stacks.html) to deploy them for testing in isolation. 
 
-Let us first consider the `Event publisher`. 
+Let us first consider the `Event publisher` construct. To the outside world, it takes in an S3 bucket and exposes an SNS topic. With this in mind, we can create the following minimal implementation. In CDK, the pattern is to provide inputs as properties on the `props` passed into the constructor, and to expose outputs as public properties on the `construct` itself.
+
+```TypeScript
+export interface FileEventPublisherProps {
+  bucket: s3.Bucket;
+}
+
+export default class FileEventPublisher extends cdk.Construct {
+  readonly fileEventTopic: sns.Topic;
+
+  constructor(scope: cdk.Construct, id: string, props: FileEventPublisherProps) {
+    super(scope, id);
+
+    this.fileEventTopic = new sns.Topic(this, `${id}FileEventTopic`, {
+      displayName: `File event topic for ${props.bucket.bucketName}`,
+    });
+
+    // TODO: Add internal resources
+  }
+}
+```
+
+With this construct, we can now create a test `stack` that will wire up the inputs and outputs of the `construct` to test resources. In this case, an S3 bucket and a Lambda function.
+
+For the Lambda function, we create one based on inline code that simply logs out the event for inspection. For the S3 bucket, we use a handy CDK property called `autoDeleteObjects`. Setting this to `true` creates a Lambda function that is triggered when the bucket is removed from the stack or when the stack is deleted. This function deletes all objects in the bucket. Having this on test buckets allows us to better clean up after ourselves. 
+
+```TypeScript
+export default class FileEventPublisherTestStack extends cdk.Stack {
+  constructor(scope: cdk.Construct, id: string) {
+    super(scope, id);
+
+    const testBucket = new s3.Bucket(this, 'TestBucket', {
+      autoDeleteObjects: true,
+    });
+
+    const testSubscriber = new lambda.Function(this, 'TestSubscriber', {
+      handler: 'index.handler',
+      runtime: lambda.Runtime.NODEJS_12_X,
+      code: lambda.Code.fromInline(
+        `exports.handler = (event) => { console.log(JSON.stringify(event)) }`
+      ),
+    });
+
+    const sut = new FileEventPublisher(this, 'SUT', {
+      bucket: testBucket,
+    });
+
+    sut.fileEventTopic.addSubscription(new subscriptions.LambdaSubscription(testSubscriber));
+  }
+}
+```
+
+The `stack` can then be deployed as part of a CDK `App` as follows.
+
+```TypeScript
+const app = new cdk.App();
+
+new FileEventPublisherTestStack(app, 'FileEventPublisherTestStack');
+```
+
+We now have an S3 bucket to drop test files into, and we have a Lambda function that outputs the resulting events for us to verify. If we are using [VS Code](https://code.visualstudio.com/) and the [AWS Toolkit](https://aws.amazon.com/visualstudiocode/), then we can do both of these things without leaving our editor whilst we develop and test the functionality. I have left out the implementation details of the event publisher, but if you are curious then you can check out all the code on the [GitHub repo](https://github.com/andybalham/blog-source-code/tree/master/integration-testing-with-cdk).
+
+Now, manually testing the deployed functionality is fine, but what we should be striving for are some repeatable tests that can be automated. TODO...
