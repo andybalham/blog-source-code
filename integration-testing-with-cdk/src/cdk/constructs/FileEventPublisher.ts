@@ -5,10 +5,12 @@ import * as s3n from '@aws-cdk/aws-s3-notifications';
 import * as sns from '@aws-cdk/aws-sns';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as lambdaEvents from '@aws-cdk/aws-lambda-event-sources';
+import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
 import * as dynamodb from '@aws-cdk/aws-dynamodb';
+import path from 'path';
 
 export interface FileEventPublisherProps {
-  bucket: s3.Bucket;
+  fileBucket: s3.Bucket;
 }
 
 export default class FileEventPublisher extends cdk.Construct {
@@ -17,54 +19,59 @@ export default class FileEventPublisher extends cdk.Construct {
   constructor(scope: cdk.Construct, id: string, props: FileEventPublisherProps) {
     super(scope, id);
 
-    const hashesTable = new dynamodb.Table(this, 'HashesTable', {
+    const fileHashesTable = new dynamodb.Table(this, 'FileHashesTable', {
       partitionKey: { name: 's3Key', type: dynamodb.AttributeType.STRING },
-      sortKey: { name: 'contentType', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'sectionType', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
     });
 
-    // TODO 06Jun21: Implement HashWriterFunction
-    const hashWriterFunction = new lambda.Function(this, 'HashWriterFunction', {
-      handler: 'index.handler',
-      runtime: lambda.Runtime.NODEJS_12_X,
-      code: lambda.Code.fromInline(
-        `exports.handler = (event) => { console.log(JSON.stringify(event)); }`
-      ),
-      environment: {
-        HASHES_TABLE_NAME: hashesTable.tableName,
-      },
+    const hashWriterFunction = this.newNodejsFunction('FileHashWriterFunction', 'fileHashWriter', {
+      FILE_HASHES_TABLE_NAME: fileHashesTable.tableName,
     });
 
-    hashesTable.grantWriteData(hashWriterFunction);
-
-    props.bucket.addEventNotification(
+    props.fileBucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
       new s3n.LambdaDestination(hashWriterFunction)
     );
 
+    props.fileBucket.grantRead(hashWriterFunction);
+    fileHashesTable.grantWriteData(hashWriterFunction);
+
     this.fileEventTopic = new sns.Topic(this, `${id}FileEventTopic`, {
-      displayName: `File event topic for ${props.bucket.bucketName}`,
+      displayName: `File event topic for ${props.fileBucket.bucketName}`,
     });
 
-    // TODO 06Jun21: Implement EventPublisherFunction
-    const eventPublisherFunction = new lambda.Function(this, 'EventPublisherFunction', {
-      handler: 'index.handler',
-      runtime: lambda.Runtime.NODEJS_12_X,
-      code: lambda.Code.fromInline(
-        `exports.handler = (event) => { console.log(JSON.stringify(event)); }`
-      ),
-      environment: {
+    const fileEventPublisherFunction = this.newNodejsFunction(
+      'FileEventPublisherFunction',
+      'fileEventPublisher',
+      {
         FILE_EVENT_TOPIC_ARN: this.fileEventTopic.topicArn,
-      },
-    });
+      }
+    );
 
-    eventPublisherFunction.addEventSource(
-      new lambdaEvents.DynamoEventSource(hashesTable, {
+    fileEventPublisherFunction.addEventSource(
+      new lambdaEvents.DynamoEventSource(fileHashesTable, {
         startingPosition: lambda.StartingPosition.TRIM_HORIZON,
       })
     );
 
-    this.fileEventTopic.grantPublish(eventPublisherFunction);
+    this.fileEventTopic.grantPublish(fileEventPublisherFunction);
+  }
+
+  private newNodejsFunction(
+    functionId: string,
+    functionModule: string,
+    environment: any
+  ): lambda.Function {
+    //
+    const functionEntryBase = path.join(__dirname, '..', '..', '..', 'src', 'functions');
+
+    return new lambdaNodejs.NodejsFunction(this, functionId, {
+      runtime: lambda.Runtime.NODEJS_12_X,
+      entry: path.join(functionEntryBase, `${functionModule}.ts`),
+      handler: 'handler',
+      environment,
+    });
   }
 }

@@ -86,7 +86,7 @@ One way to approach this is to break the system down as follows:
 * Header index: subscribes to change events from an SNS topic, reads an S3 bucket, and exposes an API for listing the file headers
 * Result calculator: subscribes to change events from an SNS topic, uses an API to list the file headers, reads files from an S3 bucket, calculates the results and puts them in the S3 bucket
 
-![affordability-grouped.jpg](https://cdn.hashnode.com/res/hashnode/image/upload/v1622908044613/rBhYP9RB8.jpeg)
+![affordability-grouped.jpg](https://cdn.hashnode.com/res/hashnode/image/upload/v1623089346147/se6bw9clw1.jpeg)
 
 With the system broken down like this, we can create CDK [constructs](https://docs.aws.amazon.com/cdk/latest/guide/constructs.html) for each part and then create individual test [stacks](https://docs.aws.amazon.com/cdk/latest/guide/stacks.html) to deploy them for testing in isolation. 
 

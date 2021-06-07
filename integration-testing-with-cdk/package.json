@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "description": "Integration testing with CDK",
   "main": "index.js",
-  "dependencies": {},
+  "dependencies": {
+    "@types/object-hash": "^2.1.0",
+    "object-hash": "^2.2.0"
+  },
   "devDependencies": {
     "@aws-cdk/aws-apigateway": "^1.106.1",
     "@aws-cdk/aws-lambda": "^1.106.1",

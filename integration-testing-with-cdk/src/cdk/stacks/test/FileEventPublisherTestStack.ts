@@ -24,7 +24,7 @@ export default class FileEventPublisherTestStack extends cdk.Stack {
     });
 
     const sut = new FileEventPublisher(this, 'SUT', {
-      bucket: testBucket,
+      fileBucket: testBucket,
     });
 
     sut.fileEventTopic.addSubscription(new subscriptions.LambdaSubscription(testSubscriber));
