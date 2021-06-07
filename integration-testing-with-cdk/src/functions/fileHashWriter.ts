@@ -49,7 +49,7 @@ export const handler = async (event: S3Event): Promise<void> => {
 
   const bodyHashItem: FileHash = {
     s3Key: eventS3.object.key,
-    fileType: file.body.fileType,
+    fileType: file.header.fileType,
     sectionType: FileSectionType.Body,
     sectionHash: hash(file.body),
   };

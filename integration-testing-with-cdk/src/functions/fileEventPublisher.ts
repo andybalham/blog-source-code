@@ -6,6 +6,7 @@ import DynamoDB from 'aws-sdk/clients/dynamodb';
 import SNS, { PublishInput } from 'aws-sdk/clients/sns';
 import { FileEvent, FileEventType } from '../contracts/FileEvent';
 import { FileHash } from '../contracts/FileHash';
+import { FileSectionType } from '../contracts/FileSectionType';
 
 const fileEventTopicArn = process.env.FILE_EVENT_TOPIC_ARN;
 
@@ -34,56 +35,50 @@ export const handler = async (event: DynamoDBStreamEvent): Promise<void> => {
           ? undefined
           : (DynamoDB.Converter.unmarshall(record.dynamodb.NewImage) as FileHash);
 
-      let publishInput: PublishInput;
-
-      if (newHash?.sectionHash !== oldHash?.sectionHash) {
-        //
-        if (newHash?.sectionHash && oldHash?.sectionHash) {
-          //
-          const fileEvent: FileEvent = {
-            eventType: FileEventType.Updated,
-            s3Key: newHash.s3Key,
-            sectionType: newHash.sectionType,
-          };
-
-          publishInput = {
-            Message: JSON.stringify(fileEvent),
-            TopicArn: fileEventTopicArn,
-            // MessageAttributes: SNS.getMessageAttributeMap(attributes),
-          };
-        } else if (newHash?.sectionHash) {
-          //
-          const fileEvent: FileEvent = {
-            eventType: FileEventType.Created,
-            s3Key: newHash.s3Key,
-            sectionType: newHash.sectionType,
-          };
-
-          publishInput = {
-            Message: JSON.stringify(fileEvent),
-            TopicArn: fileEventTopicArn,
-            // MessageAttributes: SNS.getMessageAttributeMap(attributes),
-          };
-        } else if (oldHash?.sectionHash) {
-          //
-          const fileEvent: FileEvent = {
-            eventType: FileEventType.Deleted,
-            s3Key: oldHash.s3Key,
-            sectionType: oldHash.sectionType,
-          };
-
-          publishInput = {
-            Message: JSON.stringify(fileEvent),
-            TopicArn: fileEventTopicArn,
-            // MessageAttributes: SNS.getMessageAttributeMap(attributes),
-          };
-        } else {
-          throw new Error(`No hashes`);
-        }
-
-        // eslint-disable-next-line no-await-in-loop
-        await sns.publish(publishInput).promise();
+      if (newHash?.sectionHash === oldHash?.sectionHash) {
+        return;
       }
+
+      //
+      let eventType: FileEventType;
+      let s3Key: string;
+      let sectionType: FileSectionType;
+
+      if (newHash?.sectionHash) {
+        eventType = oldHash?.sectionHash ? FileEventType.Updated : FileEventType.Created;
+        s3Key = newHash.s3Key;
+        sectionType = newHash.sectionType;
+      } else if (oldHash?.sectionHash) {
+        eventType = FileEventType.Deleted;
+        s3Key = oldHash.s3Key;
+        sectionType = oldHash.sectionType;
+      } else {
+        throw new Error(`No hashes`);
+      }
+
+      const fileEvent: FileEvent = {
+        eventType,
+        s3Key,
+        sectionType,
+      };
+
+      const publishInput = {
+        Message: JSON.stringify(fileEvent),
+        TopicArn: fileEventTopicArn,
+        MessageAttributes: {
+          eventType: {
+            DataType: 'String',
+            StringValue: eventType,
+          },
+          sectionType: {
+            DataType: 'String',
+            StringValue: sectionType,
+          },
+        },
+      };
+
+      // eslint-disable-next-line no-await-in-loop
+      await sns.publish(publishInput).promise();
     }
   }
 };
