@@ -19,6 +19,12 @@ export default class FileEventPublisher extends cdk.Construct {
   constructor(scope: cdk.Construct, id: string, props: FileEventPublisherProps) {
     super(scope, id);
 
+    this.fileEventTopic = new sns.Topic(this, `${id}FileEventTopic`, {
+      displayName: `File event topic for ${props.fileBucket.bucketName}`,
+    });
+
+    // The table to hold the hashes of the files sections
+
     const fileHashesTable = new dynamodb.Table(this, 'FileHashesTable', {
       partitionKey: { name: 's3Key', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'sectionType', type: dynamodb.AttributeType.STRING },
@@ -26,23 +32,23 @@ export default class FileEventPublisher extends cdk.Construct {
       stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
     });
 
-    const hashWriterFunction = this.newNodejsFunction('FileHashWriterFunction', 'fileHashWriter', {
+    // The function that is notified by the bucket and writes the hashes to the table
+
+    const hashWriterFunction = this.newFunction('FileHashWriterFunction', 'fileHashWriter', {
       FILE_HASHES_TABLE_NAME: fileHashesTable.tableName,
     });
 
+    props.fileBucket.grantRead(hashWriterFunction);
     props.fileBucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
       new s3n.LambdaDestination(hashWriterFunction)
     );
 
-    props.fileBucket.grantRead(hashWriterFunction);
     fileHashesTable.grantWriteData(hashWriterFunction);
 
-    this.fileEventTopic = new sns.Topic(this, `${id}FileEventTopic`, {
-      displayName: `File event topic for ${props.fileBucket.bucketName}`,
-    });
+    // The function to receive stream events from the hashes table and publish event to the topic
 
-    const fileEventPublisherFunction = this.newNodejsFunction(
+    const fileEventPublisherFunction = this.newFunction(
       'FileEventPublisherFunction',
       'fileEventPublisher',
       {
@@ -59,10 +65,10 @@ export default class FileEventPublisher extends cdk.Construct {
     this.fileEventTopic.grantPublish(fileEventPublisherFunction);
   }
 
-  private newNodejsFunction(
+  private newFunction(
     functionId: string,
     functionModule: string,
-    environment: any
+    environment: Record<string, any>
   ): lambda.Function {
     //
     const functionEntryBase = path.join(__dirname, '..', '..', '..', 'src', 'functions');

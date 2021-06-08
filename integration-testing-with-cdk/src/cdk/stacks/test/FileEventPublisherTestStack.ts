@@ -3,8 +3,8 @@
 import * as cdk from '@aws-cdk/core';
 import * as s3 from '@aws-cdk/aws-s3';
 import * as subscriptions from '@aws-cdk/aws-sns-subscriptions';
-import * as lambda from '@aws-cdk/aws-lambda';
 import { FileEventPublisher } from '../../constructs';
+import { newLogEventFunction } from '../../common';
 
 export default class FileEventPublisherTestStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string) {
@@ -15,13 +15,7 @@ export default class FileEventPublisherTestStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    const testSubscriber = new lambda.Function(this, 'TestSubscriber', {
-      handler: 'index.handler',
-      runtime: lambda.Runtime.NODEJS_12_X,
-      code: lambda.Code.fromInline(
-        `exports.handler = (event) => { console.log(JSON.stringify(event)) }`
-      ),
-    });
+    const testSubscriber = newLogEventFunction(this, 'TestSubscriber');
 
     const sut = new FileEventPublisher(this, 'SUT', {
       fileBucket: testBucket,

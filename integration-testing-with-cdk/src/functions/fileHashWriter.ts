@@ -16,6 +16,9 @@ const s3 = new S3();
 
 export const handler = async (event: S3Event): Promise<void> => {
   //
+  // eslint-disable-next-line no-console
+  console.log(JSON.stringify(event));
+
   if (fileHashesTableName === undefined) throw new Error('fileHashesTableName === undefined');
 
   const eventS3 = event.Records[0].s3; // In production, we would need to consider multiple records

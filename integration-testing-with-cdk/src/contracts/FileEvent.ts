@@ -3,11 +3,26 @@ import { FileSectionType } from './FileSectionType';
 export enum FileEventType {
   Created = 'Created',
   Updated = 'Updated',
-  Deleted = 'Deleted',
 }
 
-export interface FileEvent {
-  eventType: FileEventType;
-  sectionType: FileSectionType;
-  s3Key: string;
+export class FileEvent {
+  //
+  constructor(
+    public readonly eventType: FileEventType,
+    public readonly sectionType: FileSectionType,
+    public readonly s3Key: string
+  ) {}
+
+  get messageAttributes(): Record<string, any> {
+    return {
+      eventType: {
+        DataType: 'String',
+        StringValue: this.eventType,
+      },
+      sectionType: {
+        DataType: 'String',
+        StringValue: this.sectionType,
+      },
+    };
+  }
 }

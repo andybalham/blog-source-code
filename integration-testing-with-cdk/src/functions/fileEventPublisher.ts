@@ -3,7 +3,7 @@ import { DynamoDBStreamEvent } from 'aws-lambda/trigger/dynamodb-stream';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import DynamoDB from 'aws-sdk/clients/dynamodb';
 // eslint-disable-next-line import/no-extraneous-dependencies
-import SNS, { PublishInput } from 'aws-sdk/clients/sns';
+import SNS from 'aws-sdk/clients/sns';
 import { FileEvent, FileEventType } from '../contracts/FileEvent';
 import { FileHash } from '../contracts/FileHash';
 import { FileSectionType } from '../contracts/FileSectionType';
@@ -14,6 +14,9 @@ const sns = new SNS();
 
 export const handler = async (event: DynamoDBStreamEvent): Promise<void> => {
   //
+  // eslint-disable-next-line no-console
+  console.log(JSON.stringify(event));
+
   if (fileEventTopicArn === undefined) throw new Error('fileEventTopicArn === undefined');
 
   for (let index = 0; index < event.Records.length; index += 1) {
@@ -48,33 +51,16 @@ export const handler = async (event: DynamoDBStreamEvent): Promise<void> => {
         eventType = oldHash?.sectionHash ? FileEventType.Updated : FileEventType.Created;
         s3Key = newHash.s3Key;
         sectionType = newHash.sectionType;
-      } else if (oldHash?.sectionHash) {
-        eventType = FileEventType.Deleted;
-        s3Key = oldHash.s3Key;
-        sectionType = oldHash.sectionType;
       } else {
-        throw new Error(`No hashes`);
+        throw new Error(`No new hash`);
       }
 
-      const fileEvent: FileEvent = {
-        eventType,
-        s3Key,
-        sectionType,
-      };
+      const fileEvent = new FileEvent(eventType, sectionType, s3Key);
 
       const publishInput = {
         Message: JSON.stringify(fileEvent),
         TopicArn: fileEventTopicArn,
-        MessageAttributes: {
-          eventType: {
-            DataType: 'String',
-            StringValue: eventType,
-          },
-          sectionType: {
-            DataType: 'String',
-            StringValue: sectionType,
-          },
-        },
+        MessageAttributes: fileEvent.messageAttributes,
       };
 
       // eslint-disable-next-line no-await-in-loop
