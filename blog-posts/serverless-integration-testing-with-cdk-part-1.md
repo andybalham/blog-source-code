@@ -1,10 +1,10 @@
-From my own experience and that I have read of others, one of the biggest challenges of serverless is how to test. Beyond unit testing, do you try to replicate cloud infrastructure locally or rely on high-level end-to-end tests? With multiple resources interacting asynchronously, how can you develop repeatable, meaningful tests? Here I ponder how we might use the [AWS CDK](https://aws.amazon.com/cdk/) to help. Using it to package our serverless applications into units that can be independently deployed, tested, and then torn down.
+From my own experience and that I have read of others, one of the biggest challenges of serverless is how to test. Beyond unit testing, do you try to replicate cloud infrastructure locally or do you rely on high-level end-to-end tests? With multiple resources interacting asynchronously, how can you develop repeatable, meaningful tests? Here I ponder how we might take advantage of the [AWS CDK](https://aws.amazon.com/cdk/) to help. Using it to package our serverless applications into units that can be independently deployed, tested, and then torn down.
 
 All the code for this post is available on [GitHub](https://github.com/andybalham/blog-source-code/tree/master/integration-testing-with-cdk).
 
 # The system under test
 
-For this thought experiment, let us consider a system that does a simplified affordability calculation for a loan application. The system contains a number of configurations and a number of scenarios. A configuration contains a set of values that are used in the affordability model, such as to specify how much of any overtime income is to be used. A scenario contains the details supplied by the loan applicants, such as a breakdown of the applicants income. The system automatically calculates the results for each combination of configuration and scenario whenever a new one is added or an existing one is amended.
+For this post, let us consider a system that does a simplified affordability calculation for a loan application. The system contains a number of configurations and a number of scenarios. A configuration contains a set of values that are used in the affordability model, such as to specify how much of any overtime income is to be used. A scenario contains the details supplied by the loan applicants, such as a breakdown of the applicants income. The system automatically calculates the results for each combination of configuration and scenario whenever a new one is added or an existing one is amended.
 
 The system revolves around a bucket that contains JSON files with the following structure:
 
@@ -20,13 +20,15 @@ The system revolves around a bucket that contains JSON files with the following 
 }
 ```
 
-The system only recalculates when the body contents of `Configuration` or `Scenario` files are updated. Changing the header details does not cause any recalculation. One assumption here is that the `fileType` is never changed once set.
+The system only recalculates when the body contents of `Configuration` or `Scenario` files are updated. Changing the header details does not cause any recalculation. Note, one assumption here is that the `fileType` is never changed once set.
 
 The system design is as follows:
 
 ![affordability-full.jpg](https://cdn.hashnode.com/res/hashnode/image/upload/v1622902599565/z0Ozk5FJQ.jpeg)
 
-When a file is added or updated to the `Files` bucket an event is raised. The `Hash writer` Lambda function handles this event and calculates hashes for the `header` and `body` of the file. It then writes these to the `Hashes` DynamoDB table. The `Hashes` table raises change events that are then handled by the `File event publisher` Lambda function. The `File event publisher` function processes these events and sends notifications of the following format to the `File events` SNS topic.
+> The diagrams for this post were created using the excellent [Miro](https://miro.com/) tool.
+
+When a file is added or updated to the `Files` bucket, an event is raised. The `Hash writer` Lambda function handles this event and calculates hashes for the `header` and `body` of the file. It then writes these to the `Hashes` DynamoDB table. The `Hashes` table raises change events that are then handled by the `File event publisher` Lambda function. The `File event publisher` function processes these events and sends notifications of the following format to the `File events` SNS topic.
 
 ```JSON
 {
@@ -77,7 +79,7 @@ The final part of the system is the calculator. The `Body updates` SQS queue sub
 
 # Testing
 
-Not one part of the system we have designed is particularly complicated. In fact, the Lambda functions are going to be very simple indeed. So simple in fact, that we might query the value in building and maintaining unit tests for them. The system functionality emerges from the interaction between the various simple resources, so it seems reasonable to target our testing on verifying that those resources work together as expected.
+Not one part of the system we have designed is particularly complicated. In fact, the Lambda functions are going to be very simple indeed. So simple in fact, that we might query the value in building and maintaining unit tests for them. As with systems of this type, the functionality emerges from the interaction between the various simple resources. Given this, it seems reasonable to target our testing on verifying that those resources work together as expected.
 
 One way to approach this is to break the system down as follows:
 
@@ -106,6 +108,7 @@ export default class FileEventPublisher extends cdk.Construct {
       displayName: `File event topic for ${props.fileBucket.bucketName}`,
     });
   }
+}
 ```
 
 With this construct, we can now create a test `stack` that will wire up the inputs and outputs of the `construct` to test resources. In this case, an S3 bucket and a Lambda function.
@@ -172,6 +175,8 @@ private newFunction(
 With this utility function in place, we can add the other parts to the `FileEventPublisher` construct. I didn't do this all in one step. First, I created an inline version of each function and tested that it was wired up correctly. I did this by uploading to the bucket using the AWS Toolkit and then viewing the CloudWatch logs, again via the AWS Toolkit. Although deploying wasn't exactly speedy, it wasn't too bad and it was feasible to develop and test without recourse to unit tests.
 
 > Note: I still think unit tests have a big part to play in serverless development. However, they have their limits and sometimes they are so simple that covering them via integration tests would be sufficient IMHO.
+
+The final version of the `FileEventPublisher` was as follows.
 
 ```TypeScript
 export default class FileEventPublisher extends cdk.Construct {
