@@ -9,6 +9,7 @@
     "TRes",
     "esbuild",
     "exts",
+    "nanoid",
     "stepfunctions"
   ]
 }

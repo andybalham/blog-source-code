@@ -1,9 +1,0 @@
-{
-  "header": {
-    "fileType": "Configuration",
-    "name": "InitialConfiguration"
-  },
-  "body": {
-    "incomeMultiplier": 6.0
-  }
-}
