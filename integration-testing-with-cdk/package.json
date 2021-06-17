@@ -56,7 +56,8 @@
     "cdk-deploy": "tsc && cdk deploy",
     "test-cdk-ls": "cdk ls -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
     "file-events-test-synth": "tsc && cdk synth FileEventPublisherTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
-    "file-events-test-deploy": "tsc && cdk deploy FileEventPublisherTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\""
+    "file-events-test-deploy": "tsc && cdk deploy FileEventPublisherTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
+    "file-events-test-destroy": "tsc && cdk destroy FileEventPublisherTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\""
   },
   "repository": {
     "type": "git",

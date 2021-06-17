@@ -33,8 +33,29 @@ describe('S3 CLI-based tests', () => {
     }
   });
 
-  it.only('Header and body changes', async () => {
-    //
+  it.only('New file', async () => {
+    // Arrange
+
+    const configurationFile = newConfigurationFile();
+    const configurationFileName = saveFile(configurationFile);
+
+    try {
+      // Act
+
+      await uploadTestFileAsync(configurationFileName, testBucketName);
+    } finally {
+      fs.unlinkSync(configurationFileName);
+    }
+
+    // Assert
+
+    // TODO 17Jun21: Add the assertion
+
+  }).timeout(60 * 1000);
+
+  it('Header and body changes', async () => {
+    // Arrange
+
     const configurationFile = newConfigurationFile();
     const configurationFileName = saveFile(configurationFile);
 
@@ -43,14 +64,19 @@ describe('S3 CLI-based tests', () => {
 
       configurationFile.header.description = nanoid(10);
       configurationFile.body.incomeMultiplier += 1;
+
       saveFile(configurationFile);
 
-      await waitAsync(3);
+      // Act
 
       await uploadTestFileAsync(configurationFileName, testBucketName);
     } finally {
       fs.unlinkSync(configurationFileName);
     }
+
+    // Assert
+
+
   }).timeout(60 * 1000);
 
   it('Header only changes', async () => {
@@ -65,7 +91,6 @@ describe('S3 CLI-based tests', () => {
 });
 
 function saveFile(file: File<Configuration>): string {
-  //
   const fileName = `${file.header.name}.json`;
   fs.writeFileSync(fileName, JSON.stringify(file));
   return fileName;
@@ -73,12 +98,10 @@ function saveFile(file: File<Configuration>): string {
 
 function newConfigurationFile(): File<Configuration> {
   //
-  const configurationName = `Configuration_${nanoid(10)}`;
-
   const configFile: File<Configuration> = {
     header: {
       fileType: FileType.Configuration,
-      name: configurationName,
+      name: `Configuration_${nanoid(10)}`,
     },
     body: {
       incomeMultiplier: 0,

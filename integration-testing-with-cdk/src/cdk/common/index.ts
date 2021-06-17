@@ -1,4 +1,3 @@
-import { newLogEventFunction } from './functions';
+import { newLogEventFunction, newNodejsFunction } from './functions';
 
-// eslint-disable-next-line import/prefer-default-export
-export { newLogEventFunction };
+export { newLogEventFunction, newNodejsFunction };
