@@ -1,39 +1,28 @@
+/* eslint-disable no-restricted-syntax */
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import * as child from 'child_process';
 import path from 'path';
 import { nanoid } from 'nanoid';
 import fs from 'fs';
+import AWS from 'aws-sdk';
+import { expect } from 'chai';
 import { Configuration, File, FileType } from '../../src/contracts';
+import { FileEvent, FileEventType } from '../../src/contracts/FileEvent';
+import { FileSectionType } from '../../src/contracts/FileSectionType';
 
 describe('S3 CLI-based tests', () => {
   //
   const testBucketName = 'fileeventpublisherteststack-testbucket560b80bc-1zahbchghxtm';
+  const testResultsTableName = 'FileEventPublisherTestStack-TestResultsTable04198A62-1KTVQKN21HCDG';
 
   beforeEach('Run command line', async () => {
     //
-    // TODO 14Jun21: This is flawed, as we want to delete all DynamoDB items
-
-    const cleanTestBucketCommand = `aws s3 rm --recursive s3://${testBucketName}`;
-    console.log(await execCommand(cleanTestBucketCommand));
+    // const cleanTestBucketCommand = `aws s3 rm --recursive s3://${testBucketName}`;
+    // console.log(await execCommand(cleanTestBucketCommand));
   });
 
-  it('Clean test bucket', async () => {});
-
-  it('No changes', async () => {
-    //
-    const configurationFile = newConfigurationFile();
-    const configurationFileName = saveFile(configurationFile);
-
-    try {
-      await uploadTestFileAsync(configurationFileName, testBucketName);
-      await uploadTestFileAsync(configurationFileName, testBucketName);
-    } finally {
-      fs.unlinkSync(configurationFileName);
-    }
-  });
-
-  it.only('New file', async () => {
+  it('New file', async () => {
     // Arrange
 
     const configurationFile = newConfigurationFile();
@@ -47,47 +36,50 @@ describe('S3 CLI-based tests', () => {
       fs.unlinkSync(configurationFileName);
     }
 
+    // Wait
+
+    await waitAsync(2);
+
     // Assert
 
-    // TODO 17Jun21: Add the assertion
+    const expressionAttributeFilePath = path.join(__dirname, 'expression-attribute.json');
 
-  }).timeout(60 * 1000);
+    fs.writeFileSync(
+      expressionAttributeFilePath,
+      JSON.stringify({
+        ':s3Key': { S: configurationFileName },
+      })
+    );
 
-  it('Header and body changes', async () => {
-    // Arrange
-
-    const configurationFile = newConfigurationFile();
-    const configurationFileName = saveFile(configurationFile);
+    let messages: FileEvent[];
 
     try {
-      await uploadTestFileAsync(configurationFileName, testBucketName);
+      const queryTestResultsCommand = `aws dynamodb query \
+        --table-name ${testResultsTableName} \
+        --key-condition-expression "s3Key = :s3Key" \
+        --expression-attribute-values file://${expressionAttributeFilePath}"`;
 
-      configurationFile.header.description = nanoid(10);
-      configurationFile.body.incomeMultiplier += 1;
+      const queryResult = JSON.parse(await execCommand(queryTestResultsCommand));
 
-      saveFile(configurationFile);
-
-      // Act
-
-      await uploadTestFileAsync(configurationFileName, testBucketName);
+      messages = queryResult.Items.map((item) => AWS.DynamoDB.Converter.unmarshall(item).message);
     } finally {
-      fs.unlinkSync(configurationFileName);
+      fs.unlinkSync(expressionAttributeFilePath);
     }
 
-    // Assert
+    expect(messages.length).to.equal(2);
 
+    expect(
+      messages.some(
+        (m) => m.eventType === FileEventType.Created && m.sectionType === FileSectionType.Header
+      )
+    );
 
+    expect(
+      messages.some(
+        (m) => m.eventType === FileEventType.Created && m.sectionType === FileSectionType.Body
+      )
+    );
   }).timeout(60 * 1000);
-
-  it('Header only changes', async () => {
-    await uploadTestFileAsync('ConfigInitial.json', testBucketName);
-    await uploadTestFileAsync('ConfigHeaderOnly.json', testBucketName);
-  });
-
-  it('Body only changes', async () => {
-    await uploadTestFileAsync('ConfigInitial.json', testBucketName);
-    await uploadTestFileAsync('ConfigBodyOnly.json', testBucketName);
-  });
 });
 
 function saveFile(file: File<Configuration>): string {
@@ -116,7 +108,7 @@ async function uploadTestFileAsync(testFileName: string, testBucketName: string)
   console.log(await execCommand(uploadTestFileCommand));
 }
 
-async function execCommand(command: string): Promise<string | child.ExecException> {
+async function execCommand(command: string): Promise<string> {
   //
   return new Promise((resolve, reject) => {
     child.exec(command, (error, stdout) => {
