@@ -27,6 +27,7 @@
     "aws-sdk": "^2.920.0",
     "axios": "^0.21.1",
     "chai": "^4.3.4",
+    "dotenv": "^10.0.0",
     "esbuild": "^0.12.5",
     "eslint": "^7.27.0",
     "eslint-config-airbnb-typescript": "^12.3.1",

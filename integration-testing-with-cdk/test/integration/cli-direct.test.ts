@@ -1,86 +1,163 @@
+/* eslint-disable no-await-in-loop */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import * as child from 'child_process';
-import path from 'path';
 import { nanoid } from 'nanoid';
 import fs from 'fs';
 import AWS from 'aws-sdk';
 import { expect } from 'chai';
+import { QueryOutput } from 'aws-sdk/clients/dynamodb';
+import dotenv from 'dotenv';
 import { Configuration, File, FileType } from '../../src/contracts';
 import { FileEvent, FileEventType } from '../../src/contracts/FileEvent';
 import { FileSectionType } from '../../src/contracts/FileSectionType';
 
-describe('S3 CLI-based tests', () => {
+dotenv.config();
+
+const testBucketName = 'fileeventpublisherteststack-testbucket560b80bc-1zahbchghxtm';
+const testResultsTableName = 'FileEventPublisherTestStack-TestResultsTable04198A62-1KTVQKN21HCDG';
+
+describe('CLI-based tests', () => {
   //
-  const testBucketName = 'fileeventpublisherteststack-testbucket560b80bc-1zahbchghxtm';
-  const testResultsTableName = 'FileEventPublisherTestStack-TestResultsTable04198A62-1KTVQKN21HCDG';
-
-  beforeEach('Run command line', async () => {
-    //
-    // const cleanTestBucketCommand = `aws s3 rm --recursive s3://${testBucketName}`;
-    // console.log(await execCommand(cleanTestBucketCommand));
-  });
-
-  it('New file', async () => {
+  it('New file - No helpers, no polling', async () => {
     // Arrange
 
-    const configurationFile = newConfigurationFile();
-    const configurationFileName = saveFile(configurationFile);
+    const configurationFile: File<Configuration> = {
+      header: {
+        fileType: FileType.Configuration,
+        name: `Configuration_${nanoid(10)}`,
+      },
+      body: {
+        incomeMultiplier: 0,
+      },
+    };
+
+    const configurationFileName = `${configurationFile.header.name}.json`;
+    fs.writeFileSync(configurationFileName, JSON.stringify(configurationFile));
+
+    // Act
 
     try {
-      // Act
-
-      await uploadTestFileAsync(configurationFileName, testBucketName);
+      const uploadTestFileCommand = `aws s3 cp ${configurationFileName} s3://${testBucketName}`;
+      await execCommand(uploadTestFileCommand);
     } finally {
       fs.unlinkSync(configurationFileName);
     }
 
     // Wait
 
-    await waitAsync(2);
+    await waitAsync(3);
 
     // Assert
 
-    const expressionAttributeFilePath = path.join(__dirname, 'expression-attribute.json');
+    const queryTestResultsCommand = `aws dynamodb query \
+      --table-name ${testResultsTableName} \
+      --key-condition-expression "s3Key = :s3Key" \
+      --expression-attribute-values "{ \\":s3Key\\": { \\"S\\": \\"${configurationFileName}\\" } }"`;
 
-    fs.writeFileSync(
-      expressionAttributeFilePath,
-      JSON.stringify({
-        ':s3Key': { S: configurationFileName },
-      })
+    const queryResult = JSON.parse(await execCommand(queryTestResultsCommand)) as QueryOutput;
+
+    const fileEvents = queryResult.Items?.map(
+      (item) => AWS.DynamoDB.Converter.unmarshall(item).message as FileEvent
     );
 
-    let messages: FileEvent[];
-
-    try {
-      const queryTestResultsCommand = `aws dynamodb query \
-        --table-name ${testResultsTableName} \
-        --key-condition-expression "s3Key = :s3Key" \
-        --expression-attribute-values file://${expressionAttributeFilePath}"`;
-
-      const queryResult = JSON.parse(await execCommand(queryTestResultsCommand));
-
-      messages = queryResult.Items.map((item) => AWS.DynamoDB.Converter.unmarshall(item).message);
-    } finally {
-      fs.unlinkSync(expressionAttributeFilePath);
-    }
-
-    expect(messages.length).to.equal(2);
+    expect(fileEvents?.length).to.equal(2);
 
     expect(
-      messages.some(
-        (m) => m.eventType === FileEventType.Created && m.sectionType === FileSectionType.Header
+      fileEvents?.some(
+        (e) =>
+          e.s3Key === configurationFileName &&
+          e.eventType === FileEventType.Created &&
+          e.sectionType === FileSectionType.Header
       )
     );
 
     expect(
-      messages.some(
-        (m) => m.eventType === FileEventType.Created && m.sectionType === FileSectionType.Body
+      fileEvents?.some(
+        (e) =>
+          e.s3Key === configurationFileName &&
+          e.eventType === FileEventType.Created &&
+          e.sectionType === FileSectionType.Body
+      )
+    );
+  }).timeout(60 * 1000);
+
+  it.only('New file - With polling', async () => {
+    // Arrange
+
+    const configurationFile = newConfigurationFile();
+    const configurationFileName = saveFile(configurationFile);
+
+    // Act
+
+    try {
+      await uploadTestFileAsync(configurationFileName);
+    } finally {
+      fs.unlinkSync(configurationFileName);
+    }
+
+    // Poll
+    
+    const timeoutSeconds = 12;
+
+    const timeOutThreshold = Date.now() + 1000 * timeoutSeconds;
+
+    const timedOut = (): boolean => Date.now() > timeOutThreshold;
+
+    const expectedEventCount = (events: FileEvent[] | undefined): boolean =>
+      events !== undefined && events.length === 2;
+
+    let fileEvents: FileEvent[] | undefined;
+
+    while (!timedOut() && !expectedEventCount(fileEvents)) {
+      //
+      await waitAsync(2);
+
+      fileEvents = await getFileEvents(configurationFileName);
+    }
+
+    // Assert
+
+    expect(fileEvents?.length).to.equal(2);
+
+    expect(
+      fileEvents?.some(
+        (e) =>
+          e.s3Key === configurationFileName &&
+          e.eventType === FileEventType.Created &&
+          e.sectionType === FileSectionType.Header
+      )
+    );
+
+    expect(
+      fileEvents?.some(
+        (e) =>
+          e.s3Key === configurationFileName &&
+          e.eventType === FileEventType.Created &&
+          e.sectionType === FileSectionType.Body
       )
     );
   }).timeout(60 * 1000);
 });
+
+async function getFileEvents(configurationFileName: string): Promise<FileEvent[] | undefined> {
+  //
+  const queryTestResultsCommand = `aws dynamodb query \
+      --table-name ${testResultsTableName} \
+      --key-condition-expression "s3Key = :s3Key" \
+      --expression-attribute-values "{ \\":s3Key\\": { \\"S\\": \\"${configurationFileName}\\" } }"`;
+
+  const queryResult = JSON.parse(await execCommand(queryTestResultsCommand)) as QueryOutput;
+
+  const messages = queryResult.Items?.map(
+    (item) => AWS.DynamoDB.Converter.unmarshall(item).message as FileEvent
+  );
+
+  console.log(`messages.length: ${messages?.length}`);
+  
+  return messages;
+}
 
 function saveFile(file: File<Configuration>): string {
   const fileName = `${file.header.name}.json`;
@@ -103,7 +180,7 @@ function newConfigurationFile(): File<Configuration> {
   return configFile;
 }
 
-async function uploadTestFileAsync(testFileName: string, testBucketName: string): Promise<void> {
+async function uploadTestFileAsync(testFileName: string): Promise<void> {
   const uploadTestFileCommand = `aws s3 cp ${testFileName} s3://${testBucketName}`;
   console.log(await execCommand(uploadTestFileCommand));
 }
