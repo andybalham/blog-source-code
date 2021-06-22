@@ -3,6 +3,7 @@
     "Chainable",
     "Nextable",
     "esbuild",
+    "nanoid",
     "stepfunctions"
   ]
 }

@@ -20,7 +20,7 @@ const testResultsTableName = 'FileEventPublisherTestStack-TestResultsTable04198A
 
 describe('CLI-based tests', () => {
   //
-  it('New file - No helpers, no polling', async () => {
+  it.only('New file - No helpers, no polling', async () => {
     // Arrange
 
     const configurationFile: File<Configuration> = {
@@ -40,14 +40,14 @@ describe('CLI-based tests', () => {
 
     try {
       const uploadTestFileCommand = `aws s3 cp ${configurationFileName} s3://${testBucketName}`;
-      await execCommand(uploadTestFileCommand);
+      console.log(await execCommand(uploadTestFileCommand));
     } finally {
       fs.unlinkSync(configurationFileName);
     }
 
     // Wait
 
-    await waitAsync(3);
+    await new Promise((resolve) => setTimeout(resolve, 6 * 1000));
 
     // Assert
 
@@ -83,7 +83,7 @@ describe('CLI-based tests', () => {
     );
   }).timeout(60 * 1000);
 
-  it.only('New file - With polling', async () => {
+  it('New file - With polling', async () => {
     // Arrange
 
     const configurationFile = newConfigurationFile();
