@@ -20,7 +20,7 @@ const testOutputsTableName = 'FileEventPublisherTestStack-TestResultsTable04198A
 
 describe('CLI-based tests', () => {
   //
-  it.only('New file - No helpers, no polling', async () => {
+  it('New file - No helpers, no polling', async () => {
     // Arrange
 
     const configurationFile: File<Configuration> = {
@@ -99,21 +99,13 @@ describe('CLI-based tests', () => {
 
     // Poll
 
-    const timeoutSeconds = 12;
-
-    const timeOutThreshold = Date.now() + 1000 * timeoutSeconds;
-
-    const timedOut = (): boolean => Date.now() > timeOutThreshold;
-
-    const expectedEventCount = (events: FileEvent[] | undefined): boolean =>
-      events !== undefined && events.length === 2;
+    const timedOut = getTimedOut(12);
+    const expectedEventCount = (events: FileEvent[] | undefined): boolean => events?.length === 2;
 
     let fileEvents: FileEvent[] | undefined;
 
     while (!timedOut() && !expectedEventCount(fileEvents)) {
-      //
       await waitAsync(2);
-
       fileEvents = await getFileEvents(configurationFileName);
     }
 
@@ -139,7 +131,72 @@ describe('CLI-based tests', () => {
       )
     );
   }).timeout(60 * 1000);
+
+  it.only('Body update', async () => {
+    // Arrange
+
+    const configurationFile = newConfigurationFile();
+    const configurationFileName = saveFile(configurationFile);
+
+    try {
+      await uploadTestFileAsync(configurationFileName);
+
+      configurationFile.body.incomeMultiplier += 1;
+
+      saveFile(configurationFile);
+
+      const arrangeTimedOut = getTimedOut(12);
+      const hasEvent = (events: FileEvent[] | undefined): boolean =>
+        events !== undefined && events.length > 0;
+
+      let arrangeFileEvents: FileEvent[] | undefined;
+
+      while (!arrangeTimedOut() && !hasEvent(arrangeFileEvents)) {
+        await waitAsync(1);
+        arrangeFileEvents = await getFileEvents(configurationFileName);
+      }
+
+      expect(!arrangeTimedOut());
+
+      // Act
+
+      await uploadTestFileAsync(configurationFileName);
+    } finally {
+      fs.unlinkSync(configurationFileName);
+    }
+
+    // Poll
+
+    const actTimedOut = getTimedOut(12);
+    const expectedEventCount = (events: FileEvent[] | undefined): boolean => events?.length === 3;
+
+    let fileEvents: FileEvent[] | undefined;
+
+    while (!actTimedOut() && !expectedEventCount(fileEvents)) {
+      await waitAsync(2);
+      fileEvents = await getFileEvents(configurationFileName);
+    }
+
+    // Assert
+
+    expect(fileEvents?.length).to.equal(3);
+
+    expect(
+      fileEvents?.filter(
+        (e) =>
+          e.s3Key === configurationFileName &&
+          e.eventType === FileEventType.Updated &&
+          e.sectionType === FileSectionType.Body
+      ).length
+    ).to.equal(1);
+  }).timeout(60 * 1000);
 });
+
+function getTimedOut(timeoutSeconds: number): () => boolean {
+  const timeOutThreshold = Date.now() + 1000 * timeoutSeconds;
+  const timedOut = (): boolean => Date.now() > timeOutThreshold;
+  return timedOut;
+}
 
 async function getFileEvents(configurationFileName: string): Promise<FileEvent[] | undefined> {
   //
