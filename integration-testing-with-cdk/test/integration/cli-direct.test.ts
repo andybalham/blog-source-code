@@ -15,8 +15,8 @@ import { FileSectionType } from '../../src/contracts/FileSectionType';
 
 dotenv.config();
 
-const testBucketName = 'fileeventpublisherteststack-testbucket560b80bc-1zahbchghxtm';
-const testResultsTableName = 'FileEventPublisherTestStack-TestResultsTable04198A62-1KTVQKN21HCDG';
+const testBucketName = 'fileeventpublisherteststack-testbucket560b80bc-3dkypcn2e13w';
+const testOutputsTableName = 'FileEventPublisherTestStack-TestResultsTable04198A62-1SBMVGKT0FO04';
 
 describe('CLI-based tests', () => {
   //
@@ -47,16 +47,16 @@ describe('CLI-based tests', () => {
 
     // Wait
 
-    await new Promise((resolve) => setTimeout(resolve, 6 * 1000));
+    await new Promise((resolve) => setTimeout(resolve, 3 * 1000));
 
     // Assert
 
-    const queryTestResultsCommand = `aws dynamodb query \
-      --table-name ${testResultsTableName} \
+    const queryTestOutputsCommand = `aws dynamodb query \
+      --table-name ${testOutputsTableName} \
       --key-condition-expression "s3Key = :s3Key" \
       --expression-attribute-values "{ \\":s3Key\\": { \\"S\\": \\"${configurationFileName}\\" } }"`;
 
-    const queryResult = JSON.parse(await execCommand(queryTestResultsCommand)) as QueryOutput;
+    const queryResult = JSON.parse(await execCommand(queryTestOutputsCommand)) as QueryOutput;
 
     const fileEvents = queryResult.Items?.map(
       (item) => AWS.DynamoDB.Converter.unmarshall(item).message as FileEvent
@@ -98,7 +98,7 @@ describe('CLI-based tests', () => {
     }
 
     // Poll
-    
+
     const timeoutSeconds = 12;
 
     const timeOutThreshold = Date.now() + 1000 * timeoutSeconds;
@@ -143,19 +143,19 @@ describe('CLI-based tests', () => {
 
 async function getFileEvents(configurationFileName: string): Promise<FileEvent[] | undefined> {
   //
-  const queryTestResultsCommand = `aws dynamodb query \
-      --table-name ${testResultsTableName} \
+  const queryTestOutputsCommand = `aws dynamodb query \
+      --table-name ${testOutputsTableName} \
       --key-condition-expression "s3Key = :s3Key" \
       --expression-attribute-values "{ \\":s3Key\\": { \\"S\\": \\"${configurationFileName}\\" } }"`;
 
-  const queryResult = JSON.parse(await execCommand(queryTestResultsCommand)) as QueryOutput;
+  const queryResult = JSON.parse(await execCommand(queryTestOutputsCommand)) as QueryOutput;
 
   const messages = queryResult.Items?.map(
     (item) => AWS.DynamoDB.Converter.unmarshall(item).message as FileEvent
   );
 
   console.log(`messages.length: ${messages?.length}`);
-  
+
   return messages;
 }
 
