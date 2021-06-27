@@ -5,9 +5,21 @@ import * as s3 from '@aws-cdk/aws-s3';
 import * as subscriptions from '@aws-cdk/aws-sns-subscriptions';
 import * as dynamodb from '@aws-cdk/aws-dynamodb';
 import { FileEventPublisher } from '../../constructs';
-import { newLogEventFunction, newNodejsFunction } from '../../common';
+import { newNodejsFunction } from '../../common';
 
 export default class FileEventPublisherTestStack extends cdk.Stack {
+  static readonly ResourceKey = 'FileEventPublisherTestStack';
+
+  static readonly TestBucketTag = new cdk.Tag(
+    FileEventPublisherTestStack.ResourceKey,
+    'TestBucket'
+  );
+
+  static readonly TestResultsTableTag = new cdk.Tag(
+    FileEventPublisherTestStack.ResourceKey,
+    'TestResultsTable'
+  );
+
   constructor(scope: cdk.Construct, id: string) {
     super(scope, id);
 
@@ -15,6 +27,11 @@ export default class FileEventPublisherTestStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
+
+    cdk.Tags.of(testBucket).add(
+      FileEventPublisherTestStack.TestBucketTag.key,
+      FileEventPublisherTestStack.TestBucketTag.value
+    );
 
     const sut = new FileEventPublisher(this, 'SUT', {
       fileBucket: testBucket,
@@ -25,6 +42,11 @@ export default class FileEventPublisherTestStack extends cdk.Stack {
       sortKey: { name: 'messageId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
     });
+
+    cdk.Tags.of(testResultsTable).add(
+      FileEventPublisherTestStack.TestResultsTableTag.key,
+      FileEventPublisherTestStack.TestResultsTableTag.value
+    );
 
     const fileEventTestSubscriberFunction = newNodejsFunction(
       this,

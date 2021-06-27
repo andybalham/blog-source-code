@@ -10,6 +10,7 @@
     "esbuild",
     "exts",
     "nanoid",
+    "resourcegroupstaggingapi",
     "stepfunctions"
   ]
 }
