@@ -5,7 +5,6 @@ import AWS from 'aws-sdk';
 import { ObjectList } from 'aws-sdk/clients/s3';
 import { nanoid } from 'nanoid';
 import { expect } from 'chai';
-import { FileEventPublisherTestStack } from '../../src/cdk/stacks/test';
 import {
   uploadObjectToBucketAsync,
   getRegion,
@@ -18,6 +17,7 @@ import {
 import { Configuration, File, FileType } from '../../src/contracts';
 import { FileEvent, FileEventType } from '../../src/contracts/FileEvent';
 import { FileSectionType } from '../../src/contracts/FileSectionType';
+import FileEventPublisherTestStack from '../../src/cdk/stacks/test/FileEventPublisherTestStack-v1';
 
 describe('Tests using the SDK', () => {
   let testBucketName: string;

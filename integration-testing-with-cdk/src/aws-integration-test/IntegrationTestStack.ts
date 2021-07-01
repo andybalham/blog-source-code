@@ -8,10 +8,14 @@ export interface IntegrationTestStackProps {
 
 export default abstract class IntegrationTestStack extends cdk.Stack {
   //
+  readonly testResourceTagKey: string;
+
   readonly integrationTestTable: dynamodb.Table;
 
-  constructor(scope: cdk.Construct, id: string, private props: IntegrationTestStackProps) {
+  constructor(scope: cdk.Construct, id: string, props: IntegrationTestStackProps) {
     super(scope, id);
+
+    this.testResourceTagKey = props.testResourceTagKey;
 
     this.integrationTestTable = new dynamodb.Table(this, 'IntegrationTestTable', {
       partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
@@ -19,7 +23,7 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
     });
 
-    cdk.Tags.of(this.integrationTestTable).add(props.testResourceTagKey, 'IntegrationTestTable');
+    cdk.Tags.of(this.integrationTestTable).add(this.testResourceTagKey, 'IntegrationTestTable');
 
     cdk.Tags.of(this).add('stack', id);
   }
