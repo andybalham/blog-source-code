@@ -1,27 +1,29 @@
+/* eslint-disable no-await-in-loop */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import AWS from 'aws-sdk';
-import { ObjectList } from 'aws-sdk/clients/s3';
 import { nanoid } from 'nanoid';
 import { expect } from 'chai';
-import { getRegion, getTimedOut, waitAsync } from './testFunctions';
+import { SNSEvent } from 'aws-lambda/trigger/sns';
 import { Configuration, File, FileType } from '../../src/contracts';
 import { FileEvent, FileEventType } from '../../src/contracts/FileEvent';
 import { FileSectionType } from '../../src/contracts/FileSectionType';
 import FileEventPublisherTestStack from '../../src/cdk/stacks/test/FileEventPublisherTestStack-v2';
-import { IntegrationTestClient } from '../../src/aws-integration-test';
+import { UnitTestClient } from '../../src/aws-integration-test';
 
 describe('Tests using the SDK', () => {
-  const integrationTestClient = new IntegrationTestClient({
+  const testClient = new UnitTestClient({
     testResourceTagKey: FileEventPublisherTestStack.ResourceTagKey,
   });
 
   before(async () => {
-    await integrationTestClient.initialiseAsync();
+    await testClient.initialiseAsync();
   });
 
-  it('New file - With polling', async () => {
+  const newFileUploadTestId = 'New file upload';
+  it(newFileUploadTestId, async () => {
+    await testClient.beginTestAsync(newFileUploadTestId);
+
     // Arrange
 
     const configurationFile = newConfigurationFile();
@@ -29,31 +31,30 @@ describe('Tests using the SDK', () => {
 
     // Act
 
-    await integrationTestClient.uploadObjectToBucketAsync(
+    await testClient.uploadObjectToBucketAsync(
       FileEventPublisherTestStack.TestBucketId,
       configurationFileS3Key,
       configurationFile
     );
 
-    // Poll
+    // Await
 
-    const timedOut = getTimedOut(12);
-    const expectedEventCount = (events: FileEvent[] | undefined): boolean => events?.length === 2;
-
-    let fileEvents: FileEvent[] | undefined;
-
-    while (!timedOut() && !expectedEventCount(fileEvents)) {
-      // eslint-disable-next-line no-await-in-loop
-      await waitAsync(2);
-      fileEvents = []; // await getFileEvents(configurationFileName);
-    }
+    const { outputs, timedOut } = await testClient.pollAsync<SNSEvent>({
+      until: (o) => o.length === 2,
+      intervalSeconds: 2,
+      timeoutSeconds: 12,
+    });
 
     // Assert
 
-    expect(fileEvents?.length).to.equal(2);
+    expect(timedOut).to.equal(false);
+
+    const fileEvents = convertOutputsToFileEvents(outputs);
+
+    expect(fileEvents.length).to.equal(2);
 
     expect(
-      fileEvents?.some(
+      fileEvents.some(
         (e) =>
           e.s3Key === configurationFileS3Key &&
           e.eventType === FileEventType.Created &&
@@ -62,7 +63,7 @@ describe('Tests using the SDK', () => {
     );
 
     expect(
-      fileEvents?.some(
+      fileEvents.some(
         (e) =>
           e.s3Key === configurationFileS3Key &&
           e.eventType === FileEventType.Created &&
@@ -72,25 +73,11 @@ describe('Tests using the SDK', () => {
   }).timeout(60 * 1000);
 });
 
-const listAllKeysAsync = async (
-  bucket: string,
-  prefix?: string,
-  token?: string
-): Promise<ObjectList> => {
-  const s3 = new AWS.S3({ region: getRegion() });
-  const opts = {
-    Bucket: bucket,
-    ContinuationToken: token,
-    ...(prefix && { Prefix: prefix }),
-  };
-  const data = await s3.listObjectsV2(opts).promise();
-  let allKeys = data.Contents || [];
-  if (data.IsTruncated) {
-    allKeys = allKeys.concat(await listAllKeysAsync(bucket, prefix, data.NextContinuationToken));
-  }
-
-  return allKeys;
-};
+function convertOutputsToFileEvents(outputs: SNSEvent[]): FileEvent[] {
+  return outputs
+    .map((o) => o.Records.map((r) => JSON.parse(r.Sns.Message) as FileEvent))
+    .reduce((allEvents, events) => allEvents.concat(events), []);
+}
 
 function newConfigurationFile(): File<Configuration> {
   //

@@ -1,4 +1,5 @@
-import IntegrationTestClient from './IntegrationTestClient';
+import UnitTestClient from './UnitTestClient';
 import IntegrationTestStack from './IntegrationTestStack';
+import LambdaTestClient from './LambdaTestClient';
 
-export { IntegrationTestClient, IntegrationTestStack };
+export { IntegrationTestStack, UnitTestClient, LambdaTestClient };

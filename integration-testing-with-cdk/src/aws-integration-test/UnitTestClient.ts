@@ -6,17 +6,57 @@ import * as cdk from '@aws-cdk/core';
 
 dotenv.config();
 
-export interface IntegrationTestClientProps {
+export interface UnitTestClientProps {
   testResourceTagKey: string;
 }
 
-export default class IntegrationTestClient {
+export default class UnitTestClient {
+  //
+  async pollAsync<T>({
+    until,
+    intervalSeconds,
+    timeoutSeconds,
+  }: {
+    until: (outputs: T[]) => boolean;
+    intervalSeconds: number;
+    timeoutSeconds: number;
+  }): Promise<{ outputs: T[]; timedOut: boolean }> {
+    //
+    const timeOutThreshold = Date.now() + 1000 * timeoutSeconds;
+
+    const timedOut = (): boolean => Date.now() > timeOutThreshold;
+
+    let outputs = new Array<T>();
+
+    while (!timedOut() && !until(outputs)) {
+      // eslint-disable-next-line no-await-in-loop
+      await UnitTestClient.sleepAsync(intervalSeconds);
+      // eslint-disable-next-line no-await-in-loop
+      outputs = await this.getTestOutputs<T>();
+    }
+
+    return {
+      timedOut: !until(outputs),
+      outputs,
+    };
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  async getTestOutputs<T>(): Promise<T[]> {
+    // TODO 02Jul21: Read the outputs from the table
+    return [];
+  }
+
+  static async sleepAsync(seconds: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+  }
+
   //
   static readonly tagging = new AWS.ResourceGroupsTaggingAPI({
-    region: IntegrationTestClient.getRegion(),
+    region: UnitTestClient.getRegion(),
   });
 
-  static readonly s3 = new AWS.S3({ region: IntegrationTestClient.getRegion() });
+  static readonly s3 = new AWS.S3({ region: UnitTestClient.getRegion() });
 
   static getRegion(): string {
     if (process.env.AWS_REGION === undefined)
@@ -26,7 +66,7 @@ export default class IntegrationTestClient {
 
   static async getResourcesByTagKeyAsync(key: string): Promise<ResourceTagMappingList> {
     // TODO 27Jun21: PaginationToken
-    const resources = await IntegrationTestClient.tagging
+    const resources = await UnitTestClient.tagging
       .getResources({
         TagFilters: [
           {
@@ -39,17 +79,24 @@ export default class IntegrationTestClient {
     return resources.ResourceTagMappingList ?? [];
   }
 
+  static async sleepSecondsAsync(seconds: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+  }
+
   testResourceTagMappingList: ResourceTagMappingList;
 
-  constructor(private props: IntegrationTestClientProps) {}
+  constructor(private props: UnitTestClientProps) {}
 
   async initialiseAsync(): Promise<void> {
-    this.testResourceTagMappingList = await IntegrationTestClient.getResourcesByTagKeyAsync(
+    this.testResourceTagMappingList = await UnitTestClient.getResourcesByTagKeyAsync(
       this.props.testResourceTagKey
     );
   }
 
-  private static getResourceArnByTag(resources: ResourceTagMappingList, targetTag: cdk.Tag): string {
+  private static getResourceArnByTag(
+    resources: ResourceTagMappingList,
+    targetTag: cdk.Tag
+  ): string {
     //
     if (resources === undefined) throw new Error('resources === undefined');
 
@@ -75,7 +122,7 @@ export default class IntegrationTestClient {
     arnPattern: RegExp
   ): string {
     //
-    const tagMatchArn = IntegrationTestClient.getResourceArnByTag(resources, targetTag);
+    const tagMatchArn = UnitTestClient.getResourceArnByTag(resources, targetTag);
 
     const bucketArnMatch = tagMatchArn.match(arnPattern);
 
@@ -89,7 +136,7 @@ export default class IntegrationTestClient {
 
   private getBucketNameByTag(targetTag: cdk.Tag): string {
     const arnPattern = /^arn:aws:s3:::(?<name>.*)/;
-    const resourceName = IntegrationTestClient.getResourceNameFromArn(
+    const resourceName = UnitTestClient.getResourceNameFromArn(
       this.testResourceTagMappingList,
       targetTag,
       arnPattern
@@ -107,7 +154,7 @@ export default class IntegrationTestClient {
       new cdk.Tag(this.props.testResourceTagKey, bucketId)
     );
 
-    await IntegrationTestClient.s3
+    await UnitTestClient.s3
       .upload({
         Bucket: bucketName,
         Key: key,
@@ -119,32 +166,38 @@ export default class IntegrationTestClient {
   // ------------------------------------------------------------------------------------------------
 
   // eslint-disable-next-line class-methods-use-this
-  async beginTest<T>(testId: string, inputs?: T): Promise<void> {
+  async beginTestAsync<T>(testId: string, inputs?: T): Promise<void> {
+    if (!testId) {
+      throw new Error(`A testId must be specified`);
+    }
+
+    // TODO 02Jul21: Clear down all inputs, outputs, and mock states for the test
+
+    // TODO 02Jul21: Set the current test and inputs
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  async getCurrentTestAsync<T>(): Promise<{ testId: string; inputs?: T }> {
     throw new Error(`errorMessage`);
   }
 
   // eslint-disable-next-line class-methods-use-this
-  async getCurrentTest<T>(): Promise<{ testId: string; inputs?: T }> {
+  async getMockStateAsync<T>(mockId: string): Promise<T> {
     throw new Error(`errorMessage`);
   }
 
   // eslint-disable-next-line class-methods-use-this
-  async getMockState<T>(mockId: string): Promise<T> {
+  async setMockStateAsync<T>(mockId: string, state: T): Promise<void> {
     throw new Error(`errorMessage`);
   }
 
   // eslint-disable-next-line class-methods-use-this
-  async setMockState<T>(mockId: string, state: T): Promise<void> {
+  async setTestOutputAsync<T>(outputId: string, output?: T): Promise<void> {
     throw new Error(`errorMessage`);
   }
 
   // eslint-disable-next-line class-methods-use-this
-  async setTestOutput<T>(outputId: string, output?: T): Promise<void> {
-    throw new Error(`errorMessage`);
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  async getTestOutputs<T>(): Promise<T[]> {
+  async getTestOutputsAsync<T>(): Promise<T[]> {
     throw new Error(`errorMessage`);
   }
 }
