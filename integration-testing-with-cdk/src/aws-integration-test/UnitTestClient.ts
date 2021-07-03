@@ -123,7 +123,7 @@ export default class UnitTestClient {
     until: (outputs: T[]) => boolean;
     intervalSeconds: number;
     timeoutSeconds: number;
-  }): Promise<{ outputs: T[]; timedOut: boolean }> {
+  }): Promise<{ finalOutputs: T[]; timedOut: boolean }> {
     //
     const timeOutThreshold = Date.now() + 1000 * timeoutSeconds;
 
@@ -140,7 +140,7 @@ export default class UnitTestClient {
 
     return {
       timedOut: !until(outputs),
-      outputs,
+      finalOutputs: outputs,
     };
   }
 

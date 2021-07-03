@@ -20,9 +20,8 @@ describe('Tests using the SDK', () => {
     await testClient.initialiseAsync();
   });
 
-  const newFileUploadTestId = 'New file upload';
-  it(newFileUploadTestId, async () => {
-    await testClient.beginTestAsync(newFileUploadTestId);
+  it('New file upload', async () => {
+    await testClient.beginTestAsync('New file upload');
 
     // Arrange
 
@@ -39,8 +38,8 @@ describe('Tests using the SDK', () => {
 
     // Await
 
-    const { outputs, timedOut } = await testClient.pollAsync<SNSEvent>({
-      until: (o) => o.length === 2,
+    const { finalOutputs, timedOut } = await testClient.pollAsync<SNSEvent>({
+      until: (outputs) => outputs.length === 2,
       intervalSeconds: 2,
       timeoutSeconds: 12,
     });
@@ -49,7 +48,7 @@ describe('Tests using the SDK', () => {
 
     expect(timedOut).to.equal(false);
 
-    const fileEvents = convertOutputsToFileEvents(outputs);
+    const fileEvents = convertOutputsToFileEvents(finalOutputs);
 
     expect(fileEvents.length).to.equal(2);
 

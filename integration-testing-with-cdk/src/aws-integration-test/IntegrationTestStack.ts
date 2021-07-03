@@ -2,10 +2,12 @@
 import * as cdk from '@aws-cdk/core';
 import * as dynamodb from '@aws-cdk/aws-dynamodb';
 import * as lambda from '@aws-cdk/aws-lambda';
+import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
+import path from 'path';
 
 export interface IntegrationTestStackProps {
   testResourceTagKey: string;
-  includeTestSubscriberFunction?: boolean;
+  generateTestObserverFunction?: boolean;
 }
 
 export default abstract class IntegrationTestStack extends cdk.Stack {
@@ -16,12 +18,14 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
 
   readonly integrationTestTable: dynamodb.Table;
 
-  readonly testSubscriberFunction: lambda.IFunction;
+  readonly testObserverFunction: lambda.IFunction;
 
   constructor(scope: cdk.Construct, id: string, props: IntegrationTestStackProps) {
     super(scope, id);
 
     this.testResourceTagKey = props.testResourceTagKey;
+
+    // Test table
 
     this.integrationTestTable = new dynamodb.Table(
       this,
@@ -35,8 +39,22 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
 
     this.addTestResourceTag(this.integrationTestTable, IntegrationTestStack.IntegrationTestTableId);
 
-    if (props.includeTestSubscriberFunction) {
-      // TODO 03Jul21: Include the test subscriber function
+    if (props.generateTestObserverFunction) {
+      //
+      // Test subscriber function
+
+      const functionEntryBase = path.join(__dirname, '.');
+
+      this.testObserverFunction = new lambdaNodejs.NodejsFunction(this, 'TestObserverFunction', {
+        runtime: lambda.Runtime.NODEJS_12_X,
+        entry: path.join(functionEntryBase, `testObserverFunction.ts`),
+        handler: 'handler',
+        environment: {
+          INTEGRATION_TEST_TABLE_NAME: this.integrationTestTable.tableName,
+        },
+      });
+
+      this.integrationTestTable.grantReadWriteData(this.testObserverFunction);
     }
 
     // TODO 03Jul21: Do we need this? Do we benefit from this?
