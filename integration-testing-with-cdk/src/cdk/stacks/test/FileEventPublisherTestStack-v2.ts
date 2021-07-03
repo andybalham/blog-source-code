@@ -13,7 +13,10 @@ export default class FileEventPublisherTestStack extends IntegrationTestStack {
   static readonly TestBucketId = 'TestBucket';
 
   constructor(scope: cdk.Construct, id: string) {
-    super(scope, id, { testResourceTagKey: 'FileEventPublisherTestStack-v2' });
+    super(scope, id, {
+      testResourceTagKey: 'FileEventPublisherTestStack-v2',
+      includeTestSubscriberFunction: true,
+    });
 
     // Test bucket
 
@@ -21,8 +24,8 @@ export default class FileEventPublisherTestStack extends IntegrationTestStack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
-    
-    cdk.Tags.of(testBucket).add(this.testResourceTagKey, FileEventPublisherTestStack.TestBucketId);
+
+    this.addTestResourceTag(testBucket, FileEventPublisherTestStack.TestBucketId);
 
     // SUT
 
@@ -40,11 +43,16 @@ export default class FileEventPublisherTestStack extends IntegrationTestStack {
         INTEGRATION_TEST_TABLE_NAME: this.integrationTestTable.tableName,
       }
     );
-    
+
+    this.integrationTestTable.grantReadWriteData(fileEventTestSubscriberFunction);
+
     sut.fileEventTopic.addSubscription(
       new subscriptions.LambdaSubscription(fileEventTestSubscriberFunction)
     );
-    
-    this.integrationTestTable.grantWriteData(fileEventTestSubscriberFunction);
+
+    // TODO 03Jul21: Look to supporting the following
+    // sut.fileEventTopic.addSubscription(
+    //   new subscriptions.LambdaSubscription(this.testSubscriberFunction)
+    // );
   }
 }

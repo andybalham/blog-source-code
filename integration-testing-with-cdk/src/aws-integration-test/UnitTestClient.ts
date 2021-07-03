@@ -3,6 +3,8 @@ import { ResourceTagMappingList } from 'aws-sdk/clients/resourcegroupstaggingapi
 import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
 import * as cdk from '@aws-cdk/core';
+import IntegrationTestStack from './IntegrationTestStack';
+import { TestItemPrefix } from './TestItemPrefix';
 
 dotenv.config();
 
@@ -12,6 +14,107 @@ export interface UnitTestClientProps {
 
 export default class UnitTestClient {
   //
+  static readonly tagging = new AWS.ResourceGroupsTaggingAPI({
+    region: UnitTestClient.getRegion(),
+  });
+
+  static readonly db = new AWS.DynamoDB.DocumentClient({ region: UnitTestClient.getRegion() });
+
+  static readonly s3 = new AWS.S3({ region: UnitTestClient.getRegion() });
+
+  testResourceTagMappingList: ResourceTagMappingList;
+
+  testId: string;
+
+  constructor(private props: UnitTestClientProps) {}
+
+  // Static ------------------------------------------------------------------
+
+  static getRegion(): string {
+    if (process.env.AWS_REGION === undefined)
+      throw new Error('process.env.AWS_REGION === undefined');
+    return process.env.AWS_REGION;
+  }
+
+  static async sleepAsync(seconds: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+  }
+
+  static async getResourcesByTagKeyAsync(key: string): Promise<ResourceTagMappingList> {
+    // TODO 27Jun21: PaginationToken
+    const resources = await UnitTestClient.tagging
+      .getResources({
+        TagFilters: [
+          {
+            Key: key,
+          },
+        ],
+      })
+      .promise();
+
+    return resources.ResourceTagMappingList ?? [];
+  }
+
+  // Instance ----------------------------------------------------------------
+
+  async initialiseAsync(): Promise<void> {
+    this.testResourceTagMappingList = await UnitTestClient.getResourcesByTagKeyAsync(
+      this.props.testResourceTagKey
+    );
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  async beginTestAsync<T>(testId: string, inputs?: T): Promise<void> {
+    if (!testId) {
+      throw new Error(`A testId must be specified`);
+    }
+
+    this.testId = testId;
+
+    // Clear down all data related to the test
+
+    const tableName = this.getIntegrationTestTableName();
+
+    // TODO 03Jul21: Use LastEvaluatedKey
+    const testQueryParams /*: QueryInput */ = {
+      // QueryInput results in a 'Condition parameter type does not match schema type'
+      TableName: tableName,
+      KeyConditionExpression: `PK = :PK`,
+      ExpressionAttributeValues: {
+        ':PK': testId,
+      },
+    };
+
+    const testQueryOutput = await UnitTestClient.db.query(testQueryParams).promise();
+
+    // TODO 03Jul21: Use batchWrite with delete requests
+    if (testQueryOutput.Items) {
+      const deletePromises = testQueryOutput.Items.map((item) =>
+        UnitTestClient.db.delete({
+          TableName: tableName,
+          Key: { PK: item.PK, SK: item.SK },
+        })
+      );
+      await Promise.all(deletePromises);
+    }
+
+    // Set the current test and inputs
+
+    const currentTestItem = {
+      PK: 'Current',
+      SK: 'Test',
+      // inputs: { testId, inputs },
+      details: { testId, inputs },
+    };
+
+    await UnitTestClient.db
+      .put({
+        TableName: tableName,
+        Item: currentTestItem,
+      })
+      .promise();
+  }
+
   async pollAsync<T>({
     until,
     intervalSeconds,
@@ -32,7 +135,7 @@ export default class UnitTestClient {
       // eslint-disable-next-line no-await-in-loop
       await UnitTestClient.sleepAsync(intervalSeconds);
       // eslint-disable-next-line no-await-in-loop
-      outputs = await this.getTestOutputs<T>();
+      outputs = await this.getTestOutputsAsync<T>();
     }
 
     return {
@@ -41,57 +144,50 @@ export default class UnitTestClient {
     };
   }
 
-  // eslint-disable-next-line class-methods-use-this
-  async getTestOutputs<T>(): Promise<T[]> {
-    // TODO 02Jul21: Read the outputs from the table
-    return [];
+  async getTestOutputsAsync<T>(): Promise<T[]> {
+    //
+    const queryOutputsParams /*: QueryInput */ = {
+      // QueryInput results in a 'Condition parameter type does not match schema type'
+      TableName: this.getIntegrationTestTableName(),
+      KeyConditionExpression: `PK = :PK and begins_with(SK, :SKPrefix)`,
+      ExpressionAttributeValues: {
+        ':PK': this.testId,
+        ':SKPrefix': TestItemPrefix.TestOutput,
+      },
+    };
+
+    const queryOutputsOutput = await UnitTestClient.db.query(queryOutputsParams).promise();
+
+    if (!queryOutputsOutput.Items) {
+      return [];
+    }
+
+    // TODO 03Jul21: Use LastEvaluatedKey
+    const outputs = queryOutputsOutput.Items.map(i => i.output as T);
+
+    return outputs;
   }
 
-  static async sleepAsync(seconds: number): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
-  }
+  async uploadObjectToBucketAsync(
+    bucketId: string,
+    key: string,
+    object: Record<string, any>
+  ): Promise<void> {
+    //
+    const bucketName = this.getBucketNameByTag(
+      new cdk.Tag(this.props.testResourceTagKey, bucketId)
+    );
 
-  //
-  static readonly tagging = new AWS.ResourceGroupsTaggingAPI({
-    region: UnitTestClient.getRegion(),
-  });
-
-  static readonly s3 = new AWS.S3({ region: UnitTestClient.getRegion() });
-
-  static getRegion(): string {
-    if (process.env.AWS_REGION === undefined)
-      throw new Error('process.env.AWS_REGION === undefined');
-    return process.env.AWS_REGION;
-  }
-
-  static async getResourcesByTagKeyAsync(key: string): Promise<ResourceTagMappingList> {
-    // TODO 27Jun21: PaginationToken
-    const resources = await UnitTestClient.tagging
-      .getResources({
-        TagFilters: [
-          {
-            Key: key,
-          },
-        ],
+    await UnitTestClient.s3
+      .upload({
+        Bucket: bucketName,
+        Key: key,
+        Body: JSON.stringify(object),
       })
       .promise();
-
-    return resources.ResourceTagMappingList ?? [];
   }
 
-  static async sleepSecondsAsync(seconds: number): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
-  }
-
-  testResourceTagMappingList: ResourceTagMappingList;
-
-  constructor(private props: UnitTestClientProps) {}
-
-  async initialiseAsync(): Promise<void> {
-    this.testResourceTagMappingList = await UnitTestClient.getResourcesByTagKeyAsync(
-      this.props.testResourceTagKey
-    );
-  }
+  // Private ------------------------------------------------------
 
   private static getResourceArnByTag(
     resources: ResourceTagMappingList,
@@ -144,60 +240,21 @@ export default class UnitTestClient {
     return resourceName;
   }
 
-  async uploadObjectToBucketAsync(
-    bucketId: string,
-    key: string,
-    object: Record<string, any>
-  ): Promise<void> {
-    //
-    const bucketName = this.getBucketNameByTag(
-      new cdk.Tag(this.props.testResourceTagKey, bucketId)
+  private getTableNameByTag(targetTag: cdk.Tag): string {
+    const arnPattern = new RegExp(
+      `^arn:aws:dynamodb:${UnitTestClient.getRegion()}:[0-9]+:table/(?<name>.*)`
     );
-
-    await UnitTestClient.s3
-      .upload({
-        Bucket: bucketName,
-        Key: key,
-        Body: JSON.stringify(object),
-      })
-      .promise();
+    const resourceName = UnitTestClient.getResourceNameFromArn(
+      this.testResourceTagMappingList,
+      targetTag,
+      arnPattern
+    );
+    return resourceName;
   }
 
-  // ------------------------------------------------------------------------------------------------
-
-  // eslint-disable-next-line class-methods-use-this
-  async beginTestAsync<T>(testId: string, inputs?: T): Promise<void> {
-    if (!testId) {
-      throw new Error(`A testId must be specified`);
-    }
-
-    // TODO 02Jul21: Clear down all inputs, outputs, and mock states for the test
-
-    // TODO 02Jul21: Set the current test and inputs
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  async getCurrentTestAsync<T>(): Promise<{ testId: string; inputs?: T }> {
-    throw new Error(`errorMessage`);
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  async getMockStateAsync<T>(mockId: string): Promise<T> {
-    throw new Error(`errorMessage`);
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  async setMockStateAsync<T>(mockId: string, state: T): Promise<void> {
-    throw new Error(`errorMessage`);
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  async setTestOutputAsync<T>(outputId: string, output?: T): Promise<void> {
-    throw new Error(`errorMessage`);
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  async getTestOutputsAsync<T>(): Promise<T[]> {
-    throw new Error(`errorMessage`);
+  private getIntegrationTestTableName(): string {
+    return this.getTableNameByTag(
+      new cdk.Tag(this.props.testResourceTagKey, IntegrationTestStack.IntegrationTestTableId)
+    );
   }
 }
