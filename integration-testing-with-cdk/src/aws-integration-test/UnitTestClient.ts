@@ -2,6 +2,7 @@
 import { ResourceTagMappingList } from 'aws-sdk/clients/resourcegroupstaggingapi';
 import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
+import sns from 'aws-sdk/clients/sns';
 import IntegrationTestStack from './IntegrationTestStack';
 import { CurrentTestItem, TestItemPrefix } from './TestItem';
 
@@ -22,6 +23,8 @@ export default class UnitTestClient {
   });
 
   private static readonly s3 = new AWS.S3({ region: UnitTestClient.getRegion() });
+
+  private static readonly sns = new AWS.SNS({ region: UnitTestClient.getRegion() });
 
   testResourceTagMappingList: ResourceTagMappingList;
 
@@ -192,7 +195,7 @@ export default class UnitTestClient {
     const bucketName = this.getBucketNameByStackId(bucketStackId);
 
     if (bucketName === undefined) {
-      throw new Error(`The bucket name could not be resolved for id: ${bucketName}`);
+      throw new Error(`The bucket name could not be resolved for id: ${bucketStackId}`);
     }
 
     await UnitTestClient.s3
@@ -202,6 +205,27 @@ export default class UnitTestClient {
         Body: JSON.stringify(object),
       })
       .promise();
+  }
+
+  async publishMessageAsync<T>(
+    queueStackId: string,
+    message: T,
+    messageAttributes?: sns.MessageAttributeMap
+  ): Promise<void> {
+    //
+    const fileEventTopicArn = this.getResourceArnByStackId(queueStackId);
+
+    if (fileEventTopicArn === undefined) {
+      throw new Error(`The queue ARN could not be resolved for id: ${queueStackId}`);
+    }
+
+    const publishInput: sns.PublishInput = {
+      Message: JSON.stringify(message),
+      TopicArn: fileEventTopicArn,
+      MessageAttributes: messageAttributes,
+    };
+
+    await UnitTestClient.sns.publish(publishInput).promise();
   }
 
   getResourceArnByStackId(targetStackId: string): string | undefined {

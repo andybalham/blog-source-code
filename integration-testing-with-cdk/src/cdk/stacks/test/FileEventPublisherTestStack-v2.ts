@@ -15,7 +15,7 @@ export default class FileEventPublisherTestStack extends IntegrationTestStack {
   constructor(scope: cdk.Construct, id: string) {
     //
     super(scope, id, {
-      testResourceTagKey: 'FileEventPublisherTestStack-v2',
+      testResourceTagKey: FileEventPublisherTestStack.ResourceTagKey,
       deployIntegrationTestTable: true,
       deployTestObserverFunction: true,
     });
@@ -33,6 +33,7 @@ export default class FileEventPublisherTestStack extends IntegrationTestStack {
 
     const sut = new FileEventPublisher(this, 'SUT', {
       fileBucket: testBucket,
+      deploymentTarget: 'TEST',
     });
 
     // Test subscriber

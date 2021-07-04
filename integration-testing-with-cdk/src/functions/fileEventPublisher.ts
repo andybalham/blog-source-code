@@ -1,9 +1,8 @@
+/* eslint-disable import/no-extraneous-dependencies */
 /* eslint-disable no-console */
 /* eslint-disable import/prefer-default-export */
 import { DynamoDBStreamEvent } from 'aws-lambda/trigger/dynamodb-stream';
-// eslint-disable-next-line import/no-extraneous-dependencies
 import DynamoDB from 'aws-sdk/clients/dynamodb';
-// eslint-disable-next-line import/no-extraneous-dependencies
 import SNS from 'aws-sdk/clients/sns';
 import { FileEvent, FileEventType } from '../contracts/FileEvent';
 import { FileHash } from '../contracts/FileHash';

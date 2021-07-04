@@ -1,4 +1,4 @@
 import FileEventPublisherTestStack from './FileEventPublisherTestStack-v2';
+import HeaderIndexTestStack from './HeaderIndexTestStack';
 
-// eslint-disable-next-line import/prefer-default-export
-export { FileEventPublisherTestStack };
+export { FileEventPublisherTestStack, HeaderIndexTestStack };

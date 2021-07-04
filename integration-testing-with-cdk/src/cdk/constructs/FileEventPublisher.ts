@@ -11,6 +11,7 @@ import path from 'path';
 
 export interface FileEventPublisherProps {
   fileBucket: s3.Bucket;
+  deploymentTarget?: 'TEST' | 'PROD';
 }
 
 export default class FileEventPublisher extends cdk.Construct {
@@ -30,6 +31,7 @@ export default class FileEventPublisher extends cdk.Construct {
       sortKey: { name: 'sectionType', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
+      removalPolicy: props.deploymentTarget === 'TEST' ? cdk.RemovalPolicy.DESTROY : undefined,
     });
 
     // The function that is notified by the bucket and writes the hashes to the table

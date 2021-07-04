@@ -1,4 +1,4 @@
 import FileEventPublisher from './FileEventPublisher';
+import HeaderIndex from './HeaderIndex';
 
-// eslint-disable-next-line import/prefer-default-export
-export { FileEventPublisher };
+export { FileEventPublisher, HeaderIndex };

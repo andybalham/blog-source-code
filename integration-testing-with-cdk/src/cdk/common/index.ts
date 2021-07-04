@@ -1,3 +1,3 @@
-import { newLogEventFunction, newNodejsFunction } from './functions';
+import { newLogEventFunction, newNodejsFunction } from './helperFunctions';
 
 export { newLogEventFunction, newNodejsFunction };

@@ -1,7 +1,4 @@
 /* eslint-disable no-param-reassign */
-/* eslint-disable no-await-in-loop */
-/* eslint-disable no-restricted-syntax */
-/* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { nanoid } from 'nanoid';
 import { expect } from 'chai';
@@ -12,7 +9,7 @@ import { FileSectionType } from '../../src/contracts/FileSectionType';
 import FileEventPublisherTestStack from '../../src/cdk/stacks/test/FileEventPublisherTestStack-v2';
 import { UnitTestClient } from '../../src/aws-integration-test';
 
-describe('Tests using the SDK', () => {
+describe('FileEventPublisher Tests', () => {
   const testClient = new UnitTestClient({
     testResourceTagKey: FileEventPublisherTestStack.ResourceTagKey,
   });
