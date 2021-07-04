@@ -16,7 +16,8 @@ export default class FileEventPublisherTestStack extends IntegrationTestStack {
     //
     super(scope, id, {
       testResourceTagKey: 'FileEventPublisherTestStack-v2',
-      generateTestObserverFunction: true,
+      deployIntegrationTestTable: true,
+      deployTestObserverFunction: true,
     });
 
     // Test bucket

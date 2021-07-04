@@ -2,7 +2,6 @@
 import { ResourceTagMappingList } from 'aws-sdk/clients/resourcegroupstaggingapi';
 import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
-import * as cdk from '@aws-cdk/core';
 import IntegrationTestStack from './IntegrationTestStack';
 import { CurrentTestItem, TestItemPrefix } from './TestItem';
 
@@ -14,19 +13,21 @@ export interface UnitTestClientProps {
 
 export default class UnitTestClient {
   //
-  static readonly tagging = new AWS.ResourceGroupsTaggingAPI({
+  private static readonly tagging = new AWS.ResourceGroupsTaggingAPI({
     region: UnitTestClient.getRegion(),
   });
 
-  static readonly db = new AWS.DynamoDB.DocumentClient({ region: UnitTestClient.getRegion() });
+  private static readonly db = new AWS.DynamoDB.DocumentClient({
+    region: UnitTestClient.getRegion(),
+  });
 
-  static readonly s3 = new AWS.S3({ region: UnitTestClient.getRegion() });
+  private static readonly s3 = new AWS.S3({ region: UnitTestClient.getRegion() });
 
   testResourceTagMappingList: ResourceTagMappingList;
 
-  integrationTestTableName: string;
+  integrationTestTableName?: string;
 
-  testId: string;
+  testId?: string;
 
   constructor(private props: UnitTestClientProps) {}
 
@@ -66,59 +67,63 @@ export default class UnitTestClient {
     );
 
     this.integrationTestTableName = this.getTableNameByTag(
-      new cdk.Tag(this.props.testResourceTagKey, IntegrationTestStack.IntegrationTestTableId)
+      IntegrationTestStack.IntegrationTestTableId
     );
   }
 
   async beginTestAsync<T>(testId: string, inputs?: T): Promise<void> {
+    //
     if (!testId) {
       throw new Error(`A testId must be specified`);
     }
 
     this.testId = testId;
 
-    // Clear down all data related to the test
+    if (this.integrationTestTableName !== undefined) {
+      //
+      // Clear down all data related to the test
 
-    // TODO 03Jul21: Use LastEvaluatedKey
-    const testQueryParams /*: QueryInput */ = {
-      // QueryInput results in a 'Condition parameter type does not match schema type'
-      TableName: this.integrationTestTableName,
-      KeyConditionExpression: `PK = :PK`,
-      ExpressionAttributeValues: {
-        ':PK': testId,
-      },
-    };
-
-    const testQueryOutput = await UnitTestClient.db.query(testQueryParams).promise();
-
-    // TODO 03Jul21: Use batchWrite with delete requests
-    if (testQueryOutput.Items) {
-      const deletePromises = testQueryOutput.Items.map((item) =>
-        UnitTestClient.db
-          .delete({
-            TableName: this.integrationTestTableName,
-            Key: { PK: item.PK, SK: item.SK },
-          })
-          .promise()
-      );
-      await Promise.all(deletePromises);
-    }
-
-    // Set the current test and inputs
-
-    const currentTestItem: CurrentTestItem<T> = {
-      PK: 'Current',
-      SK: 'Test',
-      testId,
-      inputs,
-    };
-
-    await UnitTestClient.db
-      .put({
+      // TODO 03Jul21: Use LastEvaluatedKey
+      const testQueryParams /*: QueryInput */ = {
+        // QueryInput results in a 'Condition parameter type does not match schema type'
         TableName: this.integrationTestTableName,
-        Item: currentTestItem,
-      })
-      .promise();
+        KeyConditionExpression: `PK = :PK`,
+        ExpressionAttributeValues: {
+          ':PK': testId,
+        },
+      };
+
+      const testQueryOutput = await UnitTestClient.db.query(testQueryParams).promise();
+
+      // TODO 03Jul21: Use batchWrite with delete requests
+      if (testQueryOutput.Items) {
+        const deletePromises = testQueryOutput.Items.map((item) =>
+          UnitTestClient.db
+            .delete({
+              TableName: this.integrationTestTableName ?? 'undefined',
+              Key: { PK: item.PK, SK: item.SK },
+            })
+            .promise()
+        );
+        await Promise.all(deletePromises);
+      }
+
+      // Set the current test and inputs
+
+      const currentTestItem: CurrentTestItem<T> = {
+        PK: 'Current',
+        SK: 'Test',
+        testId,
+        inputs,
+      };
+
+      await UnitTestClient.db
+        .put({
+          TableName: this.integrationTestTableName,
+          Item: currentTestItem,
+        })
+        .promise();
+    }
   }
 
   async pollAsync<T>({
@@ -146,12 +151,16 @@ export default class UnitTestClient {
 
     return {
       timedOut: !until(outputs),
-      outputs: outputs,
+      outputs,
     };
   }
 
   async getTestOutputsAsync<T>(): Promise<T[]> {
     //
+    if (this.integrationTestTableName === undefined) {
+      return [];
+    }
+
     const queryOutputsParams /*: QueryInput */ = {
       // QueryInput results in a 'Condition parameter type does not match schema type'
       TableName: this.integrationTestTableName,
@@ -175,14 +184,16 @@ export default class UnitTestClient {
   }
 
   async uploadObjectToBucketAsync(
-    bucketId: string,
+    bucketStackId: string,
     key: string,
     object: Record<string, any>
   ): Promise<void> {
     //
-    const bucketName = this.getBucketNameByTag(
-      new cdk.Tag(this.props.testResourceTagKey, bucketId)
-    );
+    const bucketName = this.getBucketNameByStackId(bucketStackId);
+
+    if (bucketName === undefined) {
+      throw new Error(`The bucket name could not be resolved for id: ${bucketName}`);
+    }
 
     await UnitTestClient.s3
       .upload({
@@ -193,24 +204,26 @@ export default class UnitTestClient {
       .promise();
   }
 
-  // Private ------------------------------------------------------
-
-  private static getResourceArnByTag(
-    resources: ResourceTagMappingList,
-    targetTag: cdk.Tag
-  ): string {
+  getResourceArnByStackId(targetStackId: string): string | undefined {
     //
-    if (resources === undefined) throw new Error('resources === undefined');
+    if (this.testResourceTagMappingList === undefined)
+      throw new Error('this.testResourceTagMappingList === undefined');
 
-    const tagMatches = resources.filter(
-      (r) => r.Tags && r.Tags.some((t) => t.Key === targetTag.key && t.Value === targetTag.value)
+    const tagMatches = this.testResourceTagMappingList.filter(
+      (r) =>
+        r.Tags &&
+        r.Tags.some((t) => t.Key === this.props.testResourceTagKey && t.Value === targetStackId)
     );
 
-    if (tagMatches.length !== 1) {
+    if (tagMatches.length === 0) {
+      return undefined;
+    }
+
+    if (tagMatches.length > 1) {
       throw new Error(
-        `Found ${tagMatches.length} matches for ${JSON.stringify(
-          targetTag
-        )}, when 1 was expected: ${JSON.stringify(tagMatches)}`
+        `Found ${
+          tagMatches.length
+        } matches for ${targetStackId}, when 1 was expected: ${JSON.stringify(tagMatches)}`
       );
     }
 
@@ -218,43 +231,37 @@ export default class UnitTestClient {
     return tagMatchArn;
   }
 
-  private static getResourceNameFromArn(
-    resources: ResourceTagMappingList,
-    targetTag: cdk.Tag,
-    arnPattern: RegExp
-  ): string {
-    //
-    const tagMatchArn = UnitTestClient.getResourceArnByTag(resources, targetTag);
-
-    const bucketArnMatch = tagMatchArn.match(arnPattern);
-
-    if (!bucketArnMatch || !bucketArnMatch.groups?.name) {
-      throw new Error(`ARN did not match expected pattern: ${tagMatchArn}`);
-    }
-
-    const bucketName = bucketArnMatch.groups.name;
-    return bucketName;
-  }
-
-  private getBucketNameByTag(targetTag: cdk.Tag): string {
+  getBucketNameByStackId(targetStackId: string): string | undefined {
     const arnPattern = /^arn:aws:s3:::(?<name>.*)/;
-    const resourceName = UnitTestClient.getResourceNameFromArn(
-      this.testResourceTagMappingList,
-      targetTag,
-      arnPattern
-    );
+    const resourceName = this.getResourceNameFromArn(targetStackId, arnPattern);
     return resourceName;
   }
 
-  private getTableNameByTag(targetTag: cdk.Tag): string {
+  getTableNameByTag(targetStackId: string): string | undefined {
     const arnPattern = new RegExp(
       `^arn:aws:dynamodb:${UnitTestClient.getRegion()}:[0-9]+:table/(?<name>.*)`
     );
-    const resourceName = UnitTestClient.getResourceNameFromArn(
-      this.testResourceTagMappingList,
-      targetTag,
-      arnPattern
-    );
+    const resourceName = this.getResourceNameFromArn(targetStackId, arnPattern);
+    return resourceName;
+  }
+
+  // Private --------------------------------------------------------
+
+  private getResourceNameFromArn(targetStackId: string, arnPattern: RegExp): string | undefined {
+    //
+    const tagMatchArn = this.getResourceArnByStackId(targetStackId);
+
+    if (tagMatchArn === undefined) {
+      return undefined;
+    }
+
+    const arnMatch = tagMatchArn.match(arnPattern);
+
+    if (!arnMatch || !arnMatch.groups?.name) {
+      throw new Error(`ARN did not match expected pattern: ${tagMatchArn}`);
+    }
+
+    const resourceName = arnMatch.groups.name;
     return resourceName;
   }
 }

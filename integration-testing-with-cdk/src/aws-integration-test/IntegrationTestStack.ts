@@ -7,7 +7,8 @@ import path from 'path';
 
 export interface IntegrationTestStackProps {
   testResourceTagKey: string;
-  generateTestObserverFunction?: boolean;
+  deployIntegrationTestTable?: boolean;
+  deployTestObserverFunction?: boolean;
 }
 
 export default abstract class IntegrationTestStack extends cdk.Stack {
@@ -25,23 +26,35 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
 
     this.testResourceTagKey = props.testResourceTagKey;
 
-    // Test table
+    if (props.deployIntegrationTestTable) {
+      //
+      // Test table
 
-    this.integrationTestTable = new dynamodb.Table(
-      this,
-      IntegrationTestStack.IntegrationTestTableId,
-      {
-        partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
-        sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
-        billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      }
-    );
+      this.integrationTestTable = new dynamodb.Table(
+        this,
+        IntegrationTestStack.IntegrationTestTableId,
+        {
+          partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
+          sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
+          billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+        }
+      );
 
-    this.addTestResourceTag(this.integrationTestTable, IntegrationTestStack.IntegrationTestTableId);
+      this.addTestResourceTag(
+        this.integrationTestTable,
+        IntegrationTestStack.IntegrationTestTableId
+      );
+    }
 
-    if (props.generateTestObserverFunction) {
+    if (props.deployTestObserverFunction) {
       //
       // Test subscriber function
+
+      if (!props.deployIntegrationTestTable) {
+        throw new Error(
+          `props.deployIntegrationTestTable must be 'true' if props.deployTestObserverFunction is 'true', but is: ${props.deployIntegrationTestTable}`
+        );
+      }
 
       const functionEntryBase = path.join(__dirname, '.');
 
@@ -56,9 +69,6 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
 
       this.integrationTestTable.grantReadWriteData(this.testObserverFunction);
     }
-
-    // TODO 03Jul21: Do we need this? Do we benefit from this?
-    cdk.Tags.of(this).add('stack', id);
   }
 
   addTestResourceTag(scope: cdk.IConstruct, resourceId: string): void {

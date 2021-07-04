@@ -57,11 +57,11 @@ export default class LambdaTestClient {
 
   // eslint-disable-next-line class-methods-use-this
   async getMockStateAsync<T>(mockId: string): Promise<T> {
-    throw new Error(`errorMessage`);
+    throw new Error(mockId);
   }
 
   // eslint-disable-next-line class-methods-use-this
   async setMockStateAsync<T>(mockId: string, state: T): Promise<void> {
-    throw new Error(`errorMessage`);
+    throw new Error(JSON.stringify({ mockId, state }));
   }
 }

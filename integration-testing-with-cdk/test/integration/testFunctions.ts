@@ -10,7 +10,6 @@ export function getRegion(): string {
 }
 
 const s3 = new AWS.S3({ region: getRegion() });
-const dynamodb = new AWS.DynamoDB({ region: getRegion() });
 const tagging = new AWS.ResourceGroupsTaggingAPI({ region: getRegion() });
 
 export async function getResourcesByTagKeyAsync(key: string): Promise<ResourceTagMappingList> {
