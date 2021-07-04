@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { nanoid } from 'nanoid';
-import { TestItemPrefix } from './TestItemPrefix';
+import { CurrentTestItem, OutputTestItem, TestItemPrefix } from './TestItem';
 
 const documentClient = new DocumentClient();
 
@@ -9,8 +9,7 @@ export default class LambdaTestClient {
   //
   constructor(private integrationTestTableName: string | undefined) {}
 
-  // eslint-disable-next-line class-methods-use-this
-  async getTestDetailsAsync<T>(): Promise<{ testId: string; inputs?: T }> {
+  async getCurrentTestAsync<T>(): Promise<{ testId: string; inputs?: T }> {
     //
     if (this.integrationTestTableName === undefined)
       throw new Error('this.integrationTestTableName === undefined');
@@ -29,17 +28,19 @@ export default class LambdaTestClient {
     if (testQueryOutput.Items === undefined) throw new Error('testQueryOutput.Items === undefined');
     if (testQueryOutput.Items.length !== 1) throw new Error('testQueryOutput.Items.length !== 1');
 
-    return testQueryOutput.Items[0].details as { testId: string; inputs?: T };
+    const currentTestItem = testQueryOutput.Items[0] as CurrentTestItem<T>;
+
+    return { testId: currentTestItem.testId, inputs: currentTestItem.inputs };
   }
 
-  async setTestOutputAsync<T>(output?: T): Promise<void> {
+  async setTestOutputAsync<T>(output: T): Promise<void> {
     //
     if (this.integrationTestTableName === undefined)
       throw new Error('this.integrationTestTableName === undefined');
 
-    const { testId } = await this.getTestDetailsAsync();
+    const { testId } = await this.getCurrentTestAsync();
 
-    const testOutputItem = {
+    const testOutputItem: OutputTestItem<T> = {
       PK: testId,
       // TODO 02Jul21: Add a time element for rough ordering?
       SK: `${TestItemPrefix.TestOutput}-${nanoid()}`,

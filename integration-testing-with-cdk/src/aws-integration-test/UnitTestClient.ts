@@ -4,7 +4,7 @@ import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
 import * as cdk from '@aws-cdk/core';
 import IntegrationTestStack from './IntegrationTestStack';
-import { TestItemPrefix } from './TestItemPrefix';
+import { CurrentTestItem, TestItemPrefix } from './TestItem';
 
 dotenv.config();
 
@@ -23,6 +23,8 @@ export default class UnitTestClient {
   static readonly s3 = new AWS.S3({ region: UnitTestClient.getRegion() });
 
   testResourceTagMappingList: ResourceTagMappingList;
+
+  integrationTestTableName: string;
 
   testId: string;
 
@@ -58,12 +60,16 @@ export default class UnitTestClient {
   // Instance ----------------------------------------------------------------
 
   async initialiseAsync(): Promise<void> {
+    //
     this.testResourceTagMappingList = await UnitTestClient.getResourcesByTagKeyAsync(
       this.props.testResourceTagKey
     );
+
+    this.integrationTestTableName = this.getTableNameByTag(
+      new cdk.Tag(this.props.testResourceTagKey, IntegrationTestStack.IntegrationTestTableId)
+    );
   }
 
-  // eslint-disable-next-line class-methods-use-this
   async beginTestAsync<T>(testId: string, inputs?: T): Promise<void> {
     if (!testId) {
       throw new Error(`A testId must be specified`);
@@ -73,12 +79,10 @@ export default class UnitTestClient {
 
     // Clear down all data related to the test
 
-    const tableName = this.getIntegrationTestTableName();
-
     // TODO 03Jul21: Use LastEvaluatedKey
     const testQueryParams /*: QueryInput */ = {
       // QueryInput results in a 'Condition parameter type does not match schema type'
-      TableName: tableName,
+      TableName: this.integrationTestTableName,
       KeyConditionExpression: `PK = :PK`,
       ExpressionAttributeValues: {
         ':PK': testId,
@@ -90,26 +94,28 @@ export default class UnitTestClient {
     // TODO 03Jul21: Use batchWrite with delete requests
     if (testQueryOutput.Items) {
       const deletePromises = testQueryOutput.Items.map((item) =>
-        UnitTestClient.db.delete({
-          TableName: tableName,
-          Key: { PK: item.PK, SK: item.SK },
-        })
+        UnitTestClient.db
+          .delete({
+            TableName: this.integrationTestTableName,
+            Key: { PK: item.PK, SK: item.SK },
+          })
+          .promise()
       );
       await Promise.all(deletePromises);
     }
 
     // Set the current test and inputs
 
-    const currentTestItem = {
+    const currentTestItem: CurrentTestItem<T> = {
       PK: 'Current',
       SK: 'Test',
-      // inputs: { testId, inputs },
-      details: { testId, inputs },
+      testId,
+      inputs,
     };
 
     await UnitTestClient.db
       .put({
-        TableName: tableName,
+        TableName: this.integrationTestTableName,
         Item: currentTestItem,
       })
       .promise();
@@ -123,7 +129,7 @@ export default class UnitTestClient {
     until: (outputs: T[]) => boolean;
     intervalSeconds: number;
     timeoutSeconds: number;
-  }): Promise<{ finalOutputs: T[]; timedOut: boolean }> {
+  }): Promise<{ outputs: T[]; timedOut: boolean }> {
     //
     const timeOutThreshold = Date.now() + 1000 * timeoutSeconds;
 
@@ -140,7 +146,7 @@ export default class UnitTestClient {
 
     return {
       timedOut: !until(outputs),
-      finalOutputs: outputs,
+      outputs: outputs,
     };
   }
 
@@ -148,7 +154,7 @@ export default class UnitTestClient {
     //
     const queryOutputsParams /*: QueryInput */ = {
       // QueryInput results in a 'Condition parameter type does not match schema type'
-      TableName: this.getIntegrationTestTableName(),
+      TableName: this.integrationTestTableName,
       KeyConditionExpression: `PK = :PK and begins_with(SK, :SKPrefix)`,
       ExpressionAttributeValues: {
         ':PK': this.testId,
@@ -163,7 +169,7 @@ export default class UnitTestClient {
     }
 
     // TODO 03Jul21: Use LastEvaluatedKey
-    const outputs = queryOutputsOutput.Items.map(i => i.output as T);
+    const outputs = queryOutputsOutput.Items.map((i) => i.output as T);
 
     return outputs;
   }
@@ -250,11 +256,5 @@ export default class UnitTestClient {
       arnPattern
     );
     return resourceName;
-  }
-
-  private getIntegrationTestTableName(): string {
-    return this.getTableNameByTag(
-      new cdk.Tag(this.props.testResourceTagKey, IntegrationTestStack.IntegrationTestTableId)
-    );
   }
 }
