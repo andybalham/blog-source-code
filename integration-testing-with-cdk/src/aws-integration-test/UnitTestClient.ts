@@ -26,6 +26,8 @@ export default class UnitTestClient {
 
   private static readonly sns = new AWS.SNS({ region: UnitTestClient.getRegion() });
 
+  private static readonly lambda = new AWS.Lambda({ region: UnitTestClient.getRegion() });
+
   testResourceTagMappingList: ResourceTagMappingList;
 
   integrationTestTableName?: string;
@@ -69,7 +71,7 @@ export default class UnitTestClient {
       this.props.testResourceTagKey
     );
 
-    this.integrationTestTableName = this.getTableNameByTag(
+    this.integrationTestTableName = this.getTableNameByStackId(
       IntegrationTestStack.IntegrationTestTableId
     );
   }
@@ -207,9 +209,9 @@ export default class UnitTestClient {
       .promise();
   }
 
-  async publishMessageAsync<T>(
+  async publishMessageAsync(
     queueStackId: string,
-    message: T,
+    message: Record<string, any>,
     messageAttributes?: sns.MessageAttributeMap
   ): Promise<void> {
     //
@@ -226,6 +228,30 @@ export default class UnitTestClient {
     };
 
     await UnitTestClient.sns.publish(publishInput).promise();
+  }
+
+  async invokeFunctionAsync<T>(functionStackId: string, payload?: Record<string, any>): Promise<T | undefined> {
+    //
+    const functionName = this.getFunctionNameByStackId(functionStackId);
+
+    if (functionName === undefined) {
+      throw new Error(`The function name could not be resolved for id: ${functionStackId}`);
+    }
+
+    const lambdaPayload = payload ? { Payload: JSON.stringify(payload) } : {};
+
+    const params = {
+      FunctionName: functionName,
+      ...lambdaPayload,
+    };
+
+    const { Payload } = await UnitTestClient.lambda.invoke(params).promise();
+
+    if (Payload) {
+      return JSON.parse(Payload.toString());
+    }
+    
+    return undefined;
   }
 
   getResourceArnByStackId(targetStackId: string): string | undefined {
@@ -255,17 +281,39 @@ export default class UnitTestClient {
     return tagMatchArn;
   }
 
+  // https://docs.aws.amazon.com/service-authorization/latest/reference/reference_policies_actions-resources-contextkeys.html
+  static readonly ResourceNamePatterns = {
+    // arn:${Partition}:s3:::${BucketName}
+    bucket: /^arn:aws:s3:::(?<name>.*)/,
+    // arn:${Partition}:dynamodb:${Region}:${Account}:table/${TableName}
+    table: new RegExp(`^arn:aws:dynamodb:${UnitTestClient.getRegion()}:[0-9]+:table/(?<name>.*)`),
+    // arn:${Partition}:lambda:${Region}:${Account}:function:${FunctionName}:${Version}
+    function: new RegExp(
+      `^arn:aws:lambda:${UnitTestClient.getRegion()}:[0-9]+:table/(?<name>[^:]*)`
+    ),
+  };
+
   getBucketNameByStackId(targetStackId: string): string | undefined {
-    const arnPattern = /^arn:aws:s3:::(?<name>.*)/;
-    const resourceName = this.getResourceNameFromArn(targetStackId, arnPattern);
+    const resourceName = this.getResourceNameFromArn(
+      targetStackId,
+      UnitTestClient.ResourceNamePatterns.bucket
+    );
     return resourceName;
   }
 
-  getTableNameByTag(targetStackId: string): string | undefined {
-    const arnPattern = new RegExp(
-      `^arn:aws:dynamodb:${UnitTestClient.getRegion()}:[0-9]+:table/(?<name>.*)`
+  getTableNameByStackId(targetStackId: string): string | undefined {
+    const resourceName = this.getResourceNameFromArn(
+      targetStackId,
+      UnitTestClient.ResourceNamePatterns.table
     );
-    const resourceName = this.getResourceNameFromArn(targetStackId, arnPattern);
+    return resourceName;
+  }
+
+  getFunctionNameByStackId(targetStackId: string): string | undefined {
+    const resourceName = this.getResourceNameFromArn(
+      targetStackId,
+      UnitTestClient.ResourceNamePatterns.function
+    );
     return resourceName;
   }
 

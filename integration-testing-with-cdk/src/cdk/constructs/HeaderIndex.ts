@@ -15,7 +15,7 @@ export default class HeaderIndex extends cdk.Construct {
   //
   readonly readerFunction: lambda.IFunction;
 
-  static readonly readerFunctionId = 'HeaderIndexReaderFunction';
+  static readonly ReaderFunctionId = 'HeaderIndexReaderFunction';
 
   constructor(scope: cdk.Construct, id: string, props: HeaderIndexProps) {
     super(scope, id);
@@ -67,7 +67,7 @@ export default class HeaderIndex extends cdk.Construct {
 
     this.readerFunction = newNodejsFunction(
       this,
-      HeaderIndex.readerFunctionId,
+      HeaderIndex.ReaderFunctionId,
       'headerIndexReader',
       {
         // TODO 04Jul21: Will need the name of the header table

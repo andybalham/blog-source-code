@@ -30,6 +30,6 @@ export default class HeaderIndexTestStack extends IntegrationTestStack {
 
     // Tag the reader function to enable us to locate it
 
-    this.addTestResourceTag(sut.readerFunction, HeaderIndex.readerFunctionId);
+    this.addTestResourceTag(sut.readerFunction, HeaderIndex.ReaderFunctionId);
   }
 }
