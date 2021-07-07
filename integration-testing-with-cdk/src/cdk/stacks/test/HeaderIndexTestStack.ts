@@ -1,7 +1,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import * as cdk from '@aws-cdk/core';
 import * as sns from '@aws-cdk/aws-sns';
-import { HeaderIndex } from '../../constructs';
+import { HeaderIndexer } from '../../constructs';
 import { IntegrationTestStack } from '../../../aws-integration-test';
 
 export default class HeaderIndexTestStack extends IntegrationTestStack {
@@ -24,12 +24,12 @@ export default class HeaderIndexTestStack extends IntegrationTestStack {
 
     // SUT
 
-    const sut = new HeaderIndex(this, 'SUT', {
+    const sut = new HeaderIndexer(this, 'SUT', {
       fileEventTopic: testFileEventTopic,
     });
 
     // Tag the reader function to enable us to locate it
 
-    this.addTestResourceTag(sut.readerFunction, HeaderIndex.ReaderFunctionId);
+    this.addTestResourceTag(sut.readerFunction, HeaderIndexer.ReaderFunctionId);
   }
 }

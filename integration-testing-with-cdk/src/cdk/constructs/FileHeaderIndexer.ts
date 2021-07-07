@@ -8,16 +8,18 @@ import * as lambdaEventSources from '@aws-cdk/aws-lambda-event-sources';
 import { FileSectionType } from '../../contracts/FileSectionType';
 import { newNodejsFunction } from '../common';
 
-export interface HeaderIndexProps {
+export interface FileHeaderIndexerProps {
   fileEventTopic: sns.Topic;
 }
-export default class HeaderIndex extends cdk.Construct {
+export default class FileHeaderIndexer extends cdk.Construct {
   //
   readonly readerFunction: lambda.IFunction;
 
+  static readonly TableId = 'HeaderIndexTable';
+
   static readonly ReaderFunctionId = 'HeaderIndexReaderFunction';
 
-  constructor(scope: cdk.Construct, id: string, props: HeaderIndexProps) {
+  constructor(scope: cdk.Construct, id: string, props: FileHeaderIndexerProps) {
     super(scope, id);
 
     // Subscribe the SQS queue to the SNS topic
@@ -57,9 +59,7 @@ export default class HeaderIndex extends cdk.Construct {
       }
     );
 
-    writerFunction.addEventSource(
-      new lambdaEventSources.SqsEventSource(headerUpdatesQueue)
-    );
+    writerFunction.addEventSource(new lambdaEventSources.SqsEventSource(headerUpdatesQueue));
 
     headerUpdatesQueue.grantConsumeMessages(writerFunction);
 
@@ -67,7 +67,7 @@ export default class HeaderIndex extends cdk.Construct {
 
     this.readerFunction = newNodejsFunction(
       this,
-      HeaderIndex.ReaderFunctionId,
+      FileHeaderIndexer.ReaderFunctionId,
       'headerIndexReader',
       {
         // TODO 04Jul21: Will need the name of the header table

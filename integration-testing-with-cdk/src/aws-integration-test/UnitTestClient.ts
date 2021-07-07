@@ -136,7 +136,7 @@ export default class UnitTestClient {
     intervalSeconds,
     timeoutSeconds,
   }: {
-    until: (outputs: T[]) => boolean;
+    until: (outputs: T[]) => Promise<boolean>;
     intervalSeconds: number;
     timeoutSeconds: number;
   }): Promise<{ outputs: T[]; timedOut: boolean }> {
@@ -147,15 +147,18 @@ export default class UnitTestClient {
 
     let outputs = new Array<T>();
 
-    while (!timedOut() && !until(outputs)) {
+    // eslint-disable-next-line no-await-in-loop
+    while (!timedOut() && !(await until(outputs))) {
       // eslint-disable-next-line no-await-in-loop
       await UnitTestClient.sleepAsync(intervalSeconds);
-      // eslint-disable-next-line no-await-in-loop
-      outputs = await this.getTestOutputsAsync<T>();
+      if (this.integrationTestTableName) {
+        // eslint-disable-next-line no-await-in-loop
+        outputs = await this.getTestOutputsAsync<T>();
+      }
     }
 
     return {
-      timedOut: !until(outputs),
+      timedOut: !(await until(outputs)),
       outputs,
     };
   }
@@ -230,7 +233,10 @@ export default class UnitTestClient {
     await UnitTestClient.sns.publish(publishInput).promise();
   }
 
-  async invokeFunctionAsync<T>(functionStackId: string, payload?: Record<string, any>): Promise<T | undefined> {
+  async invokeFunctionAsync<TReq, TRes>(
+    functionStackId: string,
+    request?: TReq
+  ): Promise<TRes | undefined> {
     //
     const functionName = this.getFunctionNameByStackId(functionStackId);
 
@@ -238,7 +244,7 @@ export default class UnitTestClient {
       throw new Error(`The function name could not be resolved for id: ${functionStackId}`);
     }
 
-    const lambdaPayload = payload ? { Payload: JSON.stringify(payload) } : {};
+    const lambdaPayload = request ? { Payload: JSON.stringify(request) } : {};
 
     const params = {
       FunctionName: functionName,
@@ -250,7 +256,7 @@ export default class UnitTestClient {
     if (Payload) {
       return JSON.parse(Payload.toString());
     }
-    
+
     return undefined;
   }
 

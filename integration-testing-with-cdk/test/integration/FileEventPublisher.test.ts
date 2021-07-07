@@ -37,7 +37,7 @@ describe('FileEventPublisher Tests', () => {
     // Await
 
     const { outputs: finalOutputs, timedOut } = await testClient.pollAsync<SNSEvent>({
-      until: (outputs) => getFileEventCount(outputs) === 2,
+      until: async (outputs) => getFileEventCount(outputs) === 2,
       intervalSeconds: 2,
       timeoutSeconds: 12,
     });
@@ -117,7 +117,7 @@ describe('FileEventPublisher Tests', () => {
       );
 
       const { timedOut: arrangeTimedOut } = await testClient.pollAsync<SNSEvent>({
-        until: (outputs) => getFileEventCount(outputs) === 2,
+        until: async (outputs) => getFileEventCount(outputs) === 2,
         intervalSeconds: 2,
         timeoutSeconds: 12,
       });
@@ -137,7 +137,7 @@ describe('FileEventPublisher Tests', () => {
       // Await
 
       const { outputs: finalOutputs, timedOut } = await testClient.pollAsync<SNSEvent>({
-        until: (outputs) => getFileEventCount(outputs) >= theory.expectedEventCount,
+        until: async (outputs) => getFileEventCount(outputs) >= theory.expectedEventCount,
         intervalSeconds: 2,
         timeoutSeconds: 12,
       });

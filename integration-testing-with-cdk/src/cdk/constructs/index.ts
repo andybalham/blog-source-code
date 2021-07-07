@@ -1,4 +1,4 @@
 import FileEventPublisher from './FileEventPublisher';
-import HeaderIndex from './HeaderIndex';
+import FileHeaderIndexer from './FileHeaderIndexer';
 
-export { FileEventPublisher, HeaderIndex };
+export { FileEventPublisher, FileHeaderIndexer };
