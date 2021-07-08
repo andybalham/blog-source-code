@@ -59,9 +59,9 @@
     "file-events-test-synth": "tsc && cdk synth FileEventPublisherTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
     "file-events-test-deploy": "tsc && cdk deploy FileEventPublisherTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
     "file-events-test-destroy": "tsc && cdk destroy FileEventPublisherTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
-    "header-index-test-synth": "tsc && cdk synth HeaderIndexTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
-    "header-index-test-deploy": "tsc && cdk deploy HeaderIndexTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
-    "header-index-test-destroy": "tsc && cdk destroy HeaderIndexTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\""
+    "header-index-test-synth": "tsc && cdk synth FileHeaderIndexerTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
+    "header-index-test-deploy": "tsc && cdk deploy FileHeaderIndexerTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
+    "header-index-test-destroy": "tsc && cdk destroy FileHeaderIndexerTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\""
   },
   "repository": {
     "type": "git",

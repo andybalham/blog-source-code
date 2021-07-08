@@ -12,6 +12,7 @@
     "exts",
     "nanoid",
     "resourcegroupstaggingapi",
-    "stepfunctions"
+    "stepfunctions",
+    "vars"
   ]
 }
