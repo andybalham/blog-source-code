@@ -295,7 +295,7 @@ export default class UnitTestClient {
     table: new RegExp(`^arn:aws:dynamodb:${UnitTestClient.getRegion()}:[0-9]+:table/(?<name>.*)`),
     // arn:${Partition}:lambda:${Region}:${Account}:function:${FunctionName}:${Version}
     function: new RegExp(
-      `^arn:aws:lambda:${UnitTestClient.getRegion()}:[0-9]+:table/(?<name>[^:]*)`
+      `^arn:aws:lambda:${UnitTestClient.getRegion()}:[0-9]+:function:(?<name>[^:]*)`
     ),
   };
 

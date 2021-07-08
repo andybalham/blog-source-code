@@ -1,4 +1,4 @@
 import FileEventPublisherTestStack from './FileEventPublisherTestStack-v2';
-import HeaderIndexTestStack from './HeaderIndexTestStack';
+import FileHeaderIndexTestStack from './FileHeaderIndexTestStack';
 
-export { FileEventPublisherTestStack, HeaderIndexTestStack };
+export { FileEventPublisherTestStack, FileHeaderIndexTestStack };

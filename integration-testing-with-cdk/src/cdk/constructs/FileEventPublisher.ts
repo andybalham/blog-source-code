@@ -10,8 +10,8 @@ import * as dynamodb from '@aws-cdk/aws-dynamodb';
 import path from 'path';
 
 export interface FileEventPublisherProps {
-  fileBucket: s3.Bucket;
   deploymentTarget?: 'TEST' | 'PROD';
+  fileBucket: s3.Bucket;
 }
 
 export default class FileEventPublisher extends cdk.Construct {
