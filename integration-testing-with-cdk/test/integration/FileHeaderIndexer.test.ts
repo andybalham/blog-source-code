@@ -22,7 +22,7 @@ describe('FileHeaderIndexer Tests', () => {
   });
 
   before(async () => {
-    await testClient.initialiseAsync();
+    await testClient.initialiseClientAsync();
   });
 
   beforeEach(async () => {
@@ -30,7 +30,7 @@ describe('FileHeaderIndexer Tests', () => {
   });
 
   it('Single header indexed', async () => {
-    await testClient.beginTestAsync('Single header indexed');
+    await testClient.initialiseTestAsync('Single header indexed');
 
     // Arrange
 
@@ -56,7 +56,7 @@ describe('FileHeaderIndexer Tests', () => {
 
     // Await
 
-    const { timedOut } = await testClient.pollAsync({
+    const { timedOut } = await testClient.pollOutputsAsync({
       until: async () =>
         (await getFileHeaderIndexesAsync()).some((i) => i.header.name === file.header.name),
       intervalSeconds: 2,
@@ -86,7 +86,7 @@ describe('FileHeaderIndexer Tests', () => {
   });
 
   it('Single header updated', async () => {
-    await testClient.beginTestAsync('Single header updated');
+    await testClient.initialiseTestAsync('Single header updated');
 
     // Arrange
 
@@ -108,7 +108,7 @@ describe('FileHeaderIndexer Tests', () => {
       createdFileEvent.messageAttributes
     );
 
-    const { timedOut: arrangeTimedOut } = await testClient.pollAsync({
+    const { timedOut: arrangeTimedOut } = await testClient.pollOutputsAsync({
       until: async () =>
         (await getFileHeaderIndexesAsync()).some((i) => i.header.name === file.header.name),
       intervalSeconds: 2,
@@ -133,7 +133,7 @@ describe('FileHeaderIndexer Tests', () => {
 
     // Await
 
-    const { timedOut } = await testClient.pollAsync({
+    const { timedOut } = await testClient.pollOutputsAsync({
       until: async () =>
         (await getFileHeaderIndexesAsync()).some((i) => i.header.name === file.header.name),
       intervalSeconds: 2,
@@ -165,7 +165,7 @@ describe('FileHeaderIndexer Tests', () => {
   it('Body event ignored', async () => {
     // Arrange
 
-    await testClient.beginTestAsync('Body event ignored');
+    await testClient.initialiseTestAsync('Body event ignored');
 
     const file = newConfigurationFile();
     const s3Key = `configuration/${file.header.name}.json`;
@@ -187,7 +187,7 @@ describe('FileHeaderIndexer Tests', () => {
 
     // Await
 
-    const { timedOut } = await testClient.pollAsync({
+    const { timedOut } = await testClient.pollOutputsAsync({
       until: async () =>
         (await getFileHeaderIndexesAsync()).some((i) => i.header.name === file.header.name),
       intervalSeconds: 2,

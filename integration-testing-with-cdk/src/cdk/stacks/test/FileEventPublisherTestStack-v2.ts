@@ -8,7 +8,7 @@ import { IntegrationTestStack } from '../../../aws-integration-test';
 
 export default class FileEventPublisherTestStack extends IntegrationTestStack {
   //
-  static readonly ResourceTagKey = 'FileEventPublisherTestStack-v2';
+  static readonly ResourceTagKey = 'FileEventPublisherTestStackResource';
 
   static readonly TestBucketId = 'TestBucket';
 

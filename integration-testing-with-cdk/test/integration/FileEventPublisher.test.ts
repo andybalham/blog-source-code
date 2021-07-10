@@ -15,11 +15,11 @@ describe('FileEventPublisher Tests', () => {
   });
 
   before(async () => {
-    await testClient.initialiseAsync();
+    await testClient.initialiseClientAsync();
   });
 
   it('New file upload', async () => {
-    await testClient.beginTestAsync('New file upload');
+    await testClient.initialiseTestAsync('New file upload');
 
     // Arrange
 
@@ -36,15 +36,15 @@ describe('FileEventPublisher Tests', () => {
 
     // Await
 
-    const { outputs: finalOutputs, timedOut } = await testClient.pollAsync<SNSEvent>({
-      until: async (outputs) => getFileEventCount(outputs) === 2,
+    const { outputs, timedOut } = await testClient.pollOutputsAsync<SNSEvent>({
+      until: async (o) => getFileEventCount(o) === 2,
       intervalSeconds: 2,
       timeoutSeconds: 12,
     });
 
     // Assert
 
-    const fileEvents = convertToFileEvents(finalOutputs);
+    const fileEvents = getFileEvents(outputs);
 
     expect(timedOut).to.equal(false);
 
@@ -103,7 +103,7 @@ describe('FileEventPublisher Tests', () => {
     })}`;
 
     it(testId, async () => {
-      await testClient.beginTestAsync(testId);
+      await testClient.initialiseTestAsync(testId);
 
       // Arrange
 
@@ -116,8 +116,8 @@ describe('FileEventPublisher Tests', () => {
         configurationFile
       );
 
-      const { timedOut: arrangeTimedOut } = await testClient.pollAsync<SNSEvent>({
-        until: async (outputs) => getFileEventCount(outputs) === 2,
+      const { timedOut: arrangeTimedOut } = await testClient.pollOutputsAsync<SNSEvent>({
+        until: async (o) => getFileEventCount(o) === 2,
         intervalSeconds: 2,
         timeoutSeconds: 12,
       });
@@ -136,15 +136,15 @@ describe('FileEventPublisher Tests', () => {
 
       // Await
 
-      const { outputs: finalOutputs, timedOut } = await testClient.pollAsync<SNSEvent>({
-        until: async (outputs) => getFileEventCount(outputs) >= theory.expectedEventCount,
+      const { outputs, timedOut } = await testClient.pollOutputsAsync<SNSEvent>({
+        until: async (o) => getFileEventCount(o) >= theory.expectedEventCount,
         intervalSeconds: 2,
         timeoutSeconds: 12,
       });
 
       // Assert
 
-      const fileEvents = convertToFileEvents(finalOutputs);
+      const fileEvents = getFileEvents(outputs);
 
       expect(timedOut).to.equal(false);
 
@@ -174,12 +174,12 @@ describe('FileEventPublisher Tests', () => {
 }).timeout(60 * 1000);
 
 function getFileEventCount(outputs: SNSEvent[]): number {
-  return convertToFileEvents(outputs).length;
+  return getFileEvents(outputs).length;
 }
 
-function convertToFileEvents(outputs: SNSEvent[]): FileEvent[] {
+function getFileEvents(outputs: SNSEvent[]): FileEvent[] {
   return outputs
-    .map((o) => o.Records.map((r) => JSON.parse(r.Sns.Message) as FileEvent))
+    .map((o) => o.Records.map((r) => JSON.parse(r.Sns.Message)))
     .reduce((allEvents, events) => allEvents.concat(events), []);
 }
 

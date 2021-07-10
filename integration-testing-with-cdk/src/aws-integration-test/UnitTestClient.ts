@@ -65,7 +65,7 @@ export default class UnitTestClient {
 
   // Instance ----------------------------------------------------------------
 
-  async initialiseAsync(): Promise<void> {
+  async initialiseClientAsync(): Promise<void> {
     //
     this.testResourceTagMappingList = await UnitTestClient.getResourcesByTagKeyAsync(
       this.props.testResourceTagKey
@@ -76,7 +76,7 @@ export default class UnitTestClient {
     );
   }
 
-  async beginTestAsync<T>(testId: string, inputs?: T): Promise<void> {
+  async initialiseTestAsync<T>(testId: string, inputs?: T): Promise<void> {
     //
     if (!testId) {
       throw new Error(`A testId must be specified`);
@@ -131,7 +131,7 @@ export default class UnitTestClient {
     }
   }
 
-  async pollAsync<T>({
+  async pollOutputsAsync<T>({
     until,
     intervalSeconds,
     timeoutSeconds,
