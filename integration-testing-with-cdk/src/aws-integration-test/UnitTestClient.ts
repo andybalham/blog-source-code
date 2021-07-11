@@ -212,16 +212,16 @@ export default class UnitTestClient {
       .promise();
   }
 
-  async publishMessageAsync(
-    queueStackId: string,
+  async publishMessageToTopicAsync(
+    topicStackId: string,
     message: Record<string, any>,
     messageAttributes?: sns.MessageAttributeMap
   ): Promise<void> {
     //
-    const fileEventTopicArn = this.getResourceArnByStackId(queueStackId);
+    const fileEventTopicArn = this.getResourceArnByStackId(topicStackId);
 
     if (fileEventTopicArn === undefined) {
-      throw new Error(`The queue ARN could not be resolved for id: ${queueStackId}`);
+      throw new Error(`The topic ARN could not be resolved for id: ${topicStackId}`);
     }
 
     const publishInput: sns.PublishInput = {

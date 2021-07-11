@@ -48,7 +48,7 @@ describe('FileHeaderIndexer Tests', () => {
 
     // Act
 
-    await testClient.publishMessageAsync(
+    await testClient.publishMessageToTopicAsync(
       FileHeaderIndexTestStack.TestFileEventTopicId,
       fileEvent,
       fileEvent.messageAttributes
@@ -102,7 +102,7 @@ describe('FileHeaderIndexer Tests', () => {
 
     await testClient.uploadObjectToBucketAsync(FileHeaderIndexer.BucketId, s3Key, file);
 
-    await testClient.publishMessageAsync(
+    await testClient.publishMessageToTopicAsync(
       FileHeaderIndexTestStack.TestFileEventTopicId,
       createdFileEvent,
       createdFileEvent.messageAttributes
@@ -125,7 +125,7 @@ describe('FileHeaderIndexer Tests', () => {
 
     // Act
 
-    await testClient.publishMessageAsync(
+    await testClient.publishMessageToTopicAsync(
       FileHeaderIndexTestStack.TestFileEventTopicId,
       updatedFileEvent,
       updatedFileEvent.messageAttributes
@@ -179,7 +179,7 @@ describe('FileHeaderIndexer Tests', () => {
 
     // Act
 
-    await testClient.publishMessageAsync(
+    await testClient.publishMessageToTopicAsync(
       FileHeaderIndexTestStack.TestFileEventTopicId,
       fileEvent,
       fileEvent.messageAttributes

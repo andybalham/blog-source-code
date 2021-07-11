@@ -18,7 +18,7 @@ describe('FileEventPublisher Tests', () => {
     await testClient.initialiseClientAsync();
   });
 
-  it('New file upload', async () => {
+  it.only('New file upload', async () => {
     await testClient.initialiseTestAsync('New file upload');
 
     // Arrange

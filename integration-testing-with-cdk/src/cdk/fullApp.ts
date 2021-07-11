@@ -6,5 +6,5 @@ import FullStack from './stacks/full/FullStack';
 const app = new cdk.App();
 cdk.Tags.of(app).add('app', 'IntegrationTestingWithCDK');
 
-const fullStack = new FullStack(app, 'FullStack', {});
+const fullStack = new FullStack(app, 'FullStack');
 cdk.Tags.of(fullStack).add('stack', 'Full');
