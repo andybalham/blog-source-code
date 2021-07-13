@@ -3,6 +3,7 @@ import { ResourceTagMappingList } from 'aws-sdk/clients/resourcegroupstaggingapi
 import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
 import sns from 'aws-sdk/clients/sns';
+import { StartExecutionInput } from 'aws-sdk/clients/stepfunctions';
 import IntegrationTestStack from './IntegrationTestStack';
 import { CurrentTestItem, TestItemPrefix } from './TestItem';
 
@@ -27,6 +28,10 @@ export default class UnitTestClient {
   private static readonly sns = new AWS.SNS({ region: UnitTestClient.getRegion() });
 
   private static readonly lambda = new AWS.Lambda({ region: UnitTestClient.getRegion() });
+
+  private static readonly stepFunctions = new AWS.StepFunctions({
+    region: UnitTestClient.getRegion(),
+  });
 
   testResourceTagMappingList: ResourceTagMappingList;
 
@@ -258,6 +263,25 @@ export default class UnitTestClient {
     }
 
     return undefined;
+  }
+
+  async startStateMachineAsync(
+    stateMachineStackId: string,
+    input?: Record<string, any>
+  ): Promise<void> {
+    //
+    const stateMachineArn = this.getResourceArnByStackId(stateMachineStackId);
+
+    if (stateMachineArn === undefined) {
+      throw new Error(`The ARN could not be resolved for id: ${stateMachineStackId}`);
+    }
+
+    const params: StartExecutionInput = {
+      stateMachineArn,
+      input: JSON.stringify(input),
+    };
+
+    await UnitTestClient.stepFunctions.startExecution(params).promise();
   }
 
   getResourceArnByStackId(targetStackId: string): string | undefined {

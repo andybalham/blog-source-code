@@ -72,7 +72,7 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
     }
   }
 
-  addTestResourceTag(scope: cdk.IConstruct, resourceId: string): void {
-    cdk.Tags.of(scope).add(this.testResourceTagKey, resourceId);
+  addTestResourceTag(resource: cdk.IConstruct, resourceId: string): void {
+    cdk.Tags.of(resource).add(this.testResourceTagKey, resourceId);
   }
 }

@@ -9,8 +9,7 @@
     "dotenv": "^10.0.0"
   },
   "devDependencies": {
-    "@types/object-hash": "^2.1.0",
-    "@types/nanoid": "^3.0.0",
+    "@andybalham/state-machine-builder": "^1.0.7",
     "@aws-cdk/aws-apigateway": "^1.106.1",
     "@aws-cdk/aws-lambda": "^1.106.1",
     "@aws-cdk/aws-lambda-event-sources": "^1.106.1",
@@ -23,7 +22,9 @@
     "@types/chai": "^4.2.18",
     "@types/http-errors": "^1.8.0",
     "@types/mocha": "^8.2.2",
+    "@types/nanoid": "^3.0.0",
     "@types/node": "^15.6.1",
+    "@types/object-hash": "^2.1.0",
     "@typescript-eslint/eslint-plugin": "^4.26.0",
     "@typescript-eslint/parser": "^4.26.0",
     "aws-sdk": "^2.920.0",
@@ -61,7 +62,11 @@
     "file-events-test-destroy": "tsc && cdk destroy FileEventPublisherTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
     "header-index-test-synth": "tsc && cdk synth FileHeaderIndexerTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
     "header-index-test-deploy": "tsc && cdk deploy FileHeaderIndexerTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
-    "header-index-test-destroy": "tsc && cdk destroy FileHeaderIndexerTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\""
+    "header-index-test-destroy": "tsc && cdk destroy FileHeaderIndexerTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
+    "result-state-machine-test-synth": "tsc && cdk synth ResultCalculatorStateMachineTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
+    "result-state-machine-test-deploy": "tsc && cdk deploy ResultCalculatorStateMachineTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
+    "result-state-machine-test-destroy": "tsc && cdk destroy ResultCalculatorStateMachineTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
+    "all-test-destroy": "tsc && cdk destroy * -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\""
   },
   "repository": {
     "type": "git",
