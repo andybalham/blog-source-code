@@ -75,4 +75,23 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
   addTestResourceTag(resource: cdk.IConstruct, resourceId: string): void {
     cdk.Tags.of(resource).add(this.testResourceTagKey, resourceId);
   }
+
+  newMockFunction(mockId: string): lambda.IFunction {
+    //
+    const functionEntryBase = path.join(__dirname, '.');
+
+    const testMockFunction = new lambdaNodejs.NodejsFunction(this, `TestMockFunction-${mockId}`, {
+      runtime: lambda.Runtime.NODEJS_12_X,
+      entry: path.join(functionEntryBase, `testMockFunction.ts`),
+      handler: 'handler',
+      environment: {
+        MOCK_ID: mockId,
+        INTEGRATION_TEST_TABLE_NAME: this.integrationTestTable.tableName,
+      },
+    });
+
+    this.integrationTestTable.grantReadWriteData(testMockFunction);
+
+    return testMockFunction;
+  }
 }

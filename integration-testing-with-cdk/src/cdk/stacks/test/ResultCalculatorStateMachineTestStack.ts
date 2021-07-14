@@ -10,6 +10,8 @@ export default class ResultCalculatorStateMachineTestStack extends IntegrationTe
 
   static readonly StateMachineId = 'SUT';
 
+  static readonly FileHeaderReaderMockId = 'FileHeaderReader';
+
   constructor(scope: cdk.Construct, id: string) {
     //
     super(scope, id, {
@@ -18,11 +20,13 @@ export default class ResultCalculatorStateMachineTestStack extends IntegrationTe
       deployTestObserverFunction: true,
     });
 
+    const fileHeaderReaderMockFunction = this.newMockFunction('FileHeaderReader');
+
     const sut = new ResultCalculatorStateMachine(
       this,
       ResultCalculatorStateMachineTestStack.StateMachineId,
       {
-        fileHeaderReaderFunction: newLogEventFunction(this, 'MockFileHeaderReaderFunction'),
+        fileHeaderReaderFunction: fileHeaderReaderMockFunction,
         combineHeadersFunction: newLogEventFunction(this, 'CombineHeadersFunction'),
         calculateResultFunction: this.testObserverFunction,
       }

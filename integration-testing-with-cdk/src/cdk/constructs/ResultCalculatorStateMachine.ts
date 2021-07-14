@@ -19,15 +19,23 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
       ...props,
       definition: new StateMachineBuilder()
 
+        .lambdaInvoke('ReadHeader', {
+          lambdaFunction: props.fileHeaderReaderFunction,
+          // TODO 13Jul21: Shape the inputs to make query based on the S3 key
+          inputPath: '$.fileEvent.s3Key',
+          resultPath: '$.fileHeader',
+          // catches: [{ handler: 'HeaderReadError' }],
+        })
+
         .choice('FileType', {
           // TODO 13Jul21: We need a way of loading the header from the S3Key
           choices: [
             {
-              when: sfn.Condition.stringEquals('$.fileEvent.fileType', FileType.Configuration),
+              when: sfn.Condition.stringEquals('$.fileHeader.fileType', FileType.Configuration),
               next: 'ReadScenarioHeaders',
             },
             {
-              when: sfn.Condition.stringEquals('$.fileEvent.fileType', FileType.Scenario),
+              when: sfn.Condition.stringEquals('$.fileHeader.fileType', FileType.Scenario),
               next: 'ReadConfigurationHeaders',
             },
           ],
@@ -66,7 +74,13 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
 
         .fail('HeaderReadError', { cause: 'An error occurred when reading the headers' })
 
-        .build(scope),
+        .build(scope, {
+          defaultProps: {
+            lambdaInvoke: {
+              payloadResponseOnly: true,
+            },
+          },
+        }),
     });
   }
 }
