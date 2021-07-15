@@ -5,7 +5,6 @@ import { ResultCalculatorStateMachineTestStack as TestStack } from '../../src/cd
 import {
   FileEvent,
   FileEventType,
-  FileHeader,
   FileHeaderIndex,
   FileType,
 } from '../../src/contracts';
@@ -27,18 +26,18 @@ describe('ResultCalculatorStateMachine Tests', () => {
   it('Unhandled file type', async () => {
     //
     // Arrange
-    const resultS3Key = `s3Key:${nanoid()}`;
 
-    const fileEvent = new FileEvent(FileEventType.Created, FileSectionType.Body, resultS3Key);
+    const fileEvent = new FileEvent(
+      FileEventType.Created,
+      FileSectionType.Body,
+      `s3Key:${nanoid()}`
+    );
 
-    const unhandledFileHeaderIndex: FileHeaderIndex = {
-      s3Key: resultS3Key,
-      header: { fileType: FileType.Result, name: `name:${nanoid()}` },
-    };
+    const unhandledFileHeader = { fileType: FileType.Result, name: `name:${nanoid()}` };
 
     await testClient.initialiseTestAsync('Unhandled file type', {
       mocks: {
-        [TestStack.FileHeaderReaderMockId]: [{ response: unhandledFileHeaderIndex }],
+        [TestStack.FileHeaderReaderMockId]: [{ response: unhandledFileHeader }],
       },
     });
 
@@ -80,9 +79,11 @@ describe('ResultCalculatorStateMachine Tests', () => {
       `ScenarioS3Key:${nanoid()}`
     );
 
+    const scenarioFileHeader = { fileType: FileType.Scenario, name: `ScenarioName:${nanoid()}` };
+
     const scenarioFileHeaderIndex: FileHeaderIndex = {
       s3Key: scenarioFileEvent.s3Key,
-      header: { fileType: FileType.Scenario, name: `ScenarioName:${nanoid()}` },
+      header: scenarioFileHeader,
     };
 
     const newConfigurationFileHeaderIndex = (): FileHeaderIndex => ({
@@ -95,8 +96,8 @@ describe('ResultCalculatorStateMachine Tests', () => {
     const configurationFileHeaderIndexes = [...Array(configurationCount).keys()]
       .map(() => newConfigurationFileHeaderIndex())
       .map((c) => ({
-        configuration: c,
-        scenario: scenarioFileHeaderIndex,
+        configurationS3Key: c.s3Key,
+        scenarioS3Key: scenarioFileHeaderIndex.s3Key,
       }));
 
     const combinedHeaders = configurationFileHeaderIndexes.map((c) => ({
@@ -106,10 +107,8 @@ describe('ResultCalculatorStateMachine Tests', () => {
 
     await testClient.initialiseTestAsync('New scenario created', {
       mocks: {
-        [TestStack.FileHeaderReaderMockId]: [
-          { response: scenarioFileHeaderIndex },
-          { response: configurationFileHeaderIndexes },
-        ],
+        [TestStack.FileHeaderReaderMockId]: [{ response: scenarioFileHeader }],
+        [TestStack.FileHeaderIndexReaderMockId]: [{ response: configurationFileHeaderIndexes }],
         [TestStack.CombineHeadersMockId]: [{ response: combinedHeaders }],
       },
     });

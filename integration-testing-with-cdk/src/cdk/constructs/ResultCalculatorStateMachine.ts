@@ -8,6 +8,7 @@ import { FileType } from '../../contracts';
 export interface ResultCalculatorStateMachineProps
   extends Omit<sfn.StateMachineProps, 'definition'> {
   fileHeaderReaderFunction: lambda.IFunction;
+  fileHeaderIndexReaderFunction: lambda.IFunction;
   combineHeadersFunction: lambda.IFunction;
   calculateResultFunction: lambda.IFunction;
 }
@@ -19,28 +20,27 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
       ...props,
       definition: StateMachineBuilder.new()
 
-        .lambdaInvoke('ReadHeader', {
+        .lambdaInvoke('FileReader', {
           lambdaFunction: props.fileHeaderReaderFunction,
-          catches: [{ handler: 'HeaderReadError' }],
+          catches: [{ handler: 'FileReadError' }],
           parameters: {
-            criteriaType: 'S3Key',
             s3Key: '$.fileEvent.s3Key',
           },
-          resultPath: '$.inputHeaderIndex',
+          resultPath: '$.fileHeader',
         })
 
         .choice('FileType', {
           choices: [
             {
               when: sfn.Condition.stringEquals(
-                '$.inputHeaderIndex.header.fileType',
+                '$.fileHeader.fileType',
                 FileType.Configuration
               ),
               next: 'ReadScenarioHeaders',
             },
             {
               when: sfn.Condition.stringEquals(
-                '$.inputHeaderIndex.header.fileType',
+                '$.fileHeader.fileType',
                 FileType.Scenario
               ),
               next: 'ReadConfigurationHeaders',
@@ -50,7 +50,7 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
         })
 
         .lambdaInvoke('ReadConfigurationHeaders', {
-          lambdaFunction: props.fileHeaderReaderFunction,
+          lambdaFunction: props.fileHeaderIndexReaderFunction,
           catches: [{ handler: 'HeaderReadError' }],
           parameters: {
             criteriaType: 'FileType',
@@ -61,7 +61,7 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
         .next('CombineHeaders')
 
         .lambdaInvoke('ReadScenarioHeaders', {
-          lambdaFunction: props.fileHeaderReaderFunction,
+          lambdaFunction: props.fileHeaderIndexReaderFunction,
           catches: [{ handler: 'HeaderReadError' }],
           parameters: {
             criteriaType: 'FileType',
@@ -84,6 +84,8 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
         })
 
         .end()
+
+        .fail('FileReadError', { cause: 'An error occurred reading the file' })
 
         .fail('UnhandledFileType', { cause: 'Unhandled FileType' })
 
