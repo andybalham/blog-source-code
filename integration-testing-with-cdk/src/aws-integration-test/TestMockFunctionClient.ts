@@ -5,7 +5,7 @@ import { CurrentTestItem, MockStateTestItem, OutputTestItem, TestItemPrefix } fr
 
 const documentClient = new DocumentClient();
 
-export default class LambdaTestClient {
+export default class TestMockFunctionClient {
   //
   constructor(private integrationTestTableName: string | undefined) {}
 
@@ -73,8 +73,6 @@ export default class LambdaTestClient {
     };
 
     const mockStateQueryOutput = await documentClient.query(mockStateQueryParams).promise();
-
-    console.log(`mockStateQueryOutput: ${JSON.stringify(mockStateQueryOutput)}`);
 
     if (mockStateQueryOutput.Items === undefined || mockStateQueryOutput.Items.length === 0) {
       return defaultState;

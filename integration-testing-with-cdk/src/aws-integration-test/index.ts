@@ -1,5 +1,5 @@
 import UnitTestClient from './UnitTestClient';
 import IntegrationTestStack from './IntegrationTestStack';
-import LambdaTestClient from './LambdaTestClient';
+import TestMockFunctionClient from './TestMockFunctionClient';
 
-export { IntegrationTestStack, UnitTestClient, LambdaTestClient };
+export { IntegrationTestStack, UnitTestClient, TestMockFunctionClient };

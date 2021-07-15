@@ -1,15 +1,15 @@
 /* eslint-disable no-console */
 /* eslint-disable import/prefer-default-export */
-import { LambdaTestClient } from '.';
+import { TestMockFunctionClient } from '.';
 
-const lambdaTestClient = new LambdaTestClient(process.env.INTEGRATION_TEST_TABLE_NAME);
+const lambdaTestClient = new TestMockFunctionClient(process.env.INTEGRATION_TEST_TABLE_NAME);
 
 const mockId = process.env.MOCK_ID;
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const handler = async (request: any): Promise<void> => {
   //
-  console.log(JSON.stringify(request));
+  console.log(JSON.stringify({ request }, null, 2));
 
   if (mockId === undefined) throw new Error('mockId === undefined');
 
@@ -21,16 +21,19 @@ export const handler = async (request: any): Promise<void> => {
     invocationCount: 0,
   });
 
-  const { response } = (inputs as any).mocks[mockId][state.invocationCount];
+  const mockExchanges = (inputs as any).mocks[mockId];
+
+  if (mockExchanges === undefined) {
+    throw new Error(`No mock exchanges found for mockId: ${mockId}`);
+  }
+
+  const { response } = mockExchanges[state.invocationCount];
 
   state.invocationCount += 1;
 
-  await lambdaTestClient.setTestOutputAsync({
-    mockId,
-    invocation: state.invocationCount,
-    request,
-    response,
-  });
+  await lambdaTestClient.setMockStateAsync(mockId, state);
+
+  console.log(JSON.stringify({ response }, null, 2));
 
   return response;
 };

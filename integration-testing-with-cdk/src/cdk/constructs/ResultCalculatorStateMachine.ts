@@ -21,21 +21,28 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
 
         .lambdaInvoke('ReadHeader', {
           lambdaFunction: props.fileHeaderReaderFunction,
-          // TODO 13Jul21: Shape the inputs to make query based on the S3 key
-          inputPath: '$.fileEvent.s3Key',
-          resultPath: '$.fileHeader',
-          // catches: [{ handler: 'HeaderReadError' }],
+          payload: sfn.TaskInput.fromObject({
+            criteriaType: 'S3Key',
+            s3Key: '$.fileEvent.s3Key',
+          }),
+          resultPath: '$.inputHeaderIndex',
+          catches: [{ handler: 'HeaderReadError' }],
         })
 
         .choice('FileType', {
-          // TODO 13Jul21: We need a way of loading the header from the S3Key
           choices: [
             {
-              when: sfn.Condition.stringEquals('$.fileHeader.fileType', FileType.Configuration),
+              when: sfn.Condition.stringEquals(
+                '$.inputHeaderIndex.header.fileType',
+                FileType.Configuration
+              ),
               next: 'ReadScenarioHeaders',
             },
             {
-              when: sfn.Condition.stringEquals('$.fileHeader.fileType', FileType.Scenario),
+              when: sfn.Condition.stringEquals(
+                '$.inputHeaderIndex.header.fileType',
+                FileType.Scenario
+              ),
               next: 'ReadConfigurationHeaders',
             },
           ],
@@ -45,26 +52,34 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
         .lambdaInvoke('ReadConfigurationHeaders', {
           lambdaFunction: props.fileHeaderReaderFunction,
           catches: [{ handler: 'HeaderReadError' }],
-          // TODO 13Jul21: Configure the inputs and outputs
+          payload: sfn.TaskInput.fromObject({
+            criteriaType: 'FileType',
+            fileType: FileType.Configuration,
+          }),
+          resultPath: '$.configurations',
         })
         .next('CombineHeaders')
 
         .lambdaInvoke('ReadScenarioHeaders', {
           lambdaFunction: props.fileHeaderReaderFunction,
-          // TODO 13Jul21: Configure the inputs and outputs
           catches: [{ handler: 'HeaderReadError' }],
+          payload: sfn.TaskInput.fromObject({
+            criteriaType: 'FileType',
+            fileType: FileType.Scenario,
+          }),
+          resultPath: '$.scenarios',
         })
         .next('CombineHeaders')
 
         .lambdaInvoke('CombineHeaders', {
-          // TODO 13Jul21: Configure the inputs and outputs
           lambdaFunction: props.combineHeadersFunction,
+          resultPath: '$.combinations',
         })
 
         .map('CalculateResults', {
+          itemsPath: '$.combinations',
           iterator: new StateMachineBuilder().lambdaInvoke('CalculateResult', {
             lambdaFunction: props.calculateResultFunction,
-            // TODO 13Jul21: Configure the inputs and outputs
           }),
         })
 
