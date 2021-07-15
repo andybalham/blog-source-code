@@ -74,31 +74,32 @@ describe('ResultCalculatorStateMachine Tests', () => {
     //
     // Arrange
 
-    const scenarioS3Key = `ScenarioS3Key:${nanoid()}`;
-
     const scenarioFileEvent = new FileEvent(
       FileEventType.Created,
       FileSectionType.Body,
-      scenarioS3Key
+      `ScenarioS3Key:${nanoid()}`
     );
 
     const scenarioFileHeaderIndex: FileHeaderIndex = {
-      s3Key: scenarioS3Key,
+      s3Key: scenarioFileEvent.s3Key,
       header: { fileType: FileType.Scenario, name: `ScenarioName:${nanoid()}` },
     };
 
-    const configurationFileHeaderIndexes: FileHeaderIndex[] = [
-      {
-        s3Key: `ConfigurationS3Key${nanoid()}`,
-        header: { fileType: FileType.Configuration, name: `ConfigurationName:${nanoid()}` },
-      },
-      {
-        s3Key: `ConfigurationS3Key${nanoid()}`,
-        header: { fileType: FileType.Configuration, name: `ConfigurationName:${nanoid()}` },
-      },
-    ];
+    const newConfigurationFileHeaderIndex = (): FileHeaderIndex => ({
+      s3Key: `ConfigurationS3Key${nanoid()}`,
+      header: { fileType: FileType.Configuration, name: `ConfigurationName:${nanoid()}` },
+    });
 
-    const combinedResponse = configurationFileHeaderIndexes.map((c) => ({
+    const configurationCount = 6;
+
+    const configurationFileHeaderIndexes = [...Array(configurationCount).keys()]
+      .map(() => newConfigurationFileHeaderIndex())
+      .map((c) => ({
+        configuration: c,
+        scenario: scenarioFileHeaderIndex,
+      }));
+
+    const combinedHeaders = configurationFileHeaderIndexes.map((c) => ({
       configuration: c,
       scenario: scenarioFileHeaderIndex,
     }));
@@ -109,7 +110,7 @@ describe('ResultCalculatorStateMachine Tests', () => {
           { response: scenarioFileHeaderIndex },
           { response: configurationFileHeaderIndexes },
         ],
-        [TestStack.CombineHeadersMockId]: [{ response: combinedResponse }],
+        [TestStack.CombineHeadersMockId]: [{ response: combinedHeaders }],
       },
     });
 
@@ -121,10 +122,10 @@ describe('ResultCalculatorStateMachine Tests', () => {
 
     // Await
 
-    const { timedOut } = await testClient.pollOutputsAsync({
+    const { timedOut, outputs } = await testClient.pollOutputsAsync({
       until: async () => sutClient.isExecutionFinishedAsync(),
       intervalSeconds: 2,
-      timeoutSeconds: 6,
+      timeoutSeconds: 12,
     });
 
     // Assert
@@ -135,9 +136,6 @@ describe('ResultCalculatorStateMachine Tests', () => {
 
     expect(status).to.equal('SUCCEEDED');
 
-    const lastEvent = await sutClient.getLastEventAsync();
-
-    expect(lastEvent).to.not.equal(undefined);
-    // expect(lastEvent?.executionFailedEventDetails?.cause).to.equal('Unhandled FileType');
+    expect(outputs.length).to.equal(configurationCount);
   });
 });
