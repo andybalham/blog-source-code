@@ -70,7 +70,7 @@ describe('ResultCalculatorStateMachine Tests', () => {
     expect(lastEvent?.executionFailedEventDetails?.cause).to.equal('Unhandled FileType');
   });
 
-  it.only('New scenario created', async () => {
+  it('New scenario created', async () => {
     //
     // Arrange
 

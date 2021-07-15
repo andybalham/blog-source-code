@@ -128,10 +128,6 @@ export const getLastEventAsync = async (
 
   if (executions.length > 0) {
     //
-    const lastExecution = executions[0]; // the first is the last one
-
-    console.log(JSON.stringify({ lastExecution }, null, 2));
-
     const stepFunctions = new AWS.StepFunctions({ region });
 
     const { events } = await stepFunctions

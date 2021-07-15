@@ -17,16 +17,16 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
   constructor(scope: cdk.Construct, id: string, props: ResultCalculatorStateMachineProps) {
     super(scope, id, {
       ...props,
-      definition: new StateMachineBuilder()
+      definition: StateMachineBuilder.new()
 
         .lambdaInvoke('ReadHeader', {
           lambdaFunction: props.fileHeaderReaderFunction,
-          payload: sfn.TaskInput.fromObject({
+          catches: [{ handler: 'HeaderReadError' }],
+          parameters: {
             criteriaType: 'S3Key',
             s3Key: '$.fileEvent.s3Key',
-          }),
+          },
           resultPath: '$.inputHeaderIndex',
-          catches: [{ handler: 'HeaderReadError' }],
         })
 
         .choice('FileType', {
@@ -52,10 +52,10 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
         .lambdaInvoke('ReadConfigurationHeaders', {
           lambdaFunction: props.fileHeaderReaderFunction,
           catches: [{ handler: 'HeaderReadError' }],
-          payload: sfn.TaskInput.fromObject({
+          parameters: {
             criteriaType: 'FileType',
             fileType: FileType.Configuration,
-          }),
+          },
           resultPath: '$.configurations',
         })
         .next('CombineHeaders')
@@ -63,10 +63,10 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
         .lambdaInvoke('ReadScenarioHeaders', {
           lambdaFunction: props.fileHeaderReaderFunction,
           catches: [{ handler: 'HeaderReadError' }],
-          payload: sfn.TaskInput.fromObject({
+          parameters: {
             criteriaType: 'FileType',
             fileType: FileType.Scenario,
-          }),
+          },
           resultPath: '$.scenarios',
         })
         .next('CombineHeaders')
@@ -78,7 +78,7 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
 
         .map('CalculateResults', {
           itemsPath: '$.combinations',
-          iterator: new StateMachineBuilder().lambdaInvoke('CalculateResult', {
+          iterator: StateMachineBuilder.new().lambdaInvoke('CalculateResult', {
             lambdaFunction: props.calculateResultFunction,
           }),
         })
