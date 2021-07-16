@@ -9,6 +9,7 @@ export interface IntegrationTestStackProps {
   testResourceTagKey: string;
   deployIntegrationTestTable?: boolean;
   deployTestObserverFunction?: boolean;
+  testObserverFunctionIds?: string[];
 }
 
 export default abstract class IntegrationTestStack extends cdk.Stack {
@@ -20,6 +21,8 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
   readonly integrationTestTable: dynamodb.Table;
 
   readonly testObserverFunction: lambda.IFunction;
+
+  readonly testObserverFunctions: Record<string, lambda.IFunction>;
 
   constructor(scope: cdk.Construct, id: string, props: IntegrationTestStackProps) {
     super(scope, id);
@@ -48,28 +51,50 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
     }
 
     if (props.deployTestObserverFunction) {
+      this.testObserverFunction = this.newTestObserverFunction(props, 'Default');
+    }
+
+    if (props.testObserverFunctionIds) {
       //
-      // Test subscriber function
+      this.testObserverFunctions = {};
 
-      if (!props.deployIntegrationTestTable) {
-        throw new Error(
-          `props.deployIntegrationTestTable must be 'true' if props.deployTestObserverFunction is 'true', but is: ${props.deployIntegrationTestTable}`
-        );
-      }
+      props.testObserverFunctionIds
+        .map((i) => ({ observerId: i, function: this.newTestObserverFunction(props, i) }))
+        .forEach((iaf) => {
+          this.testObserverFunctions[iaf.observerId] = iaf.function;
+        });
+    }
+  }
 
-      const functionEntryBase = path.join(__dirname, '.');
+  private newTestObserverFunction(
+    props: IntegrationTestStackProps,
+    observerId: string
+  ): lambda.IFunction {
+    //
+    if (!props.deployIntegrationTestTable) {
+      throw new Error(
+        `props.deployIntegrationTestTable must be 'true' for observer functions, but is: ${props.deployIntegrationTestTable}`
+      );
+    }
 
-      this.testObserverFunction = new lambdaNodejs.NodejsFunction(this, 'TestObserverFunction', {
+    const functionEntryBase = path.join(__dirname, '.');
+
+    const testObserverFunction = new lambdaNodejs.NodejsFunction(
+      this,
+      `TestObserverFunction-${observerId}`,
+      {
         runtime: lambda.Runtime.NODEJS_12_X,
         entry: path.join(functionEntryBase, `testObserverFunction.ts`),
         handler: 'handler',
         environment: {
+          OBSERVER_ID: observerId,
           INTEGRATION_TEST_TABLE_NAME: this.integrationTestTable.tableName,
         },
-      });
+      }
+    );
 
-      this.integrationTestTable.grantReadWriteData(this.testObserverFunction);
-    }
+    this.integrationTestTable.grantReadWriteData(testObserverFunction);
+    return testObserverFunction;
   }
 
   addTestResourceTag(resource: cdk.IConstruct, resourceId: string): void {

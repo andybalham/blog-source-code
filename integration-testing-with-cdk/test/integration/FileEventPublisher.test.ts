@@ -8,6 +8,7 @@ import { FileEvent, FileEventType } from '../../src/contracts/FileEvent';
 import { FileSectionType } from '../../src/contracts/FileSectionType';
 import FileEventPublisherTestStack from '../../src/cdk/stacks/test/FileEventPublisherTestStack-v2';
 import { UnitTestClient } from '../../src/aws-integration-test';
+import { TestObserverOutput } from '../../src/aws-integration-test/testObserverFunction';
 
 describe('FileEventPublisher Tests', () => {
   const testClient = new UnitTestClient({
@@ -36,7 +37,7 @@ describe('FileEventPublisher Tests', () => {
 
     // Await
 
-    const { outputs, timedOut } = await testClient.pollOutputsAsync<SNSEvent>({
+    const { outputs, timedOut } = await testClient.pollOutputsAsync<TestObserverOutput<SNSEvent>>({
       until: async (o) => getFileEventCount(o) === 2,
       intervalSeconds: 2,
       timeoutSeconds: 12,
@@ -116,7 +117,9 @@ describe('FileEventPublisher Tests', () => {
         configurationFile
       );
 
-      const { timedOut: arrangeTimedOut } = await testClient.pollOutputsAsync<SNSEvent>({
+      const { timedOut: arrangeTimedOut } = await testClient.pollOutputsAsync<
+        TestObserverOutput<SNSEvent>
+      >({
         until: async (o) => getFileEventCount(o) === 2,
         intervalSeconds: 2,
         timeoutSeconds: 12,
@@ -136,11 +139,13 @@ describe('FileEventPublisher Tests', () => {
 
       // Await
 
-      const { outputs, timedOut } = await testClient.pollOutputsAsync<SNSEvent>({
-        until: async (o) => getFileEventCount(o) >= theory.expectedEventCount,
-        intervalSeconds: 2,
-        timeoutSeconds: 12,
-      });
+      const { outputs, timedOut } = await testClient.pollOutputsAsync<TestObserverOutput<SNSEvent>>(
+        {
+          until: async (o) => getFileEventCount(o) >= theory.expectedEventCount,
+          intervalSeconds: 2,
+          timeoutSeconds: 12,
+        }
+      );
 
       // Assert
 
@@ -173,13 +178,13 @@ describe('FileEventPublisher Tests', () => {
   });
 }).timeout(60 * 1000);
 
-function getFileEventCount(outputs: SNSEvent[]): number {
+function getFileEventCount(outputs: TestObserverOutput<SNSEvent>[]): number {
   return getFileEvents(outputs).length;
 }
 
-function getFileEvents(outputs: SNSEvent[]): FileEvent[] {
+function getFileEvents(outputs: TestObserverOutput<SNSEvent>[]): FileEvent[] {
   return outputs
-    .map((o) => o.Records.map((r) => JSON.parse(r.Sns.Message)))
+    .map((o) => o.event.Records.map((r) => JSON.parse(r.Sns.Message)))
     .reduce((allEvents, events) => allEvents.concat(events), []);
 }
 
