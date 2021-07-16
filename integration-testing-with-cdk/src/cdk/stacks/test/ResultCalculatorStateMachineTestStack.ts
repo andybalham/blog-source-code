@@ -1,14 +1,16 @@
 /* eslint-disable import/no-extraneous-dependencies */
+import StateMachineWithGraph from '@andybalham/state-machine-with-graph';
 import * as cdk from '@aws-cdk/core';
+import * as fs from 'fs';
+import path from 'path';
 import { IntegrationTestStack } from '../../../aws-integration-test';
-import { newLogEventFunction } from '../../common';
 import { ResultCalculatorStateMachine } from '../../constructs';
 
 export default class ResultCalculatorStateMachineTestStack extends IntegrationTestStack {
   //
   static readonly ResourceTagKey = 'ResultCalculatorStateMachineTestStack';
 
-  static readonly StateMachineId = 'SUT';
+  static readonly StateMachineId = 'ResultCalculatorStateMachine';
 
   static readonly FileHeaderReaderMockId = 'FileHeaderReader';
 
@@ -46,5 +48,20 @@ export default class ResultCalculatorStateMachineTestStack extends IntegrationTe
     );
 
     this.addTestResourceTag(sut, ResultCalculatorStateMachineTestStack.StateMachineId);
+
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    writeGraphJson(sut);
   }
+}
+
+function writeGraphJson(stateMachine: StateMachineWithGraph): void {
+  //
+  const stateMachinePath = path.join(__dirname, 'stateMachines');
+
+  if (!fs.existsSync(stateMachinePath)) fs.mkdirSync(stateMachinePath);
+
+  fs.writeFileSync(
+    path.join(stateMachinePath, `${stateMachine.node.id}.asl.json`),
+    stateMachine.graphJson
+  );
 }

@@ -3,6 +3,7 @@ import * as cdk from '@aws-cdk/core';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
 import * as lambda from '@aws-cdk/aws-lambda';
 import StateMachineBuilder from '@andybalham/state-machine-builder';
+import StateMachineWithGraph from '@andybalham/state-machine-with-graph';
 import { FileType } from '../../contracts';
 
 export interface ResultCalculatorStateMachineProps
@@ -13,16 +14,17 @@ export interface ResultCalculatorStateMachineProps
   calculateResultFunction: lambda.IFunction;
 }
 
-export default class ResultCalculatorStateMachine extends sfn.StateMachine {
+export default class ResultCalculatorStateMachine extends StateMachineWithGraph {
   //
   constructor(scope: cdk.Construct, id: string, props: ResultCalculatorStateMachineProps) {
     super(scope, id, {
       ...props,
-      definition: StateMachineBuilder.new()
+      getDefinition: (definitionScope: cdk.Construct): sfn.IChainable => StateMachineBuilder.new()
 
         .lambdaInvoke('FileReader', {
           lambdaFunction: props.fileHeaderReaderFunction,
           catches: [{ handler: 'FileReadError' }],
+          retryOnServiceExceptions: true,
           parameters: {
             s3Key: '$.fileEvent.s3Key',
           },
@@ -51,6 +53,7 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
 
         .lambdaInvoke('ReadConfigurationHeaders', {
           lambdaFunction: props.fileHeaderIndexReaderFunction,
+          retryOnServiceExceptions: true,
           catches: [{ handler: 'HeaderReadError' }],
           parameters: {
             criteriaType: 'FileType',
@@ -62,6 +65,7 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
 
         .lambdaInvoke('ReadScenarioHeaders', {
           lambdaFunction: props.fileHeaderIndexReaderFunction,
+          retryOnServiceExceptions: true,
           catches: [{ handler: 'HeaderReadError' }],
           parameters: {
             criteriaType: 'FileType',
@@ -91,10 +95,11 @@ export default class ResultCalculatorStateMachine extends sfn.StateMachine {
 
         .fail('HeaderReadError', { cause: 'An error occurred when reading the headers' })
 
-        .build(scope, {
+        .build(definitionScope, {
           defaultProps: {
             lambdaInvoke: {
               payloadResponseOnly: true,
+              retryOnServiceExceptions: false,
             },
           },
         }),

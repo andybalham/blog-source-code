@@ -9,7 +9,8 @@
     "dotenv": "^10.0.0"
   },
   "devDependencies": {
-    "@andybalham/state-machine-builder": "^1.0.8",
+    "@andybalham/state-machine-builder": "^1.0.9",
+    "@andybalham/state-machine-with-graph": "^1.0.3",
     "@aws-cdk/aws-apigateway": "^1.106.1",
     "@aws-cdk/aws-lambda": "^1.106.1",
     "@aws-cdk/aws-lambda-event-sources": "^1.106.1",

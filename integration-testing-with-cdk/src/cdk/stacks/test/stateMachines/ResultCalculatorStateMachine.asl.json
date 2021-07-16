@@ -1,0 +1,143 @@
+{
+  "StartAt": "FileReader",
+  "States": {
+    "FileReader": {
+      "Next": "FileType",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "FileReadError"
+        }
+      ],
+      "Type": "Task",
+      "ResultPath": "$.fileHeader",
+      "Resource": "${Token[TOKEN.405]}",
+      "Parameters": {
+        "s3Key": "$.fileEvent.s3Key"
+      }
+    },
+    "FileType": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.fileHeader.fileType",
+          "StringEquals": "Configuration",
+          "Next": "ReadScenarioHeaders"
+        },
+        {
+          "Variable": "$.fileHeader.fileType",
+          "StringEquals": "Scenario",
+          "Next": "ReadConfigurationHeaders"
+        }
+      ],
+      "Default": "UnhandledFileType"
+    },
+    "UnhandledFileType": {
+      "Type": "Fail",
+      "Cause": "Unhandled FileType"
+    },
+    "ReadScenarioHeaders": {
+      "Next": "CombineHeaders",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "HeaderReadError"
+        }
+      ],
+      "Type": "Task",
+      "ResultPath": "$.scenarios",
+      "Resource": "${Token[TOKEN.432]}",
+      "Parameters": {
+        "criteriaType": "FileType",
+        "fileType": "Scenario"
+      }
+    },
+    "CombineHeaders": {
+      "Next": "CalculateResults",
+      "Type": "Task",
+      "ResultPath": "$.combinations",
+      "Resource": "${Token[TOKEN.459]}"
+    },
+    "ReadConfigurationHeaders": {
+      "Next": "CombineHeaders",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "HeaderReadError"
+        }
+      ],
+      "Type": "Task",
+      "ResultPath": "$.configurations",
+      "Resource": "${Token[TOKEN.432]}",
+      "Parameters": {
+        "criteriaType": "FileType",
+        "fileType": "Configuration"
+      }
+    },
+    "HeaderReadError": {
+      "Type": "Fail",
+      "Cause": "An error occurred when reading the headers"
+    },
+    "CalculateResults": {
+      "Type": "Map",
+      "End": true,
+      "Iterator": {
+        "StartAt": "CalculateResult",
+        "States": {
+          "CalculateResult": {
+            "End": true,
+            "Type": "Task",
+            "Resource": "${Token[TOKEN.378]}"
+          }
+        }
+      },
+      "ItemsPath": "$.combinations"
+    },
+    "FileReadError": {
+      "Type": "Fail",
+      "Cause": "An error occurred reading the file"
+    }
+  }
+}
