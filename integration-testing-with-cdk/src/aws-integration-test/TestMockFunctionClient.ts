@@ -40,10 +40,11 @@ export default class TestMockFunctionClient {
 
     const { testId } = await this.getCurrentTestAsync();
 
+    const now = Date.now().toString().slice(6);
+
     const testOutputItem: OutputTestItem<T> = {
       PK: testId,
-      // TODO 02Jul21: Add a time element for rough ordering?
-      SK: `${TestItemPrefix.TestOutput}-${nanoid()}`,
+      SK: `${TestItemPrefix.TestOutput}-${now}-${nanoid(10)}`,
       output,
     };
 
