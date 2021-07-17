@@ -9,6 +9,7 @@
     "Chainable",
     "TRes",
     "allowlist",
+    "backoff",
     "esbuild",
     "exts",
     "nanoid",

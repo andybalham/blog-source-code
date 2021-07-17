@@ -25,7 +25,7 @@
       ],
       "Type": "Task",
       "ResultPath": "$.fileHeader",
-      "Resource": "${Token[TOKEN.432]}",
+      "Resource": "${Token[TOKEN.425]}",
       "Parameters": {
         "s3Key": "$.fileEvent.s3Key"
       }
@@ -49,9 +49,9 @@
     "PublishUnhandledFileTypeError": {
       "Next": "UnhandledFileTypeFailure",
       "Type": "Task",
-      "Resource": "arn:${Token[AWS.Partition.12]}:states:::sns:publish",
+      "Resource": "arn:${Token[AWS.Partition.5]}:states:::sns:publish",
       "Parameters": {
-        "TopicArn": "${Token[TOKEN.497]}",
+        "TopicArn": "${Token[TOKEN.490]}",
         "Message": {
           "cause": "Unhandled FileType",
           "fileHeader": "$.fileHeader"
@@ -64,21 +64,9 @@
     },
     "ReadScenarioHeaders": {
       "Next": "CombineHeaders",
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException"
-          ],
-          "IntervalSeconds": 2,
-          "MaxAttempts": 6,
-          "BackoffRate": 2
-        }
-      ],
       "Type": "Task",
       "ResultPath": "$.scenarios",
-      "Resource": "${Token[TOKEN.459]}",
+      "Resource": "${Token[TOKEN.452]}",
       "Parameters": {
         "criteriaType": "FileType",
         "fileType": "Scenario"
@@ -88,25 +76,13 @@
       "Next": "CalculateResults",
       "Type": "Task",
       "ResultPath": "$.combinations",
-      "Resource": "${Token[TOKEN.486]}"
+      "Resource": "${Token[TOKEN.479]}"
     },
     "ReadConfigurationHeaders": {
       "Next": "CombineHeaders",
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException"
-          ],
-          "IntervalSeconds": 2,
-          "MaxAttempts": 6,
-          "BackoffRate": 2
-        }
-      ],
       "Type": "Task",
       "ResultPath": "$.configurations",
-      "Resource": "${Token[TOKEN.459]}",
+      "Resource": "${Token[TOKEN.452]}",
       "Parameters": {
         "criteriaType": "FileType",
         "fileType": "Configuration"
@@ -121,7 +97,7 @@
           "CalculateResult": {
             "End": true,
             "Type": "Task",
-            "Resource": "${Token[TOKEN.378]}"
+            "Resource": "${Token[TOKEN.371]}"
           }
         }
       },
@@ -130,9 +106,9 @@
     "PublishFileReadError": {
       "Next": "FileReadErrorFailure",
       "Type": "Task",
-      "Resource": "arn:${Token[AWS.Partition.12]}:states:::sns:publish",
+      "Resource": "arn:${Token[AWS.Partition.5]}:states:::sns:publish",
       "Parameters": {
-        "TopicArn": "${Token[TOKEN.497]}",
+        "TopicArn": "${Token[TOKEN.490]}",
         "Message": {
           "cause": "An error occurred reading the file",
           "fileEvent": "$.fileEvent"

@@ -25,14 +25,22 @@ export const handler = async (request: any): Promise<void> => {
   const mockExchanges = mocks[mockId];
 
   if (mockExchanges === undefined) {
-    throw new Error(`No mock exchanges found for mockId: ${mockId}`);
+    throw new Error(`No expected exchanges found for mockId: ${mockId}`);
   }
 
-  const { response } = mockExchanges[state.invocationCount];
+  if (state.invocationCount >= mockExchanges.length) {
+    throw new Error(`Invocation count exceeded expected exchange count for mockId: ${mockId}`);
+  }
+
+  const { error, response } = mockExchanges[state.invocationCount];
 
   state.invocationCount += 1;
 
   await lambdaTestClient.setMockStateAsync(mockId, state);
+
+  if (error) {
+    throw new Error(error);
+  }
 
   console.log(JSON.stringify({ response }, null, 2));
 
