@@ -1,12 +1,10 @@
 /* eslint-disable import/no-extraneous-dependencies */
-import StateMachineWithGraph from '@andybalham/state-machine-with-graph';
 import * as cdk from '@aws-cdk/core';
 import * as sns from '@aws-cdk/aws-sns';
 import * as snsSubs from '@aws-cdk/aws-sns-subscriptions';
-import * as fs from 'fs';
-import path from 'path';
 import { IntegrationTestStack } from '../../../aws-integration-test';
 import { ResultCalculatorStateMachine } from '../../constructs';
+import writeGraphJson from './writeGraphJson';
 
 export default class ResultCalculatorStateMachineTestStack extends IntegrationTestStack {
   //
@@ -26,31 +24,24 @@ export default class ResultCalculatorStateMachineTestStack extends IntegrationTe
 
   constructor(scope: cdk.Construct, id: string) {
     //
+    // Declare the observers and the mocks
+
     super(scope, id, {
       testResourceTagKey: ResultCalculatorStateMachineTestStack.ResourceTagKey,
       observerFunctionIds: [
         ResultCalculatorStateMachineTestStack.ResultCalculatorObserverId,
         ResultCalculatorStateMachineTestStack.ErrorTopicObserverId,
       ],
+      mockFunctionIds: [
+        ResultCalculatorStateMachineTestStack.FileHeaderReaderMockId,
+        ResultCalculatorStateMachineTestStack.FileHeaderIndexReaderMockId,
+        ResultCalculatorStateMachineTestStack.CombineHeadersMockId,
+      ],
     });
-
-    // Mock functions
-
-    const fileHeaderReaderMockFunction = this.newMockFunction(
-      ResultCalculatorStateMachineTestStack.FileHeaderReaderMockId
-    );
-
-    const fileHeaderIndexReaderMockFunction = this.newMockFunction(
-      ResultCalculatorStateMachineTestStack.FileHeaderIndexReaderMockId
-    );
-
-    const combineHeadersFunctionMockFunction = this.newMockFunction(
-      ResultCalculatorStateMachineTestStack.CombineHeadersMockId
-    );
 
     // Test error topic and observer
 
-    const testErrorTopic = new sns.Topic(this, 'TestErrorTopic', {});
+    const testErrorTopic = new sns.Topic(this, 'TestErrorTopic');
 
     testErrorTopic.addSubscription(
       new snsSubs.LambdaSubscription(
@@ -64,9 +55,12 @@ export default class ResultCalculatorStateMachineTestStack extends IntegrationTe
       this,
       ResultCalculatorStateMachineTestStack.StateMachineId,
       {
-        fileHeaderReaderFunction: fileHeaderReaderMockFunction,
-        fileHeaderIndexReaderFunction: fileHeaderIndexReaderMockFunction,
-        combineHeadersFunction: combineHeadersFunctionMockFunction,
+        fileHeaderReaderFunction:
+          this.mockFunctions[ResultCalculatorStateMachineTestStack.FileHeaderReaderMockId],
+        fileHeaderIndexReaderFunction:
+          this.mockFunctions[ResultCalculatorStateMachineTestStack.FileHeaderIndexReaderMockId],
+        combineHeadersFunction:
+          this.mockFunctions[ResultCalculatorStateMachineTestStack.CombineHeadersMockId],
         calculateResultFunction:
           this.observerFunctions[ResultCalculatorStateMachineTestStack.ResultCalculatorObserverId],
         errorTopic: testErrorTopic,
@@ -76,19 +70,7 @@ export default class ResultCalculatorStateMachineTestStack extends IntegrationTe
     this.addTestResourceTag(sut, ResultCalculatorStateMachineTestStack.StateMachineId);
 
     // Output the graph JSON to help with development
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+
     writeGraphJson(sut);
   }
-}
-
-function writeGraphJson(stateMachine: StateMachineWithGraph): void {
-  //
-  const stateMachinePath = path.join(__dirname, 'stateMachines');
-
-  if (!fs.existsSync(stateMachinePath)) fs.mkdirSync(stateMachinePath);
-
-  fs.writeFileSync(
-    path.join(stateMachinePath, `${stateMachine.node.id}.asl.json`),
-    stateMachine.graphJson
-  );
 }

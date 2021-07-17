@@ -9,6 +9,7 @@ export interface IntegrationTestStackProps {
   testResourceTagKey: string;
   integrationTestTable?: boolean;
   observerFunctionIds?: string[];
+  mockFunctionIds?: string[];
 }
 
 export default abstract class IntegrationTestStack extends cdk.Stack {
@@ -21,12 +22,18 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
 
   readonly observerFunctions: Record<string, lambda.IFunction>;
 
+  readonly mockFunctions: Record<string, lambda.IFunction>;
+
   constructor(scope: cdk.Construct, id: string, props: IntegrationTestStackProps) {
     super(scope, id);
 
     this.testResourceTagKey = props.testResourceTagKey;
 
-    if (props.integrationTestTable || (props.observerFunctionIds?.length ?? 0) > 0) {
+    if (
+      props.integrationTestTable ||
+      (props.observerFunctionIds?.length ?? 0) > 0 ||
+      (props.mockFunctionIds?.length ?? 0) > 0
+    ) {
       //
       // Test table
 
@@ -52,21 +59,33 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
       this.observerFunctions = {};
 
       props.observerFunctionIds
-        .map((i) => ({ observerId: i, function: this.newObserverFunction(props, i) }))
+        .map((i) => ({ observerId: i, function: this.newObserverFunction(i) }))
         .forEach((iaf) => {
           this.observerFunctions[iaf.observerId] = iaf.function;
         });
     }
+
+    if (props.mockFunctionIds) {
+      //
+      this.mockFunctions = {};
+
+      props.mockFunctionIds
+        .map((i) => ({ mockId: i, function: this.newMockFunction(i) }))
+        .forEach((iaf) => {
+          this.mockFunctions[iaf.mockId] = iaf.function;
+        });
+    }
   }
 
-  private newObserverFunction(
-    props: IntegrationTestStackProps,
-    observerId: string
-  ): lambda.IFunction {
+  addTestResourceTag(resource: cdk.IConstruct, resourceId: string): void {
+    cdk.Tags.of(resource).add(this.testResourceTagKey, resourceId);
+  }
+
+  private newObserverFunction(observerId: string): lambda.IFunction {
     //
     if (this.integrationTestTable === undefined)
       throw new Error('this.integrationTestTable === undefined');
-      
+
     const functionEntryBase = path.join(__dirname, '.');
 
     const observerFunction = new lambdaNodejs.NodejsFunction(
@@ -87,11 +106,7 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
     return observerFunction;
   }
 
-  addTestResourceTag(resource: cdk.IConstruct, resourceId: string): void {
-    cdk.Tags.of(resource).add(this.testResourceTagKey, resourceId);
-  }
-
-  newMockFunction(mockId: string): lambda.IFunction {
+  private newMockFunction(mockId: string): lambda.IFunction {
     //
     const functionEntryBase = path.join(__dirname, '.');
 
