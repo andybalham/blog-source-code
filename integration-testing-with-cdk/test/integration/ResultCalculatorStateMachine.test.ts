@@ -1,6 +1,7 @@
+import { SNSEvent } from 'aws-lambda';
 import { expect } from 'chai';
 import { nanoid } from 'nanoid';
-import { UnitTestClient } from '../../src/aws-integration-test';
+import { ObserverOutput, UnitTestClient } from '../../src/aws-integration-test';
 import { ResultCalculatorStateMachineTestStack as TestStack } from '../../src/cdk/stacks/test';
 import { FileEvent, FileEventType, FileHeaderIndex, FileType } from '../../src/contracts';
 import { FileSectionType } from '../../src/contracts/FileSectionType';
@@ -19,7 +20,6 @@ describe('ResultCalculatorStateMachine Tests', () => {
   });
 
   it('Unhandled file type', async () => {
-    //
     // Arrange
 
     const fileEvent = new FileEvent(
@@ -45,10 +45,13 @@ describe('ResultCalculatorStateMachine Tests', () => {
 
     // Await
 
-    const { timedOut } = await testClient.pollOutputsAsync({
-      until: async () => sutClient.isExecutionFinishedAsync(),
+    const getErrorOutputs = (outputs: ObserverOutput<any>[]): ObserverOutput<any>[] =>
+      outputs.filter((o) => o.observerId === TestStack.ErrorTopicObserverId);
+
+    const { outputs, timedOut } = await testClient.pollOutputsAsync<ObserverOutput<any>>({
+      until: async (o) => sutClient.isExecutionFinishedAsync() && getErrorOutputs(o).length > 0,
       intervalSeconds: 2,
-      timeoutSeconds: 6,
+      timeoutSeconds: 12,
     });
 
     // Assert
@@ -63,6 +66,14 @@ describe('ResultCalculatorStateMachine Tests', () => {
 
     expect(lastEvent).to.not.equal(undefined);
     expect(lastEvent?.executionFailedEventDetails?.cause).to.equal('Unhandled FileType');
+
+    const errorEventRecords = getErrorOutputs(outputs)
+      .map((o) => (o.event as SNSEvent).Records)
+      .reduce((all, r) => all.concat(r), []);
+
+    const errorEvent = JSON.parse(errorEventRecords[0].Sns.Message);
+
+    expect(errorEvent.cause).to.equal('Unhandled FileType');
   });
 
   it('New scenario created', async () => {
@@ -118,7 +129,7 @@ describe('ResultCalculatorStateMachine Tests', () => {
 
     // Await
 
-    const { timedOut, outputs } = await testClient.pollOutputsAsync({
+    const { timedOut, outputs } = await testClient.pollOutputsAsync<ObserverOutput<any>>({
       until: async () => sutClient.isExecutionFinishedAsync(),
       intervalSeconds: 2,
       timeoutSeconds: 12,
@@ -132,6 +143,10 @@ describe('ResultCalculatorStateMachine Tests', () => {
 
     expect(status).to.equal('SUCCEEDED');
 
-    expect(outputs.length).to.equal(configurationCount);
+    const resultCalculatorOutputs = outputs.filter(
+      (o) => o.observerId === TestStack.ResultCalculatorObserverId
+    );
+
+    expect(resultCalculatorOutputs.length).to.equal(configurationCount);
   });
 });

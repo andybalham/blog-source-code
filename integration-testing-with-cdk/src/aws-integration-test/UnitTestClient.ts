@@ -6,7 +6,7 @@ import sns from 'aws-sdk/clients/sns';
 import { StartExecutionInput } from 'aws-sdk/clients/stepfunctions';
 import IntegrationTestStack from './IntegrationTestStack';
 import { CurrentTestItem, TestItemPrefix } from './TestItem';
-import StepFunctionClient from './StepFunctionTestClient';
+import StepFunctionUnitTestClient from './StepFunctionUnitTestClient';
 import { MockExchange } from './MockExchange';
 
 dotenv.config();
@@ -274,7 +274,7 @@ export default class UnitTestClient {
     return undefined;
   }
 
-  getStepFunctionClient(stateMachineStackId: string): StepFunctionClient {
+  getStepFunctionClient(stateMachineStackId: string): StepFunctionUnitTestClient {
     //
     const stateMachineArn = this.getResourceArnByStackId(stateMachineStackId);
 
@@ -282,7 +282,7 @@ export default class UnitTestClient {
       throw new Error(`The ARN could not be resolved for id: ${stateMachineStackId}`);
     }
 
-    return new StepFunctionClient(UnitTestClient.getRegion(), stateMachineArn);
+    return new StepFunctionUnitTestClient(UnitTestClient.getRegion(), stateMachineArn);
   }
 
   async startStateMachineAsync(

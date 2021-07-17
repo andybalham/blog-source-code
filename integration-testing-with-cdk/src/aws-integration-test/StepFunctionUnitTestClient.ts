@@ -2,16 +2,11 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable import/no-extraneous-dependencies */
 import AWS from 'aws-sdk';
-import {
-  ExecutionStatus,
-  HistoryEvent,
-  StartExecutionInput,
-  StartExecutionOutput,
-} from 'aws-sdk/clients/stepfunctions';
+import { ExecutionStatus, HistoryEvent, StartExecutionInput } from 'aws-sdk/clients/stepfunctions';
 
 const STEP_FUNCTION_STATE_RUNNING = 'RUNNING';
 
-export default class StepFunctionClient {
+export default class StepFunctionUnitTestClient {
   //
   private readonly stepFunctions: AWS.StepFunctions;
 

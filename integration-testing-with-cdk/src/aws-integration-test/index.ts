@@ -1,6 +1,7 @@
 import UnitTestClient from './UnitTestClient';
 import IntegrationTestStack from './IntegrationTestStack';
 import TestFunctionClient from './TestFunctionClient';
-import { TestObserverOutput } from './testObserverFunction';
+import { ObserverOutput } from './observerFunction';
+import StepFunctionUnitTestClient from './StepFunctionUnitTestClient';
 
-export { IntegrationTestStack, UnitTestClient, TestFunctionClient, TestObserverOutput };
+export { IntegrationTestStack, UnitTestClient, StepFunctionUnitTestClient, TestFunctionClient, ObserverOutput };

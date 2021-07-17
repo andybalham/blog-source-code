@@ -7,7 +7,7 @@ const observerId = process.env.OBSERVER_ID ?? 'undefined';
 
 const lambdaTestClient = new TestFunctionClient();
 
-export interface TestObserverOutput<T> {
+export interface ObserverOutput<T> {
   observerId: string;
   timestamp: number;
   event: T;
@@ -17,7 +17,7 @@ export const handler = async (event: Record<string, any>): Promise<void> => {
   //
   console.log(JSON.stringify(event));
 
-  const output: TestObserverOutput<Record<string, any>> = {
+  const output: ObserverOutput<Record<string, any>> = {
     observerId,
     timestamp: Date.now(),
     event,

@@ -14,10 +14,12 @@ export default class FileEventPublisherTestStack extends IntegrationTestStack {
 
   constructor(scope: cdk.Construct, id: string) {
     //
+    const fileTopicObserverId = 'TopicListener';
+
     super(scope, id, {
       testResourceTagKey: FileEventPublisherTestStack.ResourceTagKey,
       integrationTestTable: true,
-      testObserverFunctionIds: ['TopicListener'],
+      observerFunctionIds: [fileTopicObserverId],
     });
 
     // Test bucket
@@ -39,7 +41,7 @@ export default class FileEventPublisherTestStack extends IntegrationTestStack {
     // Test subscriber
 
     sut.fileEventTopic.addSubscription(
-      new subscriptions.LambdaSubscription(this.testObserverFunctions.TopicListener)
+      new subscriptions.LambdaSubscription(this.observerFunctions[fileTopicObserverId])
     );
   }
 }

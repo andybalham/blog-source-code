@@ -8,7 +8,7 @@ import path from 'path';
 export interface IntegrationTestStackProps {
   testResourceTagKey: string;
   integrationTestTable?: boolean;
-  testObserverFunctionIds?: string[];
+  observerFunctionIds?: string[];
 }
 
 export default abstract class IntegrationTestStack extends cdk.Stack {
@@ -19,14 +19,14 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
 
   readonly integrationTestTable: dynamodb.Table;
 
-  readonly testObserverFunctions: Record<string, lambda.IFunction>;
+  readonly observerFunctions: Record<string, lambda.IFunction>;
 
   constructor(scope: cdk.Construct, id: string, props: IntegrationTestStackProps) {
     super(scope, id);
 
     this.testResourceTagKey = props.testResourceTagKey;
 
-    if (props.integrationTestTable) {
+    if (props.integrationTestTable || (props.observerFunctionIds?.length ?? 0) > 0) {
       //
       // Test table
 
@@ -47,37 +47,34 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
       );
     }
 
-    if (props.testObserverFunctionIds) {
+    if (props.observerFunctionIds) {
       //
-      this.testObserverFunctions = {};
+      this.observerFunctions = {};
 
-      props.testObserverFunctionIds
-        .map((i) => ({ observerId: i, function: this.newTestObserverFunction(props, i) }))
+      props.observerFunctionIds
+        .map((i) => ({ observerId: i, function: this.newObserverFunction(props, i) }))
         .forEach((iaf) => {
-          this.testObserverFunctions[iaf.observerId] = iaf.function;
+          this.observerFunctions[iaf.observerId] = iaf.function;
         });
     }
   }
 
-  private newTestObserverFunction(
+  private newObserverFunction(
     props: IntegrationTestStackProps,
     observerId: string
   ): lambda.IFunction {
     //
-    if (!props.integrationTestTable) {
-      throw new Error(
-        `props.deployIntegrationTestTable must be 'true' for observer functions, but is: ${props.integrationTestTable}`
-      );
-    }
-
+    if (this.integrationTestTable === undefined)
+      throw new Error('this.integrationTestTable === undefined');
+      
     const functionEntryBase = path.join(__dirname, '.');
 
-    const testObserverFunction = new lambdaNodejs.NodejsFunction(
+    const observerFunction = new lambdaNodejs.NodejsFunction(
       this,
-      `TestObserverFunction-${observerId}`,
+      `ObserverFunction-${observerId}`,
       {
         runtime: lambda.Runtime.NODEJS_12_X,
-        entry: path.join(functionEntryBase, `testObserverFunction.ts`),
+        entry: path.join(functionEntryBase, `observerFunction.ts`),
         handler: 'handler',
         environment: {
           OBSERVER_ID: observerId,
@@ -86,8 +83,8 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
       }
     );
 
-    this.integrationTestTable.grantReadWriteData(testObserverFunction);
-    return testObserverFunction;
+    this.integrationTestTable.grantReadWriteData(observerFunction);
+    return observerFunction;
   }
 
   addTestResourceTag(resource: cdk.IConstruct, resourceId: string): void {
@@ -98,9 +95,9 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
     //
     const functionEntryBase = path.join(__dirname, '.');
 
-    const testMockFunction = new lambdaNodejs.NodejsFunction(this, `TestMockFunction-${mockId}`, {
+    const mockFunction = new lambdaNodejs.NodejsFunction(this, `MockFunction-${mockId}`, {
       runtime: lambda.Runtime.NODEJS_12_X,
-      entry: path.join(functionEntryBase, `testMockFunction.ts`),
+      entry: path.join(functionEntryBase, `mockFunction.ts`),
       handler: 'handler',
       environment: {
         MOCK_ID: mockId,
@@ -108,8 +105,8 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
       },
     });
 
-    this.integrationTestTable.grantReadWriteData(testMockFunction);
+    this.integrationTestTable.grantReadWriteData(mockFunction);
 
-    return testMockFunction;
+    return mockFunction;
   }
 }
