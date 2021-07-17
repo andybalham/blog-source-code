@@ -16,8 +16,8 @@ export default class FileEventPublisherTestStack extends IntegrationTestStack {
     //
     super(scope, id, {
       testResourceTagKey: FileEventPublisherTestStack.ResourceTagKey,
-      deployIntegrationTestTable: true,
-      deployTestObserverFunction: true,
+      integrationTestTable: true,
+      testObserverFunctionIds: ['TopicListener'],
     });
 
     // Test bucket
@@ -39,7 +39,7 @@ export default class FileEventPublisherTestStack extends IntegrationTestStack {
     // Test subscriber
 
     sut.fileEventTopic.addSubscription(
-      new subscriptions.LambdaSubscription(this.testObserverFunction)
+      new subscriptions.LambdaSubscription(this.testObserverFunctions.TopicListener)
     );
   }
 }

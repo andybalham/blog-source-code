@@ -1,8 +1,9 @@
 /* eslint-disable no-console */
 /* eslint-disable import/prefer-default-export */
-import { TestMockFunctionClient } from '.';
 
-const lambdaTestClient = new TestMockFunctionClient(process.env.INTEGRATION_TEST_TABLE_NAME);
+import TestFunctionClient from './TestFunctionClient';
+
+const lambdaTestClient = new TestFunctionClient();
 
 const mockId = process.env.MOCK_ID;
 
@@ -13,15 +14,15 @@ export const handler = async (request: any): Promise<void> => {
 
   if (mockId === undefined) throw new Error('mockId === undefined');
 
-  const { inputs } = await lambdaTestClient.getCurrentTestAsync();
+  const { mocks } = await lambdaTestClient.getTestPropsAsync();
 
-  if (inputs === undefined) throw new Error('inputs === undefined');
+  if (mocks === undefined) throw new Error('inputs === undefined');
 
   const state = await lambdaTestClient.getMockStateAsync<{ invocationCount: number }>(mockId, {
     invocationCount: 0,
   });
 
-  const mockExchanges = (inputs as any).mocks[mockId];
+  const mockExchanges = mocks[mockId];
 
   if (mockExchanges === undefined) {
     throw new Error(`No mock exchanges found for mockId: ${mockId}`);

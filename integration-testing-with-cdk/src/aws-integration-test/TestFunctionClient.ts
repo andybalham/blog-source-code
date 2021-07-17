@@ -1,22 +1,24 @@
+/* eslint-disable class-methods-use-this */
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { nanoid } from 'nanoid';
 import { CurrentTestItem, MockStateTestItem, OutputTestItem, TestItemPrefix } from './TestItem';
+import { TestProps } from './UnitTestClient';
+
+const integrationTestTableName = process.env.INTEGRATION_TEST_TABLE_NAME;
 
 const documentClient = new DocumentClient();
 
-export default class TestMockFunctionClient {
+export default class TestFunctionClient {
   //
-  constructor(private integrationTestTableName: string | undefined) {}
-
-  async getCurrentTestAsync<T>(): Promise<{ testId: string; inputs?: T }> {
+  async getTestPropsAsync<T>(): Promise<TestProps<T>> {
     //
-    if (this.integrationTestTableName === undefined)
-      throw new Error('this.integrationTestTableName === undefined');
+    if (integrationTestTableName === undefined)
+      throw new Error('integrationTestTableName === undefined');
 
     const testQueryParams /*: QueryInput */ = {
       // QueryInput results in a 'Condition parameter type does not match schema type'
-      TableName: this.integrationTestTableName,
+      TableName: integrationTestTableName,
       KeyConditionExpression: `PK = :PK`,
       ExpressionAttributeValues: {
         ':PK': 'Current',
@@ -30,15 +32,15 @@ export default class TestMockFunctionClient {
 
     const currentTestItem = testQueryOutput.Items[0] as CurrentTestItem<T>;
 
-    return { testId: currentTestItem.testId, inputs: currentTestItem.inputs };
+    return currentTestItem;
   }
 
   async setTestOutputAsync<T>(output: T): Promise<void> {
     //
-    if (this.integrationTestTableName === undefined)
-      throw new Error('this.integrationTestTableName === undefined');
+    if (integrationTestTableName === undefined)
+      throw new Error('integrationTestTableName === undefined');
 
-    const { testId } = await this.getCurrentTestAsync();
+    const { testId } = await this.getTestPropsAsync();
 
     const now = Date.now().toString().slice(6);
 
@@ -50,7 +52,7 @@ export default class TestMockFunctionClient {
 
     await documentClient
       .put({
-        TableName: this.integrationTestTableName,
+        TableName: integrationTestTableName,
         Item: testOutputItem,
       })
       .promise();
@@ -58,14 +60,14 @@ export default class TestMockFunctionClient {
 
   async getMockStateAsync<T>(mockId: string, defaultState: T): Promise<T> {
     //
-    if (this.integrationTestTableName === undefined)
-      throw new Error('this.integrationTestTableName === undefined');
+    if (integrationTestTableName === undefined)
+      throw new Error('integrationTestTableName === undefined');
 
-    const { testId } = await this.getCurrentTestAsync();
+    const { testId } = await this.getTestPropsAsync();
 
     const mockStateQueryParams /*: QueryInput */ = {
       // QueryInput results in a 'Condition parameter type does not match schema type'
-      TableName: this.integrationTestTableName,
+      TableName: integrationTestTableName,
       KeyConditionExpression: `PK = :PK and SK = :SK`,
       ExpressionAttributeValues: {
         ':PK': testId,
@@ -89,10 +91,10 @@ export default class TestMockFunctionClient {
 
   async setMockStateAsync<T>(mockId: string, state: T): Promise<void> {
     //
-    if (this.integrationTestTableName === undefined)
-      throw new Error('this.integrationTestTableName === undefined');
+    if (integrationTestTableName === undefined)
+      throw new Error('integrationTestTableName === undefined');
 
-    const { testId } = await this.getCurrentTestAsync();
+    const { testId } = await this.getTestPropsAsync();
 
     const mockStateItem: MockStateTestItem<T> = {
       PK: testId,
@@ -102,7 +104,7 @@ export default class TestMockFunctionClient {
 
     await documentClient
       .put({
-        TableName: this.integrationTestTableName,
+        TableName: integrationTestTableName,
         Item: mockStateItem,
       })
       .promise();

@@ -22,8 +22,8 @@ export default class ResultCalculatorStateMachineTestStack extends IntegrationTe
     //
     super(scope, id, {
       testResourceTagKey: ResultCalculatorStateMachineTestStack.ResourceTagKey,
-      deployIntegrationTestTable: true,
-      deployTestObserverFunction: true,
+      integrationTestTable: true,
+      testObserverFunctionIds: ['ResultCalculator'],
     });
 
     const fileHeaderReaderMockFunction = this.newMockFunction(
@@ -43,7 +43,7 @@ export default class ResultCalculatorStateMachineTestStack extends IntegrationTe
         fileHeaderReaderFunction: fileHeaderReaderMockFunction,
         fileHeaderIndexReaderFunction: fileHeaderIndexReaderMockFunction,
         combineHeadersFunction: combineHeadersFunctionMockFunction,
-        calculateResultFunction: this.testObserverFunction,
+        calculateResultFunction: this.testObserverFunctions.ResultCalculator,
       }
     );
 

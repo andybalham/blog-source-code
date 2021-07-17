@@ -30,7 +30,7 @@ describe('FileHeaderIndexer Tests', () => {
   });
 
   it('Single header indexed', async () => {
-    await testClient.initialiseTestAsync('Single header indexed');
+    await testClient.initialiseTestAsync({ testId: 'Single header indexed' });
 
     // Arrange
 
@@ -86,7 +86,7 @@ describe('FileHeaderIndexer Tests', () => {
   });
 
   it('Single header updated', async () => {
-    await testClient.initialiseTestAsync('Single header updated');
+    await testClient.initialiseTestAsync({ testId: 'Single header updated' });
 
     // Arrange
 
@@ -165,7 +165,7 @@ describe('FileHeaderIndexer Tests', () => {
   it('Body event ignored', async () => {
     // Arrange
 
-    await testClient.initialiseTestAsync('Body event ignored');
+    await testClient.initialiseTestAsync({ testId: 'Body event ignored' });
 
     const file = newConfigurationFile();
     const s3Key = `configuration/${file.header.name}.json`;

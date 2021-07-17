@@ -7,8 +7,7 @@ import path from 'path';
 
 export interface IntegrationTestStackProps {
   testResourceTagKey: string;
-  deployIntegrationTestTable?: boolean;
-  deployTestObserverFunction?: boolean;
+  integrationTestTable?: boolean;
   testObserverFunctionIds?: string[];
 }
 
@@ -20,8 +19,6 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
 
   readonly integrationTestTable: dynamodb.Table;
 
-  readonly testObserverFunction: lambda.IFunction;
-
   readonly testObserverFunctions: Record<string, lambda.IFunction>;
 
   constructor(scope: cdk.Construct, id: string, props: IntegrationTestStackProps) {
@@ -29,7 +26,7 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
 
     this.testResourceTagKey = props.testResourceTagKey;
 
-    if (props.deployIntegrationTestTable) {
+    if (props.integrationTestTable) {
       //
       // Test table
 
@@ -50,10 +47,6 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
       );
     }
 
-    if (props.deployTestObserverFunction) {
-      this.testObserverFunction = this.newTestObserverFunction(props, 'Default');
-    }
-
     if (props.testObserverFunctionIds) {
       //
       this.testObserverFunctions = {};
@@ -71,9 +64,9 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
     observerId: string
   ): lambda.IFunction {
     //
-    if (!props.deployIntegrationTestTable) {
+    if (!props.integrationTestTable) {
       throw new Error(
-        `props.deployIntegrationTestTable must be 'true' for observer functions, but is: ${props.deployIntegrationTestTable}`
+        `props.deployIntegrationTestTable must be 'true' for observer functions, but is: ${props.integrationTestTable}`
       );
     }
 

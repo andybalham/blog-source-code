@@ -2,12 +2,7 @@ import { expect } from 'chai';
 import { nanoid } from 'nanoid';
 import { UnitTestClient } from '../../src/aws-integration-test';
 import { ResultCalculatorStateMachineTestStack as TestStack } from '../../src/cdk/stacks/test';
-import {
-  FileEvent,
-  FileEventType,
-  FileHeaderIndex,
-  FileType,
-} from '../../src/contracts';
+import { FileEvent, FileEventType, FileHeaderIndex, FileType } from '../../src/contracts';
 import { FileSectionType } from '../../src/contracts/FileSectionType';
 
 describe('ResultCalculatorStateMachine Tests', () => {
@@ -35,7 +30,8 @@ describe('ResultCalculatorStateMachine Tests', () => {
 
     const unhandledFileHeader = { fileType: FileType.Result, name: `name:${nanoid()}` };
 
-    await testClient.initialiseTestAsync('Unhandled file type', {
+    await testClient.initialiseTestAsync({
+      testId: 'Unhandled file type',
       mocks: {
         [TestStack.FileHeaderReaderMockId]: [{ response: unhandledFileHeader }],
       },
@@ -105,7 +101,8 @@ describe('ResultCalculatorStateMachine Tests', () => {
       scenario: scenarioFileHeaderIndex,
     }));
 
-    await testClient.initialiseTestAsync('New scenario created', {
+    await testClient.initialiseTestAsync({
+      testId: 'New scenario created',
       mocks: {
         [TestStack.FileHeaderReaderMockId]: [{ response: scenarioFileHeader }],
         [TestStack.FileHeaderIndexReaderMockId]: [{ response: configurationFileHeaderIndexes }],

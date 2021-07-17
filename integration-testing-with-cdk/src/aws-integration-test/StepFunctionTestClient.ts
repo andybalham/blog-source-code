@@ -110,8 +110,8 @@ export const getEventName = (event: AWS.StepFunctions.HistoryEvent) => {
   //
   const { name } = event.stateEnteredEventDetails ||
     event.stateExitedEventDetails || {
-      name: undefined,
-    };
+    name: undefined,
+  };
 
   return name;
 };

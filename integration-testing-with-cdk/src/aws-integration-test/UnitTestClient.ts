@@ -7,11 +7,18 @@ import { StartExecutionInput } from 'aws-sdk/clients/stepfunctions';
 import IntegrationTestStack from './IntegrationTestStack';
 import { CurrentTestItem, TestItemPrefix } from './TestItem';
 import StepFunctionClient from './StepFunctionTestClient';
+import { MockExchange } from './MockExchange';
 
 dotenv.config();
 
 export interface UnitTestClientProps {
   testResourceTagKey: string;
+}
+
+export interface TestProps<T> {
+  testId: string;
+  inputs?: T;
+  mocks?: Record<string, MockExchange[]>;
 }
 
 export default class UnitTestClient {
@@ -82,13 +89,13 @@ export default class UnitTestClient {
     );
   }
 
-  async initialiseTestAsync<T>(testId: string, inputs?: T): Promise<void> {
+  async initialiseTestAsync<T>(props: TestProps<T>): Promise<void> {
     //
-    if (!testId) {
+    if (!props.testId) {
       throw new Error(`A testId must be specified`);
     }
 
-    this.testId = testId;
+    this.testId = props.testId;
 
     if (this.integrationTestTableName !== undefined) {
       //
@@ -100,7 +107,7 @@ export default class UnitTestClient {
         TableName: this.integrationTestTableName,
         KeyConditionExpression: `PK = :PK`,
         ExpressionAttributeValues: {
-          ':PK': testId,
+          ':PK': this.testId,
         },
       };
 
@@ -122,10 +129,11 @@ export default class UnitTestClient {
       // Set the current test and inputs
 
       const currentTestItem: CurrentTestItem<T> = {
-        PK: 'Current',
-        SK: 'Test',
-        testId,
-        inputs,
+        ...{
+          PK: 'Current',
+          SK: 'Test',
+        },
+        ...props,
       };
 
       await UnitTestClient.db

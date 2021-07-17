@@ -7,8 +7,7 @@ import { Configuration, File, FileType } from '../../src/contracts';
 import { FileEvent, FileEventType } from '../../src/contracts/FileEvent';
 import { FileSectionType } from '../../src/contracts/FileSectionType';
 import FileEventPublisherTestStack from '../../src/cdk/stacks/test/FileEventPublisherTestStack-v2';
-import { UnitTestClient } from '../../src/aws-integration-test';
-import { TestObserverOutput } from '../../src/aws-integration-test/testObserverFunction';
+import { TestObserverOutput, UnitTestClient } from '../../src/aws-integration-test';
 
 describe('FileEventPublisher Tests', () => {
   const testClient = new UnitTestClient({
@@ -20,7 +19,7 @@ describe('FileEventPublisher Tests', () => {
   });
 
   it.only('New file upload', async () => {
-    await testClient.initialiseTestAsync('New file upload');
+    await testClient.initialiseTestAsync({ testId: 'New file upload' });
 
     // Arrange
 
@@ -104,7 +103,7 @@ describe('FileEventPublisher Tests', () => {
     })}`;
 
     it(testId, async () => {
-      await testClient.initialiseTestAsync(testId);
+      await testClient.initialiseTestAsync({ testId });
 
       // Arrange
 

@@ -1,10 +1,11 @@
 /* eslint-disable no-console */
 /* eslint-disable import/prefer-default-export */
-import { TestMockFunctionClient } from '.';
+
+import TestFunctionClient from './TestFunctionClient';
 
 const observerId = process.env.OBSERVER_ID ?? 'undefined';
 
-const lambdaTestClient = new TestMockFunctionClient(process.env.INTEGRATION_TEST_TABLE_NAME);
+const lambdaTestClient = new TestFunctionClient();
 
 export interface TestObserverOutput<T> {
   observerId: string;
