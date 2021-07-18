@@ -1,6 +1,7 @@
-
 export interface MockExchange {
-  expectedRequest?: any;
+  assert?: {
+    requiredProperties?: string[];
+  };
   error?: string;
   response?: any;
 }

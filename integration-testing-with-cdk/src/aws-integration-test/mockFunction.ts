@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable no-console */
 /* eslint-disable import/prefer-default-export */
 
@@ -32,7 +33,15 @@ export const handler = async (request: any): Promise<void> => {
     throw new Error(`Invocation count exceeded expected exchange count for mockId: ${mockId}`);
   }
 
-  const { error, response } = mockExchanges[state.invocationCount];
+  const { assert, error, response } = mockExchanges[state.invocationCount];
+
+  if (assert) {
+    const { requiredProperties } = assert;
+
+    if (requiredProperties) {
+      assertRequiredProperties(requiredProperties, request);
+    }
+  }
 
   state.invocationCount += 1;
 
@@ -46,3 +55,14 @@ export const handler = async (request: any): Promise<void> => {
 
   return response;
 };
+
+function assertRequiredProperties(requiredProperties: string[], request: any): void {
+  //
+  const missingProperties = requiredProperties.filter((p) => !(p in request));
+
+  if (missingProperties.length > 0) {
+    throw new Error(
+      `${missingProperties.join(', ')} properties missing from request: ${JSON.stringify(request)}`
+    );
+  }
+}

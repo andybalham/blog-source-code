@@ -79,7 +79,6 @@ describe('ResultCalculatorStateMachine Tests', () => {
   });
 
   it('New scenario created', async () => {
-    //
     // Arrange
 
     const scenarioFileEvent = new FileEvent(
@@ -117,9 +116,18 @@ describe('ResultCalculatorStateMachine Tests', () => {
     await testClient.initialiseTestAsync({
       testId: 'New scenario created',
       mocks: {
-        [TestStack.FileHeaderReaderMockId]: [{ response: scenarioFileHeader }],
-        [TestStack.FileHeaderIndexReaderMockId]: [{ response: configurationFileHeaderIndexes }],
-        [TestStack.CombineHeadersMockId]: [{ response: combinedHeaders }],
+        [TestStack.FileHeaderReaderMockId]: [
+          { assert: { requiredProperties: ['s3Key'] }, response: scenarioFileHeader },
+        ],
+        [TestStack.FileHeaderIndexReaderMockId]: [
+          {
+            assert: { requiredProperties: ['fileType'] },
+            response: configurationFileHeaderIndexes,
+          },
+        ],
+        [TestStack.CombineHeadersMockId]: [
+          { assert: { requiredProperties: ['configurations'] }, response: combinedHeaders },
+        ],
       },
     });
 
@@ -150,6 +158,91 @@ describe('ResultCalculatorStateMachine Tests', () => {
     );
 
     expect(resultCalculatorOutputs.length).to.equal(configurationCount);
+  });
+
+  it('New configuration created', async () => {
+    // Arrange
+
+    const configurationFileEvent = new FileEvent(
+      FileEventType.Created,
+      FileSectionType.Body,
+      `ConfigurationS3Key:${nanoid()}`
+    );
+
+    const configurationFileHeader = {
+      fileType: FileType.Configuration,
+      name: `ConfigurationName:${nanoid()}`,
+    };
+
+    const configurationFileHeaderIndex: FileHeaderIndex = {
+      s3Key: configurationFileEvent.s3Key,
+      header: configurationFileHeader,
+    };
+
+    const newScenarioFileHeaderIndex = (): FileHeaderIndex => ({
+      s3Key: `ScenarioS3Key${nanoid()}`,
+      header: { fileType: FileType.Scenario, name: `ScenarioName:${nanoid()}` },
+    });
+
+    const scenarioCount = 6;
+
+    const scenarioFileHeaderIndexes = [...Array(scenarioCount).keys()]
+      .map(() => newScenarioFileHeaderIndex())
+      .map((s) => ({
+        configurationS3Key: configurationFileHeaderIndex.s3Key,
+        scenarioS3Key: s.s3Key,
+      }));
+
+    const combinedHeaders = scenarioFileHeaderIndexes.map((s) => ({
+      configuration: configurationFileHeaderIndex,
+      scenario: s,
+    }));
+
+    await testClient.initialiseTestAsync({
+      testId: 'New configuration created',
+      mocks: {
+        [TestStack.FileHeaderReaderMockId]: [
+          { assert: { requiredProperties: ['s3Key'] }, response: configurationFileHeader },
+        ],
+        [TestStack.FileHeaderIndexReaderMockId]: [
+          {
+            assert: { requiredProperties: ['fileType'] },
+            response: scenarioFileHeaderIndexes,
+          },
+        ],
+        [TestStack.CombineHeadersMockId]: [
+          { assert: { requiredProperties: ['scenarios'] }, response: combinedHeaders },
+        ],
+      },
+    });
+
+    const sutClient = testClient.getStepFunctionClient(TestStack.StateMachineId);
+
+    // Act
+
+    await sutClient.startExecutionAsync({ fileEvent: configurationFileEvent });
+
+    // Await
+
+    const { timedOut, outputs } = await testClient.pollOutputsAsync<ObserverOutput<any>>({
+      until: async () => sutClient.isExecutionFinishedAsync(),
+      intervalSeconds: 2,
+      timeoutSeconds: 12,
+    });
+
+    // Assert
+
+    expect(timedOut, 'Timed out').to.equal(false);
+
+    const status = await sutClient.getStatusAsync();
+
+    expect(status).to.equal('SUCCEEDED');
+
+    const resultCalculatorOutputs = outputs.filter(
+      (o) => o.observerId === TestStack.ResultCalculatorObserverId
+    );
+
+    expect(resultCalculatorOutputs.length).to.equal(scenarioCount);
   });
 
   it('File reader retries and succeeds', async () => {
