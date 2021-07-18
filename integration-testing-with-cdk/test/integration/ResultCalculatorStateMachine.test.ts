@@ -73,7 +73,9 @@ describe('ResultCalculatorStateMachine Tests', () => {
 
     const errorEvent = JSON.parse(errorEventRecords[0].Sns.Message);
 
-    expect(errorEvent.cause).to.equal('Unhandled FileType');
+    expect(errorEvent.error).to.equal('Unhandled FileType');
+    expect(errorEvent.fileEvent).to.not.equal(undefined);
+    expect(errorEvent.fileHeader).to.not.equal(undefined);
   });
 
   it('New scenario created', async () => {
@@ -150,7 +152,7 @@ describe('ResultCalculatorStateMachine Tests', () => {
     expect(resultCalculatorOutputs.length).to.equal(configurationCount);
   });
 
-  it.only('File reader errors', async () => {
+  it('File reader retries and succeeds', async () => {
     //
     // Arrange
 
@@ -187,7 +189,7 @@ describe('ResultCalculatorStateMachine Tests', () => {
     }));
 
     await testClient.initialiseTestAsync({
-      testId: 'File reader error retried',
+      testId: 'File reader retries and succeeds',
       mocks: {
         [TestStack.FileHeaderReaderMockId]: [
           { error: 'Test error 1' },
@@ -226,5 +228,66 @@ describe('ResultCalculatorStateMachine Tests', () => {
     );
 
     expect(resultCalculatorOutputs.length).to.equal(configurationCount);
+  });
+
+  it('File reader retries and fails', async () => {
+    //
+    // Arrange
+
+    const scenarioFileEvent = new FileEvent(
+      FileEventType.Created,
+      FileSectionType.Body,
+      `ScenarioS3Key:${nanoid()}`
+    );
+
+    await testClient.initialiseTestAsync({
+      testId: 'File reader retries and fails',
+      mocks: {
+        [TestStack.FileHeaderReaderMockId]: [
+          { error: 'Test error 1' },
+          { error: 'Test error 2' },
+          { error: 'Test error 3' },
+        ],
+      },
+    });
+
+    const sutClient = testClient.getStepFunctionClient(TestStack.StateMachineId);
+
+    // Act
+
+    await sutClient.startExecutionAsync({ fileEvent: scenarioFileEvent });
+
+    // Await
+
+    const getErrorOutputs = (outputs: ObserverOutput<any>[]): ObserverOutput<any>[] =>
+      outputs.filter((o) => o.observerId === TestStack.ErrorTopicObserverId);
+
+    const { outputs, timedOut } = await testClient.pollOutputsAsync<ObserverOutput<any>>({
+      until: async (o) => sutClient.isExecutionFinishedAsync() && getErrorOutputs(o).length > 0,
+      intervalSeconds: 2,
+      timeoutSeconds: 24,
+    });
+
+    // Assert
+
+    expect(timedOut, 'Timed out').to.equal(false);
+
+    const status = await sutClient.getStatusAsync();
+
+    expect(status).to.equal('FAILED');
+
+    const lastEvent = await sutClient.getLastEventAsync();
+
+    expect(lastEvent).to.not.equal(undefined);
+    expect(lastEvent?.executionFailedEventDetails?.cause).to.equal('Failed to read the input file');
+
+    const errorEventRecords = getErrorOutputs(outputs)
+      .map((o) => (o.event as SNSEvent).Records)
+      .reduce((all, r) => all.concat(r), []);
+
+    const errorEvent = JSON.parse(errorEventRecords[0].Sns.Message);
+
+    expect(errorEvent.error).to.equal('Failed to read the input file');
+    expect(errorEvent.cause).to.not.equal(undefined);
   });
 });

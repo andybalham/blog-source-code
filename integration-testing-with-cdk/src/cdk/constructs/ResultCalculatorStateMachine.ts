@@ -17,12 +17,6 @@ export interface ResultCalculatorStateMachineProps
   errorTopic: sns.ITopic;
 }
 
-const retryProps: sfn.RetryProps = {
-  errors: [sfn.Errors.ALL],
-  maxAttempts: 3,
-  interval: cdk.Duration.seconds(2),
-};
-
 export default class ResultCalculatorStateMachine extends StateMachineWithGraph {
   //
   constructor(scope: cdk.Construct, id: string, props: ResultCalculatorStateMachineProps) {
@@ -33,13 +27,14 @@ export default class ResultCalculatorStateMachine extends StateMachineWithGraph 
 
           .lambdaInvoke('FileReader', {
             lambdaFunction: props.fileHeaderReaderFunction,
-            catches: [{ handler: 'PublishFileReadError' }],
-            // https://medium.com/system-design/building-aws-step-function-lambda-with-cdk-and-handling-error-case-e405b6a33aa6
-            retry: retryProps,
             parameters: {
               s3Key: '$.fileEvent.s3Key',
             },
             resultPath: '$.fileHeader',
+            retry: {
+              maxAttempts: 2,
+            },
+            catches: [{ handler: 'PublishFileReadError' }],
           })
 
           .choice('FileType', {
@@ -94,19 +89,20 @@ export default class ResultCalculatorStateMachine extends StateMachineWithGraph 
             new sfnTasks.SnsPublish(definitionScope, 'PublishFileReadError', {
               topic: props.errorTopic,
               message: sfn.TaskInput.fromObject({
-                cause: 'An error occurred reading the file',
-                fileEvent: '$.fileEvent',
+                error: 'Failed to read the input file',
+                'cause.$': '$.Cause',
               }),
             })
           )
-          .fail('FileReadErrorFailure', { cause: 'An error occurred reading the file' })
+          .fail('FileReadErrorFailure', { cause: 'Failed to read the input file' })
 
           .perform(
             new sfnTasks.SnsPublish(definitionScope, 'PublishUnhandledFileTypeError', {
               topic: props.errorTopic,
               message: sfn.TaskInput.fromObject({
-                cause: 'Unhandled FileType',
-                fileHeader: '$.fileHeader',
+                error: 'Unhandled FileType',
+                'fileEvent.$': '$.fileEvent',
+                'fileHeader.$': '$.fileHeader',
               }),
             })
           )
