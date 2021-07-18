@@ -25,7 +25,7 @@ export default class ResultCalculatorStateMachine extends StateMachineWithGraph 
       getDefinition: (definitionScope: cdk.Construct): sfn.IChainable =>
         StateMachineBuilder.new()
 
-          .lambdaInvoke('FileReader', {
+          .lambdaInvoke('ReadInputFileHeader', {
             lambdaFunction: props.fileHeaderReaderFunction,
             parameters: {
               s3Key: '$.fileEvent.s3Key',
@@ -34,10 +34,10 @@ export default class ResultCalculatorStateMachine extends StateMachineWithGraph 
             retry: {
               maxAttempts: 2,
             },
-            catches: [{ handler: 'PublishFileReadError' }],
+            catches: [{ handler: 'PublishInputFileHeaderReadError' }],
           })
 
-          .choice('FileType', {
+          .choice('SwitchOnFileType', {
             choices: [
               {
                 when: sfn.Condition.stringEquals('$.fileHeader.fileType', FileType.Configuration),
@@ -86,7 +86,7 @@ export default class ResultCalculatorStateMachine extends StateMachineWithGraph 
           .end()
 
           .perform(
-            new sfnTasks.SnsPublish(definitionScope, 'PublishFileReadError', {
+            new sfnTasks.SnsPublish(definitionScope, 'PublishInputFileHeaderReadError', {
               topic: props.errorTopic,
               message: sfn.TaskInput.fromObject({
                 error: 'Failed to read the input file',
@@ -94,7 +94,7 @@ export default class ResultCalculatorStateMachine extends StateMachineWithGraph 
               }),
             })
           )
-          .fail('FileReadErrorFailure', { cause: 'Failed to read the input file' })
+          .fail('InputFileHeaderReadFailure', { cause: 'Failed to read the input file' })
 
           .perform(
             new sfnTasks.SnsPublish(definitionScope, 'PublishUnhandledFileTypeError', {
