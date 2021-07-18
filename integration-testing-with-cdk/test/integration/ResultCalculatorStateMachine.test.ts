@@ -81,7 +81,7 @@ describe('ResultCalculatorStateMachine Tests', () => {
   it('New scenario created', async () => {
     // Arrange
 
-    const scenarioFileEvent = new FileEvent(
+    const fileEvent = new FileEvent(
       FileEventType.Created,
       FileSectionType.Body,
       `ScenarioS3Key:${nanoid()}`
@@ -90,7 +90,7 @@ describe('ResultCalculatorStateMachine Tests', () => {
     const scenarioFileHeader = { fileType: FileType.Scenario, name: `ScenarioName:${nanoid()}` };
 
     const scenarioFileHeaderIndex: FileHeaderIndex = {
-      s3Key: scenarioFileEvent.s3Key,
+      s3Key: fileEvent.s3Key,
       header: scenarioFileHeader,
     };
 
@@ -135,7 +135,7 @@ describe('ResultCalculatorStateMachine Tests', () => {
 
     // Act
 
-    await sutClient.startExecutionAsync({ fileEvent: scenarioFileEvent });
+    await sutClient.startExecutionAsync({ fileEvent });
 
     // Await
 
