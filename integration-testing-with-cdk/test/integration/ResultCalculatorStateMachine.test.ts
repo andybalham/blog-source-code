@@ -95,22 +95,19 @@ describe('ResultCalculatorStateMachine Tests', () => {
     };
 
     const newConfigurationFileHeaderIndex = (): FileHeaderIndex => ({
-      s3Key: `ConfigurationS3Key${nanoid()}`,
+      s3Key: `ConfigurationS3Key:${nanoid()}`,
       header: { fileType: FileType.Configuration, name: `ConfigurationName:${nanoid()}` },
     });
 
     const configurationCount = 6;
 
-    const configurationFileHeaderIndexes = [...Array(configurationCount).keys()]
-      .map(() => newConfigurationFileHeaderIndex())
-      .map((c) => ({
-        configurationS3Key: c.s3Key,
-        scenarioS3Key: scenarioFileHeaderIndex.s3Key,
-      }));
+    const configurationFileHeaderIndexes = [...Array(configurationCount).keys()].map(() =>
+      newConfigurationFileHeaderIndex()
+    );
 
     const combinedHeaders = configurationFileHeaderIndexes.map((c) => ({
-      configuration: c,
-      scenario: scenarioFileHeaderIndex,
+      configurationS3Key: c.s3Key,
+      scenarioS3Key: scenarioFileHeaderIndex.s3Key,
     }));
 
     await testClient.initialiseTestAsync({
@@ -180,22 +177,19 @@ describe('ResultCalculatorStateMachine Tests', () => {
     };
 
     const newScenarioFileHeaderIndex = (): FileHeaderIndex => ({
-      s3Key: `ScenarioS3Key${nanoid()}`,
+      s3Key: `ScenarioS3Key:${nanoid()}`,
       header: { fileType: FileType.Scenario, name: `ScenarioName:${nanoid()}` },
     });
 
     const scenarioCount = 6;
 
-    const scenarioFileHeaderIndexes = [...Array(scenarioCount).keys()]
-      .map(() => newScenarioFileHeaderIndex())
-      .map((s) => ({
-        configurationS3Key: configurationFileHeaderIndex.s3Key,
-        scenarioS3Key: s.s3Key,
-      }));
+    const scenarioFileHeaderIndexes = [...Array(scenarioCount).keys()].map(() =>
+      newScenarioFileHeaderIndex()
+    );
 
     const combinedHeaders = scenarioFileHeaderIndexes.map((s) => ({
-      configuration: configurationFileHeaderIndex,
-      scenario: s,
+      configurationS3Key: configurationFileHeaderIndex.s3Key,
+      scenarioS3Key: s.s3Key,
     }));
 
     await testClient.initialiseTestAsync({

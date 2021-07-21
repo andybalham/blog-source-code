@@ -28,7 +28,7 @@ export default class ResultCalculatorStateMachine extends StateMachineWithGraph 
           .lambdaInvoke('ReadInputFileHeader', {
             lambdaFunction: props.fileHeaderReaderFunction,
             parameters: {
-              s3Key: '$.fileEvent.s3Key',
+              's3Key.$': '$.fileEvent.s3Key',
             },
             resultPath: '$.fileHeader',
             retry: {
@@ -48,13 +48,12 @@ export default class ResultCalculatorStateMachine extends StateMachineWithGraph 
                 next: 'ReadConfigurationHeaders',
               },
             ],
-            otherwise: 'PublishUnhandledFileTypeError',
+            otherwise: 'PublishUnhandledFileTypeError', // TODO 21Jul21: This should just exit rather than error
           })
 
           .lambdaInvoke('ReadConfigurationHeaders', {
             lambdaFunction: props.fileHeaderIndexReaderFunction,
             parameters: {
-              criteriaType: 'FileType',
               fileType: FileType.Configuration,
             },
             resultPath: '$.configurations',
@@ -64,7 +63,6 @@ export default class ResultCalculatorStateMachine extends StateMachineWithGraph 
           .lambdaInvoke('ReadScenarioHeaders', {
             lambdaFunction: props.fileHeaderIndexReaderFunction,
             parameters: {
-              criteriaType: 'FileType',
               fileType: FileType.Scenario,
             },
             resultPath: '$.scenarios',

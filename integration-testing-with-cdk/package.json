@@ -67,6 +67,9 @@
     "result-state-machine-test-synth": "tsc && cdk synth ResultCalculatorStateMachineTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
     "result-state-machine-test-deploy": "tsc && cdk deploy ResultCalculatorStateMachineTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
     "result-state-machine-test-destroy": "tsc && cdk destroy ResultCalculatorStateMachineTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
+    "result-calculator-test-synth": "tsc && cdk synth ResultCalculatorTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
+    "result-calculator-test-deploy": "tsc && cdk deploy ResultCalculatorTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
+    "result-calculator-test-destroy": "tsc && cdk destroy ResultCalculatorTestStack -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\"",
     "all-test-destroy": "tsc && cdk destroy * -a \"npx ts-node --prefer-ts-exts src/cdk/testApp.ts\""
   },
   "repository": {

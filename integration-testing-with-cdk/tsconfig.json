@@ -61,5 +61,5 @@
     "cdk-integration-test/**/*",
     "src/**/*",
     "test/**/*"
-  ]
+, "src/functions/combineHeaders.ts"  ]
 }

@@ -8,6 +8,7 @@ import IntegrationTestStack from './IntegrationTestStack';
 import { CurrentTestItem, TestItemPrefix } from './TestItem';
 import StepFunctionUnitTestClient from './StepFunctionUnitTestClient';
 import { MockExchange } from './MockExchange';
+import { ObserverOutput } from './ObserverOutput';
 
 dotenv.config();
 
@@ -51,10 +52,22 @@ export default class UnitTestClient {
 
   // Static ------------------------------------------------------------------
 
+  // TODO 21Jul21: Do we need this? What happens if we don't supply it?
   static getRegion(): string {
     if (process.env.AWS_REGION === undefined)
       throw new Error('process.env.AWS_REGION === undefined');
     return process.env.AWS_REGION;
+  }
+
+  static getObserverOutputCount(outputs: ObserverOutput<any>[], observerId: string): number {
+    return UnitTestClient.getObserverOutputs(outputs, observerId).length;
+  }
+
+  static getObserverOutputs<T>(
+    outputs: ObserverOutput<any>[],
+    observerId: string
+  ): ObserverOutput<T>[] {
+    return outputs.filter((o) => o.observerId === observerId);
   }
 
   static async sleepAsync(seconds: number): Promise<void> {
@@ -89,6 +102,8 @@ export default class UnitTestClient {
     );
   }
 
+  // TODO 21Jul21: Should we change this to beginTestAsync or beginActAsync?
+  //               We would want to clear all observations and invocations just before the Act step
   async initialiseTestAsync<T>(props: TestProps<T>): Promise<void> {
     //
     if (!props.testId) {
