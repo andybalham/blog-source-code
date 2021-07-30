@@ -21,7 +21,7 @@
       ],
       "Type": "Task",
       "ResultPath": "$.fileHeader",
-      "Resource": "${Token[TOKEN.429]}",
+      "Resource": "${Token[TOKEN.430]}",
       "Parameters": {
         "s3Key.$": "$.fileEvent.s3Key"
       }
@@ -45,9 +45,9 @@
     "PublishUnhandledFileTypeError": {
       "Next": "UnhandledFileTypeFailure",
       "Type": "Task",
-      "Resource": "arn:${Token[AWS.Partition.9]}:states:::sns:publish",
+      "Resource": "arn:${Token[AWS.Partition.10]}:states:::sns:publish",
       "Parameters": {
-        "TopicArn": "${Token[TOKEN.494]}",
+        "TopicArn": "${Token[TOKEN.495]}",
         "Message": {
           "error": "Unhandled FileType",
           "fileEvent.$": "$.fileEvent",
@@ -63,7 +63,7 @@
       "Next": "CombineHeaders",
       "Type": "Task",
       "ResultPath": "$.scenarios",
-      "Resource": "${Token[TOKEN.456]}",
+      "Resource": "${Token[TOKEN.457]}",
       "Parameters": {
         "fileType": "Scenario"
       }
@@ -72,13 +72,13 @@
       "Next": "CalculateResults",
       "Type": "Task",
       "ResultPath": "$.combinations",
-      "Resource": "${Token[TOKEN.483]}"
+      "Resource": "${Token[TOKEN.484]}"
     },
     "ReadConfigurationHeaders": {
       "Next": "CombineHeaders",
       "Type": "Task",
       "ResultPath": "$.configurations",
-      "Resource": "${Token[TOKEN.456]}",
+      "Resource": "${Token[TOKEN.457]}",
       "Parameters": {
         "fileType": "Configuration"
       }
@@ -92,7 +92,7 @@
           "CalculateResult": {
             "End": true,
             "Type": "Task",
-            "Resource": "${Token[TOKEN.375]}"
+            "Resource": "${Token[TOKEN.376]}"
           }
         }
       },
@@ -101,9 +101,9 @@
     "PublishInputFileHeaderReadError": {
       "Next": "InputFileHeaderReadFailure",
       "Type": "Task",
-      "Resource": "arn:${Token[AWS.Partition.9]}:states:::sns:publish",
+      "Resource": "arn:${Token[AWS.Partition.10]}:states:::sns:publish",
       "Parameters": {
-        "TopicArn": "${Token[TOKEN.494]}",
+        "TopicArn": "${Token[TOKEN.495]}",
         "Message": {
           "error": "Failed to read the input file",
           "cause.$": "$.Cause"
