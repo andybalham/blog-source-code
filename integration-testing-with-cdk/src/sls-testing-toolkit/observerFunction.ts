@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 /* eslint-disable import/prefer-default-export */
-import { TestObservation } from './TestObservation';
+import TestObservation from './TestObservation';
 import TestFunctionClient from './TestFunctionClient';
 
 const observerId = process.env.OBSERVER_ID ?? 'undefined';
@@ -11,11 +11,11 @@ export const handler = async (event: Record<string, any>): Promise<void> => {
   //
   console.log(JSON.stringify(event));
 
-  const output: TestObservation<Record<string, any>> = {
+  const output: TestObservation = {
     observerId,
     timestamp: Date.now(),
     data: event,
   };
 
-  await lambdaTestClient.setTestOutputAsync(output);
+  await lambdaTestClient.recordObservationAsync(output);
 };

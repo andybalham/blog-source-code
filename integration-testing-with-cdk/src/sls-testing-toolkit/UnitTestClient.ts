@@ -2,25 +2,20 @@
 import { ResourceTagMappingList } from 'aws-sdk/clients/resourcegroupstaggingapi';
 import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
-import sns from 'aws-sdk/clients/sns';
-import { StartExecutionInput } from 'aws-sdk/clients/stepfunctions';
 import IntegrationTestStack from './IntegrationTestStack';
 import { CurrentTestItem, TestItemPrefix } from './TestItem';
-import StepFunctionUnitTestClient from './StepFunctionUnitTestClient';
-import { MockExchange } from './MockExchange';
-import { TestObservation } from './TestObservation';
-import { MockInvocation } from './MockInvocation';
+import StateMachineTestClient from './StateMachineTestClient';
+import TestObservation from './TestObservation';
+import MockInvocation from './MockInvocation';
+import { TestProps } from './TestProps';
+import BucketTestClient from './BucketTestClient';
+import FunctionTestClient from './FunctionTestClient';
+import TopicTestClient from './TopicTestClient';
 
 dotenv.config();
 
 export interface UnitTestClientProps {
   testResourceTagKey: string;
-}
-
-export interface TestProps<T> {
-  testId: string;
-  inputs?: T;
-  mocks?: Record<string, MockExchange[]>;
 }
 
 export default class UnitTestClient {
@@ -33,15 +28,9 @@ export default class UnitTestClient {
     region: UnitTestClient.getRegion(),
   });
 
-  private static readonly s3 = new AWS.S3({ region: UnitTestClient.getRegion() });
-
   private static readonly sns = new AWS.SNS({ region: UnitTestClient.getRegion() });
 
   private static readonly lambda = new AWS.Lambda({ region: UnitTestClient.getRegion() });
-
-  private static readonly stepFunctions = new AWS.StepFunctions({
-    region: UnitTestClient.getRegion(),
-  });
 
   testResourceTagMappingList: ResourceTagMappingList;
 
@@ -58,17 +47,6 @@ export default class UnitTestClient {
     if (process.env.AWS_REGION === undefined)
       throw new Error('process.env.AWS_REGION === undefined');
     return process.env.AWS_REGION;
-  }
-
-  static getObserverOutputCount(outputs: TestObservation<any>[], observerId: string): number {
-    return UnitTestClient.getObserverOutputs(outputs, observerId).length;
-  }
-
-  static getObserverOutputs<T>(
-    outputs: TestObservation<any>[],
-    observerId: string
-  ): TestObservation<T>[] {
-    return outputs.filter((o) => o.observerId === observerId);
   }
 
   static async sleepAsync(seconds: number): Promise<void> {
@@ -103,9 +81,7 @@ export default class UnitTestClient {
     );
   }
 
-  // TODO 21Jul21: Should we change this to beginTestAsync or beginActAsync?
-  //               We would want to clear all observations and invocations just before the Act step
-  async initialiseTestAsync<T>(props: TestProps<T>): Promise<void> {
+  async initialiseTestAsync(props: TestProps): Promise<void> {
     //
     if (!props.testId) {
       throw new Error(`A testId must be specified`);
@@ -144,12 +120,12 @@ export default class UnitTestClient {
 
       // Set the current test and inputs
 
-      const currentTestItem: CurrentTestItem<T> = {
+      const currentTestItem: CurrentTestItem = {
         ...{
           PK: 'Current',
           SK: 'Test',
         },
-        ...props,
+        props,
       };
 
       await UnitTestClient.db
@@ -179,25 +155,28 @@ export default class UnitTestClient {
 
     const timedOut = (): boolean => Date.now() > timeOutThreshold;
 
-    let outputs = new Array<T>();
+    let observations = new Array<TestObservation>();
 
     // eslint-disable-next-line no-await-in-loop
-    while (!timedOut() && !(await until(outputs))) {
+    while (!timedOut() && !(await until(observations))) {
+      //
       // eslint-disable-next-line no-await-in-loop
       await UnitTestClient.sleepAsync(intervalSeconds);
-      if (this.integrationTestTableName) {
-        // eslint-disable-next-line no-await-in-loop
-        outputs = await this.getTestOutputsAsync<T>();
-      }
+
+      // eslint-disable-next-line no-await-in-loop
+      observations = await this.getTestObservationsAsync();
     }
 
+    const invocations = await this.getMockInvocationsAsync();
+
     return {
-      timedOut: !(await until(outputs)),
-      observations: outputs,
+      timedOut: !(await until(observations)),
+      observations,
+      invocations,
     };
   }
 
-  async getTestOutputsAsync<T>(): Promise<T[]> {
+  async getTestObservationsAsync(): Promise<TestObservation[]> {
     //
     if (this.integrationTestTableName === undefined) {
       return [];
@@ -220,57 +199,40 @@ export default class UnitTestClient {
     }
 
     // TODO 03Jul21: Use LastEvaluatedKey
-    const outputs = queryOutputsOutput.Items.map((i) => i.output as T);
+    const observations = queryOutputsOutput.Items.map((i) => i.observation);
 
-    return outputs;
+    return observations;
   }
 
-  async uploadObjectToBucketAsync(
-    bucketStackId: string,
-    key: string,
-    object: Record<string, any>
-  ): Promise<void> {
+  async getMockInvocationsAsync(): Promise<MockInvocation[]> {
     //
-    const bucketName = this.getBucketNameByStackId(bucketStackId);
-
-    if (bucketName === undefined) {
-      throw new Error(`The bucket name could not be resolved for id: ${bucketStackId}`);
+    if (this.integrationTestTableName === undefined) {
+      return [];
     }
 
-    await UnitTestClient.s3
-      .upload({
-        Bucket: bucketName,
-        Key: key,
-        Body: JSON.stringify(object),
-      })
-      .promise();
-  }
-
-  async publishMessageToTopicAsync(
-    topicStackId: string,
-    message: Record<string, any>,
-    messageAttributes?: sns.MessageAttributeMap
-  ): Promise<void> {
-    //
-    const fileEventTopicArn = this.getResourceArnByStackId(topicStackId);
-
-    if (fileEventTopicArn === undefined) {
-      throw new Error(`The topic ARN could not be resolved for id: ${topicStackId}`);
-    }
-
-    const publishInput: sns.PublishInput = {
-      Message: JSON.stringify(message),
-      TopicArn: fileEventTopicArn,
-      MessageAttributes: messageAttributes,
+    const queryOutputsParams /*: QueryInput */ = {
+      // QueryInput results in a 'Condition parameter type does not match schema type'
+      TableName: this.integrationTestTableName,
+      KeyConditionExpression: `PK = :PK and begins_with(SK, :SKPrefix)`,
+      ExpressionAttributeValues: {
+        ':PK': this.testId,
+        ':SKPrefix': TestItemPrefix.MockInvocation,
+      },
     };
 
-    await UnitTestClient.sns.publish(publishInput).promise();
+    const queryOutputsOutput = await UnitTestClient.db.query(queryOutputsParams).promise();
+
+    if (!queryOutputsOutput.Items) {
+      return [];
+    }
+
+    // TODO 03Jul21: Use LastEvaluatedKey
+    const invocations = queryOutputsOutput.Items.map((i) => i.invocation);
+
+    return invocations;
   }
 
-  async invokeFunctionAsync<TReq, TRes>(
-    functionStackId: string,
-    request?: TReq
-  ): Promise<TRes | undefined> {
+  getFunctionTestClient(functionStackId: string): FunctionTestClient {
     //
     const functionName = this.getFunctionNameByStackId(functionStackId);
 
@@ -278,50 +240,40 @@ export default class UnitTestClient {
       throw new Error(`The function name could not be resolved for id: ${functionStackId}`);
     }
 
-    const lambdaPayload = request ? { Payload: JSON.stringify(request) } : {};
-
-    const params = {
-      FunctionName: functionName,
-      ...lambdaPayload,
-    };
-
-    const { Payload } = await UnitTestClient.lambda.invoke(params).promise();
-
-    if (Payload) {
-      return JSON.parse(Payload.toString());
-    }
-
-    return undefined;
+    return new FunctionTestClient(UnitTestClient.getRegion(), functionName);
   }
 
-  getStepFunctionClient(stateMachineStackId: string): StepFunctionUnitTestClient {
+  getBucketTestClient(bucketStackId: string): BucketTestClient {
+    //
+    const bucketName = this.getBucketNameByStackId(bucketStackId);
+
+    if (bucketName === undefined) {
+      throw new Error(`The bucket name could not be resolved for id: ${bucketStackId}`);
+    }
+
+    return new BucketTestClient(UnitTestClient.getRegion(), bucketName);
+  }
+
+  getStateMachineTestClient(stateMachineStackId: string): StateMachineTestClient {
     //
     const stateMachineArn = this.getResourceArnByStackId(stateMachineStackId);
 
     if (stateMachineArn === undefined) {
-      throw new Error(`The ARN could not be resolved for id: ${stateMachineStackId}`);
+      throw new Error(`The state machine ARN could not be resolved for id: ${stateMachineStackId}`);
     }
 
-    return new StepFunctionUnitTestClient(UnitTestClient.getRegion(), stateMachineArn);
+    return new StateMachineTestClient(UnitTestClient.getRegion(), stateMachineArn);
   }
 
-  async startStateMachineAsync(
-    stateMachineStackId: string,
-    input?: Record<string, any>
-  ): Promise<void> {
+  getTopicTestClient(topicStackId: string): TopicTestClient {
     //
-    const stateMachineArn = this.getResourceArnByStackId(stateMachineStackId);
+    const topicArn = this.getResourceArnByStackId(topicStackId);
 
-    if (stateMachineArn === undefined) {
-      throw new Error(`The ARN could not be resolved for id: ${stateMachineStackId}`);
+    if (topicArn === undefined) {
+      throw new Error(`The state machine ARN could not be resolved for id: ${topicStackId}`);
     }
 
-    const params: StartExecutionInput = {
-      stateMachineArn,
-      input: JSON.stringify(input),
-    };
-
-    await UnitTestClient.stepFunctions.startExecution(params).promise();
+    return new TopicTestClient(UnitTestClient.getRegion(), topicArn);
   }
 
   getResourceArnByStackId(targetStackId: string): string | undefined {

@@ -1,8 +1,8 @@
 /* eslint-disable import/prefer-default-export */
 
-import { MockExchange } from "./MockExchange";
-import { MockInvocation } from "./MockInvocation";
-import { TestObservation } from "./TestObservation";
+import MockInvocation from "./MockInvocation";
+import TestObservation from "./TestObservation";
+import { TestProps } from './TestProps';
 
 export enum TestItemPrefix {
   TestInput = 'TestInput',
@@ -18,10 +18,8 @@ export interface TestItemKey {
   SK: string;
 }
 
-export interface CurrentTestItem<T> extends TestItemKey {
-  testId: string;
-  inputs?: T;
-  mocks?: Record<string, MockExchange[]>;
+export interface CurrentTestItem extends TestItemKey {
+  props: TestProps;
 }
 
 export interface ObservationTestItem extends TestItemKey {

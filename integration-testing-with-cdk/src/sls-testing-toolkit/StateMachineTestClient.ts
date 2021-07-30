@@ -6,7 +6,7 @@ import { ExecutionStatus, HistoryEvent, StartExecutionInput } from 'aws-sdk/clie
 
 const STEP_FUNCTION_STATE_RUNNING = 'RUNNING';
 
-export default class StepFunctionUnitTestClient {
+export default class StateMachineTestClient {
   //
   private readonly stepFunctions: AWS.StepFunctions;
 
@@ -103,10 +103,12 @@ const getExecutionsAsync = async (
 
 export const getEventName = (event: AWS.StepFunctions.HistoryEvent) => {
   //
-  const { name } = event.stateEnteredEventDetails ||
-    event.stateExitedEventDetails || {
+  const defaultDetails = {
     name: undefined,
   };
+
+  const { name } =
+    event.stateEnteredEventDetails || event.stateExitedEventDetails || defaultDetails;
 
   return name;
 };

@@ -8,8 +8,8 @@ import path from 'path';
 export interface IntegrationTestStackProps {
   testResourceTagKey: string;
   integrationTestTable?: boolean;
-  observerFunctionIds?: string[];
-  mockFunctionIds?: string[];
+  observerIds?: string[];
+  mockIds?: string[];
 }
 
 export default abstract class IntegrationTestStack extends cdk.Stack {
@@ -20,11 +20,9 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
 
   readonly integrationTestTable: dynamodb.Table;
 
-  // TODO 21Jul21: Change to just observers
-  readonly observerFunctions: Record<string, lambda.IFunction>;
+  readonly observers: Record<string, lambda.IFunction>;
 
-  // TODO 21Jul21: Change to just mocks
-  readonly mockFunctions: Record<string, lambda.IFunction>;
+  readonly mocks: Record<string, lambda.IFunction>;
 
   constructor(scope: cdk.Construct, id: string, props: IntegrationTestStackProps) {
     super(scope, id);
@@ -33,8 +31,8 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
 
     if (
       props.integrationTestTable ||
-      (props.observerFunctionIds?.length ?? 0) > 0 ||
-      (props.mockFunctionIds?.length ?? 0) > 0
+      (props.observerIds?.length ?? 0) > 0 ||
+      (props.mockIds?.length ?? 0) > 0
     ) {
       //
       // Test table
@@ -56,25 +54,25 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
       );
     }
 
-    if (props.observerFunctionIds) {
+    if (props.observerIds) {
       //
-      this.observerFunctions = {};
+      this.observers = {};
 
-      props.observerFunctionIds
+      props.observerIds
         .map((i) => ({ observerId: i, function: this.newObserverFunction(i) }))
         .forEach((iaf) => {
-          this.observerFunctions[iaf.observerId] = iaf.function;
+          this.observers[iaf.observerId] = iaf.function;
         });
     }
 
-    if (props.mockFunctionIds) {
+    if (props.mockIds) {
       //
-      this.mockFunctions = {};
+      this.mocks = {};
 
-      props.mockFunctionIds
+      props.mockIds
         .map((i) => ({ mockId: i, function: this.newMockFunction(i) }))
         .forEach((iaf) => {
-          this.mockFunctions[iaf.mockId] = iaf.function;
+          this.mocks[iaf.mockId] = iaf.function;
         });
     }
   }

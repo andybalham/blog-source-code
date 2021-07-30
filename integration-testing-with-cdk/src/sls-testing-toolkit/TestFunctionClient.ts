@@ -2,8 +2,10 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { nanoid } from 'nanoid';
-import { CurrentTestItem, MockStateTestItem, ObservationTestItem, TestItemPrefix } from './TestItem';
-import { TestProps } from './UnitTestClient';
+import MockInvocation from './MockInvocation';
+import { CurrentTestItem, InvocationTestItem, MockStateTestItem, ObservationTestItem, TestItemPrefix } from './TestItem';
+import TestObservation from './TestObservation';
+import { TestProps } from "./TestProps";
 
 const integrationTestTableName = process.env.INTEGRATION_TEST_TABLE_NAME;
 
@@ -11,7 +13,7 @@ const documentClient = new DocumentClient();
 
 export default class TestFunctionClient {
   //
-  async getTestPropsAsync<T>(): Promise<TestProps<T>> {
+  async getTestPropsAsync(): Promise<TestProps> {
     //
     if (integrationTestTableName === undefined)
       throw new Error('integrationTestTableName === undefined');
@@ -30,12 +32,12 @@ export default class TestFunctionClient {
     if (testQueryOutput.Items === undefined) throw new Error('testQueryOutput.Items === undefined');
     if (testQueryOutput.Items.length !== 1) throw new Error('testQueryOutput.Items.length !== 1');
 
-    const currentTestItem = testQueryOutput.Items[0] as CurrentTestItem<T>;
+    const currentTestItem = testQueryOutput.Items[0] as CurrentTestItem;
 
-    return currentTestItem;
+    return currentTestItem.props;
   }
 
-  async setTestOutputAsync<T>(output: T): Promise<void> {
+  async recordObservationAsync(observation: TestObservation): Promise<void> {
     //
     if (integrationTestTableName === undefined)
       throw new Error('integrationTestTableName === undefined');
@@ -44,10 +46,10 @@ export default class TestFunctionClient {
 
     const now = Date.now().toString().slice(6);
 
-    const testOutputItem: ObservationTestItem<T> = {
+    const testOutputItem: ObservationTestItem = {
       PK: testId,
       SK: `${TestItemPrefix.TestObservation}-${now}-${nanoid(10)}`,
-      observation: output,
+      observation,
     };
 
     await documentClient
@@ -58,7 +60,30 @@ export default class TestFunctionClient {
       .promise();
   }
 
-  async getMockStateAsync<T>(mockId: string, defaultState: T): Promise<T> {
+  async recordInvocationAsync(invocation: MockInvocation): Promise<void> {
+    //
+    if (integrationTestTableName === undefined)
+      throw new Error('integrationTestTableName === undefined');
+
+    const { testId } = await this.getTestPropsAsync();
+
+    const now = Date.now().toString().slice(6);
+
+    const testOutputItem: InvocationTestItem = {
+      PK: testId,
+      SK: `${TestItemPrefix.MockInvocation}-${now}-${nanoid(10)}`,
+      invocation,
+    };
+
+    await documentClient
+      .put({
+        TableName: integrationTestTableName,
+        Item: testOutputItem,
+      })
+      .promise();
+  }
+
+  async getMockStateAsync(mockId: string, initialState: Record<string, any>): Promise<Record<string, any>> {
     //
     if (integrationTestTableName === undefined)
       throw new Error('integrationTestTableName === undefined');
@@ -78,7 +103,7 @@ export default class TestFunctionClient {
     const mockStateQueryOutput = await documentClient.query(mockStateQueryParams).promise();
 
     if (mockStateQueryOutput.Items === undefined || mockStateQueryOutput.Items.length === 0) {
-      return defaultState;
+      return initialState;
     }
 
     if (mockStateQueryOutput.Items.length > 1)
@@ -89,14 +114,14 @@ export default class TestFunctionClient {
     return mockState;
   }
 
-  async setMockStateAsync<T>(mockId: string, state: T): Promise<void> {
+  async setMockStateAsync(mockId: string, state: Record<string, any>): Promise<void> {
     //
     if (integrationTestTableName === undefined)
       throw new Error('integrationTestTableName === undefined');
 
     const { testId } = await this.getTestPropsAsync();
 
-    const mockStateItem: MockStateTestItem<T> = {
+    const mockStateItem: MockStateTestItem = {
       PK: testId,
       SK: `${TestItemPrefix.MockState}-${mockId}`,
       state,
