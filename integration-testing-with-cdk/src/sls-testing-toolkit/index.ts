@@ -3,11 +3,17 @@ import IntegrationTestStack from './IntegrationTestStack';
 import TestFunctionClient from './TestFunctionClient';
 import TestObservation from './TestObservation';
 import StateMachineTestClient from './StateMachineTestClient';
+import FunctionTestClient from './FunctionTestClient';
+import TopicTestClient from './TopicTestClient';
+import BucketTestClient from './BucketTestClient';
 
 export {
   IntegrationTestStack,
   UnitTestClient,
-  StateMachineTestClient as StepFunctionUnitTestClient,
   TestFunctionClient,
-  TestObservation as ObserverOutput,
+  StateMachineTestClient,
+  FunctionTestClient,
+  TopicTestClient,
+  BucketTestClient,
+  TestObservation,
 };

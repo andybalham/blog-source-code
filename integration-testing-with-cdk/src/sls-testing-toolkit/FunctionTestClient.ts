@@ -9,7 +9,7 @@ export default class FunctionTestClient {
     this.lambda = new AWS.Lambda({ region });
   }
 
-  async invokeAsync(request?: Record<string, any>): Promise<Record<string, any> | undefined> {
+  async invokeAsync<TReq, TRes>(request?: TReq): Promise<TRes | undefined> {
     //
     const lambdaPayload = request ? { Payload: JSON.stringify(request) } : {};
 
