@@ -12,6 +12,7 @@ export interface IntegrationTestStackProps {
   mockIds?: string[];
 }
 
+// TODO 31Jul21: Rename to UnitTestStack, UnitTestTable etc
 export default abstract class IntegrationTestStack extends cdk.Stack {
   //
   readonly testResourceTagKey: string;

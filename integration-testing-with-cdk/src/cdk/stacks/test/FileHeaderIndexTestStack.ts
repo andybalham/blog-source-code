@@ -11,6 +11,8 @@ export default class FileHeaderIndexerTestStack extends IntegrationTestStack {
 
   static readonly TestFileEventTopicId = 'TestFileEventTopic';
 
+  static readonly TestBucketId = 'TestFileBucket';
+
   constructor(scope: cdk.Construct, id: string) {
     //
     super(scope, id, {
@@ -19,18 +21,22 @@ export default class FileHeaderIndexerTestStack extends IntegrationTestStack {
 
     // Test file event topic
 
-    const testFileEventTopic = new sns.Topic(this, FileHeaderIndexerTestStack.TestFileEventTopicId, {});
+    const testFileEventTopic = new sns.Topic(
+      this,
+      FileHeaderIndexerTestStack.TestFileEventTopicId,
+      {}
+    );
 
     this.addTestResourceTag(testFileEventTopic, FileHeaderIndexerTestStack.TestFileEventTopicId);
 
     // Test bucket
 
-    const testBucket = new s3.Bucket(this, FileHeaderIndexer.BucketId, {
+    const testBucket = new s3.Bucket(this, FileHeaderIndexerTestStack.TestBucketId, {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
 
-    this.addTestResourceTag(testBucket, FileHeaderIndexer.BucketId);
+    this.addTestResourceTag(testBucket, FileHeaderIndexerTestStack.TestBucketId);
 
     // SUT
 
@@ -41,5 +47,6 @@ export default class FileHeaderIndexerTestStack extends IntegrationTestStack {
     });
 
     this.addTestResourceTag(sut.readerFunction, FileHeaderIndexer.ReaderFunctionId);
+    this.addTestResourceTag(sut.fileHeaderIndexTable, FileHeaderIndexer.TableId);
   }
 }

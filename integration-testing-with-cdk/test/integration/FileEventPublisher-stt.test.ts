@@ -7,7 +7,7 @@ import { Configuration, File, FileType } from '../../src/contracts';
 import { FileEvent, FileEventType } from '../../src/contracts/FileEvent';
 import { FileSectionType } from '../../src/contracts/FileSectionType';
 import FileEventPublisherTestStack from '../../src/cdk/stacks/test/FileEventPublisherTestStack-stt';
-import { TestObservation, UnitTestClient } from '../../src/sls-testing-toolkit';
+import { BucketTestClient, TestObservation, UnitTestClient } from '../../src/sls-testing-toolkit';
 
 describe('FileEventPublisher Tests', () => {
   //
@@ -15,10 +15,11 @@ describe('FileEventPublisher Tests', () => {
     testResourceTagKey: FileEventPublisherTestStack.ResourceTagKey,
   });
 
-  const testBucket = testClient.getBucketTestClient(FileEventPublisherTestStack.TestBucketId);
+  let testBucket: BucketTestClient;
 
   before(async () => {
     await testClient.initialiseClientAsync();
+    testBucket = testClient.getBucketTestClient(FileEventPublisherTestStack.TestBucketId);
   });
 
   it('New file upload', async () => {

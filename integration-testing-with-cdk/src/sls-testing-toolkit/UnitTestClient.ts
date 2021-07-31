@@ -11,6 +11,7 @@ import { TestProps } from './TestProps';
 import BucketTestClient from './BucketTestClient';
 import FunctionTestClient from './FunctionTestClient';
 import TopicTestClient from './TopicTestClient';
+import TableTestClient from './TableTestClient';
 
 dotenv.config();
 
@@ -252,6 +253,17 @@ export default class UnitTestClient {
     }
 
     return new BucketTestClient(UnitTestClient.getRegion(), bucketName);
+  }
+
+  getTableTestClient(tableStackId: string): TableTestClient {
+    //
+    const tableName = this.getTableNameByStackId(tableStackId);
+
+    if (tableName === undefined) {
+      throw new Error(`The table name could not be resolved for id: ${tableStackId}`);
+    }
+
+    return new TableTestClient(UnitTestClient.getRegion(), tableName);
   }
 
   getStateMachineTestClient(stateMachineStackId: string): StateMachineTestClient {

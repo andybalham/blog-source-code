@@ -17,13 +17,13 @@ export interface FileHeaderIndexerProps {
 }
 export default class FileHeaderIndexer extends cdk.Construct {
   //
-  readonly readerFunction: lambda.IFunction;
-
   static readonly TableId = 'HeaderIndexTable';
+
+  readonly fileHeaderIndexTable: dynamodb.Table;
 
   static readonly ReaderFunctionId = 'HeaderIndexReaderFunction';
 
-  static readonly BucketId = 'HeaderIndexBucket';
+  readonly readerFunction: lambda.IFunction;
 
   constructor(scope: cdk.Construct, id: string, props: FileHeaderIndexerProps) {
     super(scope, id);
@@ -54,7 +54,7 @@ export default class FileHeaderIndexer extends cdk.Construct {
 
     // Header table
 
-    const fileHeadersTable = new dynamodb.Table(this, 'FileHeadersTable', {
+    this.fileHeaderIndexTable = new dynamodb.Table(this, FileHeaderIndexer.TableId, {
       partitionKey: { name: 'fileType', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 's3Key', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -68,7 +68,7 @@ export default class FileHeaderIndexer extends cdk.Construct {
       'HeaderIndexWriterFunction',
       'headerIndexWriter',
       {
-        HEADERS_TABLE_NAME: fileHeadersTable.tableName,
+        HEADERS_TABLE_NAME: this.fileHeaderIndexTable.tableName,
         FILE_BUCKET_NAME: props.fileBucket.bucketName,
       }
     );
@@ -77,7 +77,7 @@ export default class FileHeaderIndexer extends cdk.Construct {
 
     headerUpdatesQueue.grantConsumeMessages(writerFunction);
     props.fileBucket.grantRead(writerFunction);
-    fileHeadersTable.grantWriteData(writerFunction);
+    this.fileHeaderIndexTable.grantWriteData(writerFunction);
 
     // Lambda to read from the table
 
@@ -86,10 +86,10 @@ export default class FileHeaderIndexer extends cdk.Construct {
       FileHeaderIndexer.ReaderFunctionId,
       'headerIndexReader',
       {
-        HEADERS_TABLE_NAME: fileHeadersTable.tableName,
+        HEADERS_TABLE_NAME: this.fileHeaderIndexTable.tableName,
       }
     );
 
-    fileHeadersTable.grantReadData(this.readerFunction);
+    this.fileHeaderIndexTable.grantReadData(this.readerFunction);
   }
 }

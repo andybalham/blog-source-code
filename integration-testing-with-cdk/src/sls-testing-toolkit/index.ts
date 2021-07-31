@@ -6,6 +6,7 @@ import StateMachineTestClient from './StateMachineTestClient';
 import FunctionTestClient from './FunctionTestClient';
 import TopicTestClient from './TopicTestClient';
 import BucketTestClient from './BucketTestClient';
+import TableTestClient from './TableTestClient';
 
 export {
   IntegrationTestStack,
@@ -15,5 +16,6 @@ export {
   FunctionTestClient,
   TopicTestClient,
   BucketTestClient,
+  TableTestClient,
   TestObservation,
 };

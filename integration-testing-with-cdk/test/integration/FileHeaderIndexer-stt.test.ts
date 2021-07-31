@@ -2,7 +2,13 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import { expect } from 'chai';
 import { nanoid } from 'nanoid';
-import { UnitTestClient } from '../../src/sls-testing-toolkit';
+import {
+  BucketTestClient,
+  FunctionTestClient,
+  TableTestClient,
+  TopicTestClient,
+  UnitTestClient,
+} from '../../src/sls-testing-toolkit';
 import { FileHeaderIndexer } from '../../src/cdk/constructs';
 import { FileHeaderIndexTestStack } from '../../src/cdk/stacks/test';
 import {
@@ -22,15 +28,10 @@ describe('FileHeaderIndexer Tests', () => {
     testResourceTagKey: FileHeaderIndexTestStack.ResourceTagKey,
   });
 
-  const fileBucket = testClient.getBucketTestClient(FileHeaderIndexer.BucketId);
-
-  const headerIndexReaderFunction = testClient.getFunctionTestClient(
-    FileHeaderIndexer.ReaderFunctionId
-  );
-
-  const fileEventTopic = testClient.getTopicTestClient(
-    FileHeaderIndexTestStack.TestFileEventTopicId
-  );
+  let fileBucket: BucketTestClient;
+  let headerIndexReaderFunction: FunctionTestClient;
+  let headerIndexTable: TableTestClient;
+  let fileEventTopic: TopicTestClient;
 
   const getFileHeaderIndexesAsync = async (fileType: FileType): Promise<FileHeaderIndex[]> =>
     (await headerIndexReaderFunction.invokeAsync<FileTypeCriteria, FileHeaderIndex[]>({
@@ -38,13 +39,23 @@ describe('FileHeaderIndexer Tests', () => {
     })) ?? [];
 
   before(async () => {
+    //
     await testClient.initialiseClientAsync();
+
+    fileBucket = testClient.getBucketTestClient(FileHeaderIndexTestStack.TestBucketId);
+
+    headerIndexReaderFunction = testClient.getFunctionTestClient(
+      FileHeaderIndexer.ReaderFunctionId
+    );
+
+    headerIndexTable = testClient.getTableTestClient(FileHeaderIndexer.TableId);
+
+    fileEventTopic = testClient.getTopicTestClient(FileHeaderIndexTestStack.TestFileEventTopicId);
   });
 
   beforeEach(async () => {
-    // TODO 08Jul21: Clear down test bucket and underlying table?
-    // await fileBucket.emptyAsync();
-    // await headerIndexTable.deleteAllAsync();
+    await fileBucket.clearAllObjectsAsync();
+    await headerIndexTable.clearAllItemsAsync();
   });
 
   it('Single header indexed', async () => {
@@ -65,10 +76,7 @@ describe('FileHeaderIndexer Tests', () => {
     // Await
 
     const { timedOut } = await testClient.pollTestAsync({
-      until: async () =>
-        (
-          await getFileHeaderIndexesAsync(file.header.fileType)
-        ).some((i) => i.header.name === file.header.name),
+      until: async () => (await getFileHeaderIndexesAsync(file.header.fileType)).length > 0,
       intervalSeconds: 2,
       timeoutSeconds: 12,
     });
@@ -77,11 +85,7 @@ describe('FileHeaderIndexer Tests', () => {
 
     expect(timedOut, 'Timed out').to.be.false;
 
-    const allFileHeaderIndexes = await getFileHeaderIndexesAsync(file.header.fileType);
-
-    const fileHeaderIndexes = allFileHeaderIndexes.filter(
-      (i) => i.header.name === file.header.name
-    );
+    const fileHeaderIndexes = await getFileHeaderIndexesAsync(file.header.fileType);
 
     expect(fileHeaderIndexes.length).to.equal(1);
 
@@ -102,24 +106,6 @@ describe('FileHeaderIndexer Tests', () => {
 
     const file = newConfigurationFile();
     const s3Key = `configuration/${file.header.name}.json`;
-    const createdFileEvent = new FileEvent(FileEventType.Created, FileSectionType.Header, s3Key);
-
-    await fileBucket.uploadObjectAsync(s3Key, file);
-
-    await fileEventTopic.publishMessageAsync(createdFileEvent, createdFileEvent.messageAttributes);
-
-    const { timedOut: arrangeTimedOut } = await testClient.pollTestAsync({
-      until: async () =>
-        (
-          await getFileHeaderIndexesAsync(file.header.fileType)
-        ).some((i) => i.header.name === file.header.name),
-      intervalSeconds: 2,
-      timeoutSeconds: 12,
-    });
-
-    expect(arrangeTimedOut, 'Arrange timed out').to.be.false;
-
-    file.header.description = `Description ${nanoid()}`;
 
     await fileBucket.uploadObjectAsync(s3Key, file);
 
@@ -132,10 +118,7 @@ describe('FileHeaderIndexer Tests', () => {
     // Await
 
     const { timedOut } = await testClient.pollTestAsync({
-      until: async () =>
-        (
-          await getFileHeaderIndexesAsync(file.header.fileType)
-        ).some((i) => i.header.name === file.header.name),
+      until: async () => (await getFileHeaderIndexesAsync(file.header.fileType)).length > 0,
       intervalSeconds: 2,
       timeoutSeconds: 12,
     });
@@ -144,18 +127,14 @@ describe('FileHeaderIndexer Tests', () => {
 
     expect(timedOut, 'Timed out').to.be.false;
 
-    const allFileHeaderIndexes = await getFileHeaderIndexesAsync(file.header.fileType);
-
-    const fileHeaderIndexes = allFileHeaderIndexes.filter(
-      (i) => i.header.name === file.header.name
-    );
+    const fileHeaderIndexes = await getFileHeaderIndexesAsync(file.header.fileType);
 
     expect(fileHeaderIndexes.length).to.equal(1);
 
     const fileHeaderIndex = fileHeaderIndexes[0];
 
     const expectedFileHeaderIndex: FileHeaderIndex = {
-      s3Key: createdFileEvent.s3Key,
+      s3Key: updatedFileEvent.s3Key,
       header: file.header,
     };
 
@@ -169,6 +148,7 @@ describe('FileHeaderIndexer Tests', () => {
 
     const file = newConfigurationFile();
     const s3Key = `configuration/${file.header.name}.json`;
+
     const fileEvent = new FileEvent(FileEventType.Created, FileSectionType.Body, s3Key);
 
     // Act
@@ -181,7 +161,7 @@ describe('FileHeaderIndexer Tests', () => {
       until: async () =>
         (
           await getFileHeaderIndexesAsync(file.header.fileType)
-        ).some((i) => i.header.name === file.header.name),
+        ).length > 0,
       intervalSeconds: 2,
       timeoutSeconds: 6,
     });

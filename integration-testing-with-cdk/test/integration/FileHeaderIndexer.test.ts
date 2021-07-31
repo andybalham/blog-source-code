@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid';
 import { UnitTestClient } from '../../src/aws-integration-test';
 import { FileHeaderIndexer } from '../../src/cdk/constructs';
 import { FileHeaderIndexTestStack } from '../../src/cdk/stacks/test';
+import FileHeaderIndexerTestStack from '../../src/cdk/stacks/test/FileHeaderIndexTestStack';
 import {
   File,
   FileEvent,
@@ -44,7 +45,11 @@ describe('FileHeaderIndexer Tests', () => {
         { fileType: file.header.fileType }
       )) ?? [];
 
-    await testClient.uploadObjectToBucketAsync(FileHeaderIndexer.BucketId, s3Key, file);
+    await testClient.uploadObjectToBucketAsync(
+      FileHeaderIndexerTestStack.TestBucketId,
+      s3Key,
+      file
+    );
 
     // Act
 
@@ -100,7 +105,11 @@ describe('FileHeaderIndexer Tests', () => {
         { fileType: file.header.fileType }
       )) ?? [];
 
-    await testClient.uploadObjectToBucketAsync(FileHeaderIndexer.BucketId, s3Key, file);
+    await testClient.uploadObjectToBucketAsync(
+      FileHeaderIndexerTestStack.TestBucketId,
+      s3Key,
+      file
+    );
 
     await testClient.publishMessageToTopicAsync(
       FileHeaderIndexTestStack.TestFileEventTopicId,
@@ -119,7 +128,11 @@ describe('FileHeaderIndexer Tests', () => {
 
     file.header.description = `Description ${nanoid()}`;
 
-    await testClient.uploadObjectToBucketAsync(FileHeaderIndexer.BucketId, s3Key, file);
+    await testClient.uploadObjectToBucketAsync(
+      FileHeaderIndexerTestStack.TestBucketId,
+      s3Key,
+      file
+    );
 
     const updatedFileEvent = new FileEvent(FileEventType.Updated, FileSectionType.Header, s3Key);
 
