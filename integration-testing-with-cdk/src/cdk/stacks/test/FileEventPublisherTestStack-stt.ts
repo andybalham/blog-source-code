@@ -40,7 +40,7 @@ export default class FileEventPublisherTestStack extends IntegrationTestStack {
     // Test subscriber
 
     sut.fileEventTopic.addSubscription(
-      new subscriptions.LambdaSubscription(this.observers[fileTopicObserverId])
+      new subscriptions.LambdaSubscription(this.testFunctions[fileTopicObserverId])
     );
   }
 }

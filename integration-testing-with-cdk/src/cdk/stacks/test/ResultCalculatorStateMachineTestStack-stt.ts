@@ -45,7 +45,7 @@ export default class ResultCalculatorStateMachineTestStack extends IntegrationTe
 
     testErrorTopic.addSubscription(
       new snsSubs.LambdaSubscription(
-        this.observers[ResultCalculatorStateMachineTestStack.ErrorTopicObserverId]
+        this.testFunctions[ResultCalculatorStateMachineTestStack.ErrorTopicObserverId]
       )
     );
 
@@ -56,13 +56,13 @@ export default class ResultCalculatorStateMachineTestStack extends IntegrationTe
       ResultCalculatorStateMachineTestStack.StateMachineId,
       {
         fileHeaderReaderFunction:
-          this.mocks[ResultCalculatorStateMachineTestStack.FileHeaderReaderMockId],
+          this.testFunctions[ResultCalculatorStateMachineTestStack.FileHeaderReaderMockId],
         fileHeaderIndexReaderFunction:
-          this.mocks[ResultCalculatorStateMachineTestStack.FileHeaderIndexReaderMockId],
+          this.testFunctions[ResultCalculatorStateMachineTestStack.FileHeaderIndexReaderMockId],
         combineHeadersFunction:
-          this.mocks[ResultCalculatorStateMachineTestStack.CombineHeadersMockId],
+          this.testFunctions[ResultCalculatorStateMachineTestStack.CombineHeadersMockId],
         calculateResultFunction:
-          this.observers[ResultCalculatorStateMachineTestStack.ResultCalculatorObserverId],
+          this.testFunctions[ResultCalculatorStateMachineTestStack.ResultCalculatorObserverId],
         errorTopic: testErrorTopic,
       }
     );

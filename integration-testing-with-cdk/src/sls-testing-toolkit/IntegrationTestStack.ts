@@ -21,9 +21,7 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
 
   readonly integrationTestTable: dynamodb.Table;
 
-  readonly observers: Record<string, lambda.IFunction>;
-
-  readonly mocks: Record<string, lambda.IFunction>;
+  readonly testFunctions: Record<string, lambda.IFunction>;
 
   constructor(scope: cdk.Construct, id: string, props: IntegrationTestStackProps) {
     super(scope, id);
@@ -55,25 +53,21 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
       );
     }
 
-    if (props.observerIds) {
-      //
-      this.observers = {};
+    this.testFunctions = {};
 
+    if (props.observerIds) {
       props.observerIds
         .map((i) => ({ observerId: i, function: this.newObserverFunction(i) }))
         .forEach((iaf) => {
-          this.observers[iaf.observerId] = iaf.function;
+          this.testFunctions[iaf.observerId] = iaf.function;
         });
     }
 
     if (props.mockIds) {
-      //
-      this.mocks = {};
-
       props.mockIds
         .map((i) => ({ mockId: i, function: this.newMockFunction(i) }))
         .forEach((iaf) => {
-          this.mocks[iaf.mockId] = iaf.function;
+          this.testFunctions[iaf.mockId] = iaf.function;
         });
     }
   }
