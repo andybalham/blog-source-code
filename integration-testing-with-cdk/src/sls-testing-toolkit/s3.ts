@@ -1,3 +1,5 @@
+// Copied from https://github.com/erezrokah/aws-testing-library
+
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import AWS = require('aws-sdk');

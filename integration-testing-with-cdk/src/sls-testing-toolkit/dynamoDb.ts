@@ -1,3 +1,5 @@
+// Copied from https://github.com/erezrokah/aws-testing-library
+
 /* eslint-disable array-callback-return */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */

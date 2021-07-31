@@ -58,8 +58,8 @@ describe('FileHeaderIndexer Tests', () => {
     await headerIndexTable.clearAllItemsAsync();
   });
 
-  it('Single header indexed', async () => {
-    await testClient.initialiseTestAsync({ testId: 'Single header indexed' });
+  it('Header created event processed', async () => {
+    await testClient.initialiseTestAsync({ testId: 'Header created event processed' });
 
     // Arrange
 
@@ -99,8 +99,8 @@ describe('FileHeaderIndexer Tests', () => {
     expect(fileHeaderIndex).to.deep.equal(expectedFileHeaderIndex);
   });
 
-  it('Single header updated', async () => {
-    await testClient.initialiseTestAsync({ testId: 'Single header updated' });
+  it('Header updated event processed', async () => {
+    await testClient.initialiseTestAsync({ testId: 'Header updated event processed' });
 
     // Arrange
 
