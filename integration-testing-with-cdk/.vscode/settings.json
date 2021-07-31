@@ -12,6 +12,7 @@
     "backoff",
     "esbuild",
     "exts",
+    "failsafe",
     "nanoid",
     "resourcegroupstaggingapi",
     "stepfunctions",

@@ -81,8 +81,6 @@ export default class StepFunctionUnitTestClient {
   }
 }
 
-// TODO 15Jul21: Tidy up this code VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
-
 const getExecutionsAsync = async (
   region: string,
   stateMachineArn: string,

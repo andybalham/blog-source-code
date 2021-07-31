@@ -12,7 +12,7 @@ export interface IntegrationTestStackProps {
   mockIds?: string[];
 }
 
-// TODO 31Jul21: Rename to UnitTestStack, UnitTestTable etc
+// TODO 31Jul21: Rename to UnitTestStack, UnitTestTable etc when in a separate package
 export default abstract class IntegrationTestStack extends cdk.Stack {
   //
   readonly testResourceTagKey: string;

@@ -20,10 +20,8 @@ export default abstract class IntegrationTestStack extends cdk.Stack {
 
   readonly integrationTestTable: dynamodb.Table;
 
-  // TODO 21Jul21: Change to just observers
   readonly observerFunctions: Record<string, lambda.IFunction>;
 
-  // TODO 21Jul21: Change to just mocks
   readonly mockFunctions: Record<string, lambda.IFunction>;
 
   constructor(scope: cdk.Construct, id: string, props: IntegrationTestStackProps) {

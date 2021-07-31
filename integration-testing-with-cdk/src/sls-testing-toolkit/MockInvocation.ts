@@ -6,11 +6,11 @@ export default class MockInvocation {
 
   request: Record<string, any>;
 
-  static getCountById(observations: MockInvocation[], mockId: string): number {
-    return MockInvocation.filterById(observations, mockId).length;
+  static getCountById(invocations: MockInvocation[], mockId: string): number {
+    return MockInvocation.filterById(invocations, mockId).length;
   }
 
-  static filterById(observations: MockInvocation[], mockId: string): MockInvocation[] {
-    return observations.filter((o) => o.mockId === mockId);
+  static filterById(invocations: MockInvocation[], mockId: string): MockInvocation[] {
+    return invocations.filter((o) => o.mockId === mockId);
   }
 }

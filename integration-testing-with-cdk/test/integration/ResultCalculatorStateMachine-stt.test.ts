@@ -319,8 +319,7 @@ describe('ResultCalculatorStateMachine Tests', () => {
       testId: 'File reader retries and succeeds',
       mocks: {
         [TestStack.FileHeaderReaderMockId]: [
-          { error: 'Test error 1' },
-          { error: 'Test error 2' },
+          { error: 'Test error', repeat: 2 },
           { response: scenarioFileHeader },
         ],
         [TestStack.FileHeaderIndexReaderMockId]: [{ response: configurationFileHeaderIndexes }],
@@ -369,11 +368,7 @@ describe('ResultCalculatorStateMachine Tests', () => {
     await testClient.initialiseTestAsync({
       testId: 'File reader retries and fails',
       mocks: {
-        [TestStack.FileHeaderReaderMockId]: [
-          { error: 'Test error 1' },
-          { error: 'Test error 2' },
-          { error: 'Test error 3' },
-        ],
+        [TestStack.FileHeaderReaderMockId]: [{ error: 'Test error', repeat: 'FOREVER' }],
       },
     });
 

@@ -28,6 +28,10 @@ export const handler = async (
     index: state.invocationCount,
   });
 
+  state.invocationCount += 1;
+
+  await testFunctionClient.setMockStateAsync(mockId, state);
+
   const mockExchanges = mocks[mockId];
 
   if (mockExchanges === undefined) {
@@ -35,18 +39,39 @@ export const handler = async (
     return undefined;
   }
 
-  // TODO 30Jul21: We want to honour 'repeat' setting
+  let failsafe = 0;
 
-  if (state.invocationCount >= mockExchanges.length) {
+  let mockExchangeCount = 0;
+  let mockExchangeIndex = 0;
+
+  while (mockExchangeCount < state.invocationCount && mockExchangeIndex < mockExchanges.length) {
+    //
+    failsafe += 1;
+    if (failsafe > 1000) {
+      throw new Error(`failsafe: ${failsafe}`);
+    }
+
+    const mockExchange = mockExchanges[mockExchangeIndex];
+
+    if (mockExchange.repeat === 'FOREVER') {
+      break;
+    }
+
+    mockExchangeCount += mockExchange.repeat ?? 1;
+
+    if (mockExchangeCount < state.invocationCount) {
+      mockExchangeIndex += 1;
+    }
+  }
+
+  if (mockExchangeIndex >= mockExchanges.length) {
     console.log(`Exhausted mock exchanges for id '${mockId}', so returning undefined`);
     return undefined;
   }
 
-  const { error, response } = mockExchanges[state.invocationCount];
+  const mockExchange = mockExchanges[mockExchangeIndex];
 
-  state.invocationCount += 1;
-
-  await testFunctionClient.setMockStateAsync(mockId, state);
+  const { error, response } = mockExchange;
 
   if (error) {
     throw new Error(error);

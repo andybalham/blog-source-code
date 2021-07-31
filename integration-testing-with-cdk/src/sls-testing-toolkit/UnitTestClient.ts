@@ -1,5 +1,10 @@
 /* eslint-disable import/no-extraneous-dependencies */
-import { ResourceTagMappingList } from 'aws-sdk/clients/resourcegroupstaggingapi';
+import {
+  PaginationToken as ResourcePaginationToken,
+  ResourceTagMapping,
+  ResourceTagMappingList,
+} from 'aws-sdk/clients/resourcegroupstaggingapi';
+import dynamodb from 'aws-sdk/clients/dynamodb';
 import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
 import IntegrationTestStack from './IntegrationTestStack';
@@ -12,6 +17,7 @@ import BucketTestClient from './BucketTestClient';
 import FunctionTestClient from './FunctionTestClient';
 import TopicTestClient from './TopicTestClient';
 import TableTestClient from './TableTestClient';
+import { TestItemKey } from '../aws-integration-test/TestItem';
 
 dotenv.config();
 
@@ -29,10 +35,6 @@ export default class UnitTestClient {
     region: UnitTestClient.getRegion(),
   });
 
-  private static readonly sns = new AWS.SNS({ region: UnitTestClient.getRegion() });
-
-  private static readonly lambda = new AWS.Lambda({ region: UnitTestClient.getRegion() });
-
   testResourceTagMappingList: ResourceTagMappingList;
 
   integrationTestTableName?: string;
@@ -43,7 +45,6 @@ export default class UnitTestClient {
 
   // Static ------------------------------------------------------------------
 
-  // TODO 21Jul21: Do we need this? What happens if we don't supply it?
   static getRegion(): string {
     if (process.env.AWS_REGION === undefined)
       throw new Error('process.env.AWS_REGION === undefined');
@@ -55,18 +56,33 @@ export default class UnitTestClient {
   }
 
   static async getResourcesByTagKeyAsync(key: string): Promise<ResourceTagMappingList> {
-    // TODO 27Jun21: PaginationToken
-    const resources = await UnitTestClient.tagging
-      .getResources({
-        TagFilters: [
-          {
-            Key: key,
-          },
-        ],
-      })
-      .promise();
+    //
+    let resourceTagMappings: ResourceTagMapping[] = [];
 
-    return resources.ResourceTagMappingList ?? [];
+    let paginationToken: ResourcePaginationToken | undefined;
+
+    do {
+      // eslint-disable-next-line no-await-in-loop
+      const resourcesOutput = await UnitTestClient.tagging
+        .getResources({
+          TagFilters: [
+            {
+              Key: key,
+            },
+          ],
+          PaginationToken: paginationToken,
+        })
+        .promise();
+
+      resourceTagMappings = resourceTagMappings.concat(
+        resourcesOutput.ResourceTagMappingList ?? []
+      );
+
+      paginationToken = resourcesOutput.PaginationToken;
+      //
+    } while (paginationToken);
+
+    return resourceTagMappings;
   }
 
   // Instance ----------------------------------------------------------------
@@ -94,29 +110,40 @@ export default class UnitTestClient {
       //
       // Clear down all data related to the test
 
-      // TODO 03Jul21: Use LastEvaluatedKey
-      const testQueryParams /*: QueryInput */ = {
-        // QueryInput results in a 'Condition parameter type does not match schema type'
-        TableName: this.integrationTestTableName,
-        KeyConditionExpression: `PK = :PK`,
-        ExpressionAttributeValues: {
-          ':PK': this.testId,
-        },
-      };
+      let testItemKeys = new Array<TestItemKey>();
 
-      const testQueryOutput = await UnitTestClient.db.query(testQueryParams).promise();
+      let lastEvaluatedKey: dynamodb.Key | undefined;
 
-      // TODO 03Jul21: Use batchWrite with delete requests
-      if (testQueryOutput.Items) {
-        const deletePromises = testQueryOutput.Items.map((item) =>
-          UnitTestClient.db
-            .delete({
-              TableName: this.integrationTestTableName ?? 'undefined',
-              Key: { PK: item.PK, SK: item.SK },
-            })
-            .promise()
-        );
-        await Promise.all(deletePromises);
+      do {
+        const testQueryParams /*: QueryInput */ = {
+          // QueryInput results in a 'Condition parameter type does not match schema type'
+          TableName: this.integrationTestTableName,
+          KeyConditionExpression: `PK = :PK`,
+          ExpressionAttributeValues: {
+            ':PK': this.testId,
+          },
+          ExclusiveStartKey: lastEvaluatedKey,
+        };
+
+        // eslint-disable-next-line no-await-in-loop
+        const testQueryOutput = await UnitTestClient.db.query(testQueryParams).promise();
+
+        if (testQueryOutput.Items) {
+          testItemKeys = testItemKeys.concat(testQueryOutput.Items.map((i) => i as TestItemKey));
+        }
+
+        lastEvaluatedKey = testQueryOutput.LastEvaluatedKey;
+        //
+      } while (lastEvaluatedKey);
+
+      if (testItemKeys.length > 0) {
+        const deleteRequests = testItemKeys.map((k) => ({
+          DeleteRequest: { Key: { PK: k.PK, SK: k.SK } },
+        }));
+
+        await UnitTestClient.db
+          .batchWrite({ RequestItems: { [this.integrationTestTableName]: deleteRequests } })
+          .promise();
       }
 
       // Set the current test and inputs
@@ -179,58 +206,88 @@ export default class UnitTestClient {
 
   async getTestObservationsAsync(): Promise<TestObservation[]> {
     //
+    let allObservations = new Array<TestObservation>();
+
     if (this.integrationTestTableName === undefined) {
-      return [];
+      return allObservations;
     }
 
-    const queryOutputsParams /*: QueryInput */ = {
-      // QueryInput results in a 'Condition parameter type does not match schema type'
-      TableName: this.integrationTestTableName,
-      KeyConditionExpression: `PK = :PK and begins_with(SK, :SKPrefix)`,
-      ExpressionAttributeValues: {
-        ':PK': this.testId,
-        ':SKPrefix': TestItemPrefix.TestObservation,
-      },
-    };
+    let lastEvaluatedKey: dynamodb.Key | undefined;
 
-    const queryOutputsOutput = await UnitTestClient.db.query(queryOutputsParams).promise();
+    do {
+      const queryObservationsParams /*: QueryInput */ = {
+        // QueryInput results in a 'Condition parameter type does not match schema type'
+        TableName: this.integrationTestTableName,
+        KeyConditionExpression: `PK = :PK and begins_with(SK, :SKPrefix)`,
+        ExpressionAttributeValues: {
+          ':PK': this.testId,
+          ':SKPrefix': TestItemPrefix.TestObservation,
+        },
+        ExclusiveStartKey: lastEvaluatedKey,
+      };
 
-    if (!queryOutputsOutput.Items) {
-      return [];
-    }
+      // eslint-disable-next-line no-await-in-loop
+      const queryObservationsOutput = await UnitTestClient.db
+        .query(queryObservationsParams)
+        .promise();
 
-    // TODO 03Jul21: Use LastEvaluatedKey
-    const observations = queryOutputsOutput.Items.map((i) => i.observation);
+      if (!queryObservationsOutput.Items) {
+        return allObservations;
+      }
 
-    return observations;
+      const observations = queryObservationsOutput.Items.map(
+        (i) => i.observation as TestObservation
+      );
+
+      allObservations = allObservations.concat(observations);
+
+      lastEvaluatedKey = queryObservationsOutput.LastEvaluatedKey;
+      //
+    } while (lastEvaluatedKey);
+
+    return allObservations;
   }
 
   async getMockInvocationsAsync(): Promise<MockInvocation[]> {
     //
+    let allInvocations = new Array<MockInvocation>();
+
     if (this.integrationTestTableName === undefined) {
-      return [];
+      return allInvocations;
     }
 
-    const queryOutputsParams /*: QueryInput */ = {
-      // QueryInput results in a 'Condition parameter type does not match schema type'
-      TableName: this.integrationTestTableName,
-      KeyConditionExpression: `PK = :PK and begins_with(SK, :SKPrefix)`,
-      ExpressionAttributeValues: {
-        ':PK': this.testId,
-        ':SKPrefix': TestItemPrefix.MockInvocation,
-      },
-    };
+    let lastEvaluatedKey: dynamodb.Key | undefined;
 
-    const queryOutputsOutput = await UnitTestClient.db.query(queryOutputsParams).promise();
+    do {
+      const queryInvocationsParams /*: QueryInput */ = {
+        // QueryInput results in a 'Condition parameter type does not match schema type'
+        TableName: this.integrationTestTableName,
+        KeyConditionExpression: `PK = :PK and begins_with(SK, :SKPrefix)`,
+        ExpressionAttributeValues: {
+          ':PK': this.testId,
+          ':SKPrefix': TestItemPrefix.MockInvocation,
+        },
+        ExclusiveStartKey: lastEvaluatedKey,
+      };
 
-    if (!queryOutputsOutput.Items) {
-      return [];
-    }
+      // eslint-disable-next-line no-await-in-loop
+      const queryInvocationsOutput = await UnitTestClient.db
+        .query(queryInvocationsParams)
+        .promise();
 
-    // TODO 03Jul21: Use LastEvaluatedKey
-    const invocations = queryOutputsOutput.Items.map((i) => i.invocation);
+      if (!queryInvocationsOutput.Items) {
+        return allInvocations;
+      }
 
-    return invocations;
+      const invocations = queryInvocationsOutput.Items.map((i) => i.invocation as MockInvocation);
+
+      allInvocations = allInvocations.concat(invocations);
+
+      lastEvaluatedKey = queryInvocationsOutput.LastEvaluatedKey;
+      //
+    } while (lastEvaluatedKey);
+
+    return allInvocations;
   }
 
   getFunctionTestClient(functionStackId: string): FunctionTestClient {
