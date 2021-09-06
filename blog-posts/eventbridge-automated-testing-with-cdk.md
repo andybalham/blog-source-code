@@ -1,16 +1,17 @@
-Listening to podcasts and reading articles, it seems [AWS EventBridge](TODO) is getting quite a bit of attention. Given this, I thought I would kick its tyres myself and see if I could automate testing it in the process. This article documents that journey and what I found on the way.
+Listening to podcasts and reading articles, it seems [AWS EventBridge](https://aws.amazon.com/eventbridge/) is getting quite a bit of attention. Given this, I thought I would kick its tyres myself and see if I could automate testing it in the process. This article documents that journey and what I found on the way.
 
-TODO: Code can be found...
+All the code can be found as part of the [GitHub repo](https://github.com/andybalham/sls-testing-toolkit/tree/main/examples/notification-hub) for the [Serverless Testing Toolkit](https://www.npmjs.com/package/@andybalham/sls-testing-toolkit) package I am developing.
 
 ## TL;DR
 
-TODO: Can we think of any summary?
-
 - You can't tag event buses, despite what the [documentation](https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_TagResource.html) says.
+- Invalid event patterns fail the whole deployment.
+- You can't do a partial match on `source`.
+- The `testEventPattern` SDK method requires different inputs than the CDK methods.
 
 ## Putting the wheels on the event bus
 
-The first thing I wanted to do was create an event bus and put some events on it. The first part is straightforward enough using the [AWS CDK](TODO). I wrapped an `EventBus` instance in a [CDK Construct](TODO) and exposed it as a property.
+The first thing I wanted to do with EventBridge was create an event bus and put some events on it. The first part is straightforward enough using the [AWS CDK](https://aws.amazon.com/cdk/). I wrapped an `EventBus` instance in a [CDK Construct](https://docs.aws.amazon.com/cdk/latest/guide/constructs.html) and exposed it as a property.
 
 ```TypeScript
 export default class NotificationHub extends cdk.Construct {
@@ -27,7 +28,7 @@ export default class NotificationHub extends cdk.Construct {
 }
 ```
 
-Now, I am currently developing an npm package called [Serverless Testing Toolkit](https://www.npmjs.com/package/@andybalham/sls-testing-toolkit). This toolkit has a base [CDK Stack](TODO) that can extended to provide a hosting environment for the construct under test. I wrote about this approach in my series [Serverless integration testing with the AWS CDK](https://www.10printiamcool.com/series/integration-test-with-cdk). This testing approach relies on tagging resources, such as Lambda functions or SQS queues, so that they can be located and invoked. I hoped to use this approach to put events on an EventBridge event bus. The [AWS documentation](https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_TagResource.html) certainly gave me reason to believe.
+Now, I am currently developing an npm package called [Serverless Testing Toolkit](https://www.npmjs.com/package/@andybalham/sls-testing-toolkit). This toolkit has a base [CDK Stack](https://docs.aws.amazon.com/cdk/latest/guide/stacks.html) that can extended to provide a hosting environment for the construct under test. I wrote about this approach in my series [Serverless integration testing with the AWS CDK](https://www.10printiamcool.com/series/integration-test-with-cdk). This testing approach relies on tagging resources, such as Lambda functions or SQS queues, so that they can be located and invoked. I hoped to use this approach to put events on an EventBridge event bus. The [AWS documentation](https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_TagResource.html) certainly gave me reason to believe.
 
 > In EventBridge, rules and **event buses** can be tagged.
 
@@ -82,7 +83,7 @@ Deploying the `Stack` proved straightforward. The problems started when I create
 
 `¯\_(ツ)_/¯`
 
-I looked at the event bus in the AWS console, but still no joy. It looks like currently (26 August 2021), there is no way to tag an event bus. This was a bit of a kick in the teeth, but I had a fall back plan. This involved using the `EventBridge` `listEventBuses` method, then using the pattern matching on the name to resolve to an [ARN](TODO) . This wouldn't be as robust as using tags, but would have to suffice until support was added for event bus tags.
+I looked at the event bus in the AWS console, but still no joy. It looks like currently (26 August 2021), there is no way to tag an event bus. This was a bit of a kick in the teeth, but I had a fall back plan. This involved using the `EventBridge` `listEventBuses` method, then using the pattern matching on the name to resolve to an [ARN](https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html) . This wouldn't be as robust as using tags, but would have to suffice until support was added for event bus tags.
 
 Armed with the knowledge of how the ARN for an event bus, I extended the [Serverless Testing Toolkit](https://www.npmjs.com/package/@andybalham/sls-testing-toolkit) `IntegrationTestClient` class. I added a new `getEventBridgeTestClient` method that returned an `EventBridgeTestClient` for a given id. The implementation of `EventBridgeTestClient` can be seen below.
 
@@ -216,9 +217,9 @@ All looked good until I tried to deploy.
 at [Source: (String)"{"source":["test.event-pattern"],"detail":{"lenderId":"LenderA"}}"; line: 1, column: 56] (Service: AmazonCloudWatchEvents; Status Code: 400; Error Code: InvalidEventPatternException; Request ID: 7ec85bb1-59fe-421b-92d5-f8ed1827d4fc; Proxy: null)
 ```
 
-I was impressed at the detail of the error message, clearly pinpointing the error of my ways. However, I felt it was a little late in the day to find out such an error. I would have rather caught such a thing earlier. Thankfully, it turns out there is a solution that I will go into later.
+I was impressed at the detail of the error message, clearly pinpointing the error of my ways. However, I felt it was a little late in the day to find out such an error. I would have rather caught such a thing earlier. Thankfully, it turns out there is a way to do this that I will go into later.
 
-Amending the pattern as follows allowed the deployment to succeed.
+At the time, however, I amending the pattern as follows and that allowed the deployment to succeed.
 
 ```TypeScript
 static readonly EqualTestEventPattern = {
@@ -229,10 +230,109 @@ static readonly EqualTestEventPattern = {
 };
 ```
 
-TODO
+With this in place, I created a unit test that followed the pattern of the previous unit test. In the test, I put through a set of events and asserted that the observations were as expected for each. I extended this to cover all the pattern options as described by the [AWS documentation](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html). The resulting test can be found in the [GitHub repo](https://github.com/andybalham/sls-testing-toolkit/blob/main/examples/notification-hub/NotificationHub.test.ts).
+
+> One thing I noticed during this experimentation, was that it wasn't possible to do prefix matching on the `source` of an event. The recommendation is for a Java package style naming, e.g. `com.mycompany.myapp`, but you cannot match on all `com.mycompany` entries.
+
+I was now fairly confident in using CDK to create `Rule` instances and then to wire them up to a Lambda function `Target`. I was not overly happy that it required a deployment to validate and test the pattern matching. However, I had noticed that both the [AWS SDK](https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_TestEventPattern.html) had a `testEventPattern` method that promised to do both without deployment.
+
+## Early warning testing with `testEventPattern`
+
+Consulting the documentation, the theory seemed simple enough. Pass in an event and an event pattern and `testEventPattern` would validate the pattern and return whether it matched. With this in mind, I created the following test.
 
 ```TypeScript
+// Arrange
 
+const caseEvent = {
+  eventType: CaseEventType.CaseStatusUpdated,
+  lenderId: 'LenderA',
+  caseId: 'C1234',
+},
+
+const putEventsRequest: PutEventsRequestEntry = {
+  Source: `test.event-pattern`,
+  DetailType: caseEvent.eventType,
+  Detail: JSON.stringify(caseEvent),
+};
+
+// Act
+
+const testRequest: TestEventPatternRequest = {
+  Event: JSON.stringify(putEventsRequest),
+  EventPattern: JSON.stringify(NotificationHubTestStack.EqualTestEventPattern),
+};
+
+const isEqualMatch = (
+  await IntegrationTestClient.eventBridge.testEventPattern(testRequest).promise()
+).Result;
+
+// Assert
+
+expect(isEqualMatch).to.be.true;
 ```
 
-TODO
+However, when running the test, I got the following error:
+
+```
+ValidationException: Parameter Event is not valid.
+```
+
+Drilling into the documentation for `TestEventPatternRequest`, I found the following for `Event`:
+
+> The event, in JSON format, to test against the event pattern. The JSON must follow the format specified in Amazon Web Services Events, and the following fields are mandatory: id, account, source, time, region, resources, detail-type   
+
+So it seemed that `testEventPattern` requires a fully-formed event to work. At this point, I decided that I would create a method `isEventPatternMatchAsync` on `IntegrationTestClient` to encapsulate this:
+
+```TypeScript
+static async isEventPatternMatchAsync({
+  eventPattern,
+  putEventsRequest,
+}: {
+  eventPattern: cdkEvents.EventPattern;
+  putEventsRequest: PutEventsRequestEntry;
+}): Promise<boolean> {
+  //
+  const mappedEvent: any = {
+    id: '6a7e8feb-b491-4cf7-a9f1-bf3703467718',
+    'detail-type': putEventsRequest.DetailType ? putEventsRequest.DetailType : 'detail-type',
+    source: putEventsRequest.Source ? putEventsRequest.Source : 'source',
+    account: '0000000000',
+    time: putEventsRequest.Time ? putEventsRequest.Time : '2017-12-22T18:43:48Z',
+    region: 'us-west-1',
+    resources: putEventsRequest.Resources ? putEventsRequest.Resources : [],
+    detail: putEventsRequest.Detail ? JSON.parse(putEventsRequest.Detail) : undefined,
+  };
+
+  const request: TestEventPatternRequest = {
+    Event: JSON.stringify(mappedEvent),
+    EventPattern: JSON.stringify(eventPattern),
+  };
+
+  const response = await this.eventBridge.testEventPattern(request).promise();
+
+  return response.Result ?? false;
+}
+```
+
+I re-ran the tests and got a number of failures. All the failed tests involved matching on the detail type. After comparing the deployed patterns with the JSON for the CDK patterns, I noticed that the deployed patterns had `detail-type` as a property. With this in mind, I amended the `isEventPatternMatchAsync` method to map the event pattern as follows.
+
+```TypeScript
+const mappedEventPattern = {
+  ...eventPattern,
+  'detail-type': eventPattern.detailType,
+  detailType: undefined,
+};
+
+const request: TestEventPatternRequest = {
+  Event: JSON.stringify(mappedEvent),
+  EventPattern: JSON.stringify(mappedEventPattern),
+};
+```
+
+This did the trick. Now I had a way of validating and testing event patterns before deployment and then using the exact same patterns in my CDK constructs. For future projects, this should make development much easier. The resulting test can be found in the [GitHub repo](https://github.com/andybalham/sls-testing-toolkit/blob/main/examples/notification-hub/NotificationHubPattern.test.ts).
+
+## Conclusion
+
+I found EventBridge fairly straightforward to use, certainly within the limitations of my experiment. There were some oddities, such as no tags and differing structures, but on the whole I found it nice to use.
+
+If you want, please check out my [Serverless Testing Toolkit](https://www.npmjs.com/package/@andybalham/sls-testing-toolkit). You can either use it as a package, or you can take whatever code you like from the repo. All feedback is welcomed.
