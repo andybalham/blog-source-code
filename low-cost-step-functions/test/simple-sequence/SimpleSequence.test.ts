@@ -8,12 +8,12 @@ import {
   StartExecutionRequest,
   StartExecutionResponse,
 } from '../../src';
-import EmptyOrchestrationTestStack from './EmptyOrchestrationTestStack';
+import SimpleSequenceTestStack from './SimpleSequenceTestStack';
 
 describe('Empty orchestration tests', () => {
   //
   const testClient = new IntegrationTestClient({
-    testStackId: EmptyOrchestrationTestStack.Id,
+    testStackId: SimpleSequenceTestStack.Id,
     deleteLogs: true,
   });
 
@@ -21,7 +21,7 @@ describe('Empty orchestration tests', () => {
 
   before(async () => {
     await testClient.initialiseClientAsync();
-    sut = testClient.getLambdaTestClient(EmptyOrchestrationTestStack.OrchestrationHandlerId);
+    sut = testClient.getLambdaTestClient(SimpleSequenceTestStack.OrchestrationHandlerId);
   });
 
   it('returns completed status', async () => {

@@ -1,8 +1,9 @@
 export interface StartExecutionRequest {
-  isStartExecution: null;
+  isStartExecutionResponse: null;
+  payload?: Record<string, any>;
 }
 
 export interface StartExecutionResponse {
-  isStartExecution: null;
+  isStartExecutionResponse: null;
   executionId: string;
 }

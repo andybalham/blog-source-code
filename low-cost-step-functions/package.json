@@ -15,7 +15,10 @@
     "all-destroy": "tsc && cdk destroy --all",
     "empty-orchestration-synth": "tsc && cdk synth EmptyOrchestrationTestStack",
     "empty-orchestration-deploy": "tsc && cdk deploy EmptyOrchestrationTestStack",
-    "empty-orchestration-destroy": "tsc && cdk destroy EmptyOrchestrationTestStack"
+    "empty-orchestration-destroy": "tsc && cdk destroy EmptyOrchestrationTestStack",
+    "simple-sequence-synth": "tsc && cdk synth SimpleSequenceTestStack",
+    "simple-sequence-deploy": "tsc && cdk deploy SimpleSequenceTestStack",
+    "simple-sequence-destroy": "tsc && cdk destroy SimpleSequenceTestStack"
   },
   "repository": {
     "type": "git",

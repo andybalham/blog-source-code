@@ -1,5 +1,5 @@
 export interface ListExecutionRequest {
-  isListExecution: null;
+  isListExecutionResponse: null;
   executionId: string;
 }
 
@@ -10,8 +10,9 @@ export enum ExecutionStatus {
 }
 
 export interface ListExecutionResponse {
-  isListExecution: null;
+  isListExecutionResponse: null;
   status: ExecutionStatus;
   startDate: Date;
   stopDate?: Date;
+  state?: Record<string, any>;
 }
