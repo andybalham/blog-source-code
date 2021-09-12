@@ -8,8 +8,12 @@ import { StartExecutionRequest, StartExecutionResponse } from './exchanges/Start
 import OrchestratorHandler from './OrchestratorHandler';
 import LambdaTask from './LambdaTask';
 import LambdaTaskHandler from './LambdaTaskHandler';
+import OrchestrationDefinition from './OrchestrationDefinition';
+import OrchestrationDefinitionBuilder from './OrchestrationDefinitionBuilder';
 
 export {
+  OrchestrationDefinition,
+  OrchestrationDefinitionBuilder,
   Orchestrator,
   OrchestratorProps,
   OrchestratorHandler,

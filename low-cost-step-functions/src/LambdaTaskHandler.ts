@@ -49,5 +49,5 @@ export default abstract class LambdaTaskHandler<TReq, TRes> {
     }
   }
 
-  abstract handleRequestAsync(request?: TReq): Promise<TRes | undefined>;
+  abstract handleRequestAsync(request: TReq): Promise<TRes>;
 }

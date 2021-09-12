@@ -1,31 +1,41 @@
+import { SNSEvent } from 'aws-lambda/trigger/sns';
 import { nanoid } from 'nanoid';
-import { LambdaInvokeResponse } from './exchanges/LambdaInvokeExchange';
 import {
   ExecutionStatus,
   ListExecutionRequest,
   ListExecutionResponse,
 } from './exchanges/ListExecutionExchange';
-import { OrchestratorExchange } from './exchanges/OrchestratorExchange';
 import { StartExecutionRequest, StartExecutionResponse } from './exchanges/StartExecutionExchange';
+import OrchestrationDefinition from './OrchestrationDefinition';
 
-export default abstract class OrchestratorHandler {
+export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
   //
+  readonly definition: OrchestrationDefinition<TInput, TOutput, TData>;
+
+  constructor() {
+    this.definition = this.getDefinition();
+  }
+
+  abstract getDefinition(): OrchestrationDefinition<TInput, TOutput, TData>;
+
   // eslint-disable-next-line class-methods-use-this
   async handleAsync(
-    event: StartExecutionRequest | ListExecutionRequest | LambdaInvokeResponse
-  ): Promise<StartExecutionResponse | ListExecutionResponse> {
+    event: StartExecutionRequest | ListExecutionRequest | SNSEvent
+  ): Promise<StartExecutionResponse | ListExecutionResponse | void> {
     //
     // eslint-disable-next-line no-console
     console.log(JSON.stringify({ event }, null, 2));
 
-    if (OrchestratorExchange.StartExecution in event) {
+    // TODO 12Sep21: Raise an event on completion with the output
+
+    if ('isStartExecutionResponse' in event) {
       return {
         isStartExecutionResponse: null,
         executionId: nanoid(),
       };
     }
 
-    if (OrchestratorExchange.ListExecution in event) {
+    if ('isListExecutionResponse' in event) {
       return {
         isListExecutionResponse: null,
         status: ExecutionStatus.Completed,
@@ -33,7 +43,7 @@ export default abstract class OrchestratorHandler {
       };
     }
 
-    if (OrchestratorExchange.LambdaInvokeResponse in event) {
+    if ('Records' in event) {
       throw new Error(`Not implemented yet`);
     }
 
