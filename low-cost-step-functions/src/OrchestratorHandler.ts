@@ -10,13 +10,7 @@ import OrchestrationDefinition from './OrchestrationDefinition';
 
 export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
   //
-  readonly definition: OrchestrationDefinition<TInput, TOutput, TData>;
-
-  constructor() {
-    this.definition = this.getDefinition();
-  }
-
-  abstract getDefinition(): OrchestrationDefinition<TInput, TOutput, TData>;
+  constructor(private definition: OrchestrationDefinition<TInput, TOutput, TData>) {}
 
   // eslint-disable-next-line class-methods-use-this
   async handleAsync(

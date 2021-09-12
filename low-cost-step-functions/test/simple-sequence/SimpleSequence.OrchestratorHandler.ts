@@ -35,47 +35,43 @@ class SimpleSequenceHandler extends OrchestratorHandler<
   SimpleSequenceOutput,
   SimpleSequenceData
 > {
-  //
-  getDefinition(): OrchestrationDefinition<
-    SimpleSequenceInput,
-    SimpleSequenceOutput,
-    SimpleSequenceData
-    // eslint-disable-next-line indent
-  > {
-    return new OrchestrationDefinitionBuilder<
-      SimpleSequenceInput,
-      SimpleSequenceOutput,
-      SimpleSequenceData
-    >((input) => ({
-      ...input,
-      total: 0,
-    }))
+  constructor() {
+    super(
+      new OrchestrationDefinitionBuilder<
+        SimpleSequenceInput,
+        SimpleSequenceOutput,
+        SimpleSequenceData
+      >((input) => ({
+        ...input,
+        total: 0,
+      }))
 
-      .lambdaInvokeAsync<AddTwoNumbersRequest, AddTwoNumbersResponse>(
-        'AddX&Y',
-        AddTwoNumbersTaskHandler.name,
-        (data) => ({
-          value1: data.x,
-          value2: data.y,
-        }),
-        (data, response) => {
-          data.total = response.total;
-        }
-      )
+        .lambdaInvokeAsync<AddTwoNumbersRequest, AddTwoNumbersResponse>(
+          'AddX&Y',
+          AddTwoNumbersTaskHandler.name,
+          (data) => ({
+            value1: data.x,
+            value2: data.y,
+          }),
+          (data, response) => {
+            data.total = response.total;
+          }
+        )
 
-      .lambdaInvokeAsync<AddTwoNumbersRequest, AddTwoNumbersResponse>(
-        'AddZ&Total',
-        AddTwoNumbersTaskHandler.name,
-        (data) => ({
-          value1: data.z,
-          value2: data.total,
-        }),
-        (data, response) => {
-          data.total = response.total;
-        }
-      )
+        .lambdaInvokeAsync<AddTwoNumbersRequest, AddTwoNumbersResponse>(
+          'AddZ&Total',
+          AddTwoNumbersTaskHandler.name,
+          (data) => ({
+            value1: data.z,
+            value2: data.total,
+          }),
+          (data, response) => {
+            data.total = response.total;
+          }
+        )
 
-      .build((data) => ({ total: data.total }));
+        .build((data) => ({ total: data.total }))
+    );
   }
 }
 
