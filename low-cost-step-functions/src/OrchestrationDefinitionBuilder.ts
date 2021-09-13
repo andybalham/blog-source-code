@@ -15,6 +15,6 @@ export default class OrchestrationDefinitionBuilder<TInput, TOutput, TData> {
   }
 
   build(getOutput?: (data: TData) => TOutput): OrchestrationDefinition<TInput, TOutput, TData> {
-    return new OrchestrationDefinition<TInput, TOutput, TData>();
+    return new OrchestrationDefinition<TInput, TOutput, TData>(this.getData);
   }
 }

@@ -1,6 +1,6 @@
 export interface StartExecutionRequest {
   isStartExecutionResponse: null;
-  payload?: Record<string, any>;
+  input?: Record<string, any>;
 }
 
 export interface StartExecutionResponse {

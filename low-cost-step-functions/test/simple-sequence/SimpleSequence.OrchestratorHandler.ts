@@ -2,11 +2,7 @@
 /* eslint-disable class-methods-use-this */
 /* eslint-disable no-console */
 /* eslint-disable import/prefer-default-export */
-import {
-  OrchestrationDefinition,
-  OrchestrationDefinitionBuilder,
-  OrchestratorHandler,
-} from '../../src';
+import { OrchestrationDefinitionBuilder, OrchestratorHandler } from '../../src';
 import {
   AddTwoNumbersRequest,
   AddTwoNumbersResponse,

@@ -8,9 +8,10 @@ import {
   StartExecutionRequest,
   StartExecutionResponse,
 } from '../../src';
+import { SimpleSequenceInput, SimpleSequenceOutput } from './SimpleSequence.OrchestratorHandler';
 import SimpleSequenceTestStack from './SimpleSequenceTestStack';
 
-describe('Empty orchestration tests', () => {
+describe('Simple sequence tests', () => {
   //
   const testClient = new IntegrationTestClient({
     testStackId: SimpleSequenceTestStack.Id,
@@ -24,8 +25,18 @@ describe('Empty orchestration tests', () => {
     sut = testClient.getLambdaTestClient(SimpleSequenceTestStack.OrchestrationHandlerId);
   });
 
-  it('returns completed status', async () => {
+  it('returns expected total', async () => {
     // Arrange
+
+    const input: SimpleSequenceInput = {
+      x: 1,
+      y: 2,
+      z: 3,
+    };
+
+    const expectedOutput: SimpleSequenceOutput = {
+      total: 6,
+    };
 
     // Act
 
@@ -34,6 +45,7 @@ describe('Empty orchestration tests', () => {
       StartExecutionResponse
     >({
       isStartExecutionResponse: null,
+      input,
     });
 
     if (startExecutionResponse === undefined)
@@ -50,11 +62,21 @@ describe('Empty orchestration tests', () => {
             isListExecutionResponse: null,
             executionId,
           })
-        )?.status === ExecutionStatus.Completed,
+        )?.executionState?.status === ExecutionStatus.Completed,
     });
 
     // Assert
 
     expect(timedOut, 'timedOut').to.be.false;
+
+    const listExecutionResponse = await sut.invokeAsync<
+      ListExecutionRequest,
+      ListExecutionResponse
+    >({
+      isListExecutionResponse: null,
+      executionId,
+    });
+
+    expect(listExecutionResponse?.executionState?.output).to.deep.equal(expectedOutput);
   });
 });
