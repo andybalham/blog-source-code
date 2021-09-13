@@ -41,6 +41,8 @@ export default abstract class LambdaTaskHandler<TReq, TRes> {
       const responsePublishInput: PublishInput = {
         TopicArn: LambdaTaskHandler.eventTopicArn,
         Message: JSON.stringify(lambdaInvokeResponse),
+        // TODO 13Sep21: Routing attributes
+        // MessageAttributes
       };
 
       const responsePublishResponse = await sns.publish(responsePublishInput).promise();

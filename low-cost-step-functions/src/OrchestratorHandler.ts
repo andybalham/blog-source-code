@@ -87,7 +87,11 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     );
 
     for await (const lambdaInvokeResponse of lambdaInvokeResponses) {
-      await this.handleLambdaInvokeResponseAsync(lambdaInvokeResponse);
+      try {
+        await this.handleLambdaInvokeResponseAsync(lambdaInvokeResponse);
+      } catch (error) {
+        // TODO 13Sep21: Prevent one orchestration from bringing down another
+      }
     }
   }
 
