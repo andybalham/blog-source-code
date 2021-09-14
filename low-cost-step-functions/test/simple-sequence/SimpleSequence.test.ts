@@ -8,7 +8,7 @@ import {
   StartExecutionRequest,
   StartExecutionResponse,
 } from '../../src';
-import { SimpleSequenceInput, SimpleSequenceOutput } from './SimpleSequence.OrchestratorHandler';
+import { SimpleSequenceInput, SimpleSequenceOutput } from './SimpleSequence.handler';
 import SimpleSequenceTestStack from './SimpleSequenceTestStack';
 
 describe('Simple sequence tests', () => {

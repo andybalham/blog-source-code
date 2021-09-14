@@ -3,11 +3,7 @@
 /* eslint-disable no-console */
 /* eslint-disable import/prefer-default-export */
 import { OrchestrationDefinitionBuilder, OrchestratorHandler } from '../../src';
-import {
-  AddTwoNumbersRequest,
-  AddTwoNumbersResponse,
-  AddTwoNumbersTaskHandler,
-} from './SimpleSequence.AddTwoNumbersHandler';
+import { AddTwoNumbersTaskHandler } from './AddTwoNumbersTask.handler';
 
 export interface SimpleSequenceInput {
   x: number;
@@ -42,9 +38,9 @@ class SimpleSequenceHandler extends OrchestratorHandler<
         total: 0,
       }))
 
-        .lambdaInvokeAsync<AddTwoNumbersRequest, AddTwoNumbersResponse>(
+        .lambdaInvokeAsync(
           'AddX&Y',
-          AddTwoNumbersTaskHandler.name,
+          AddTwoNumbersTaskHandler,
           (data) => ({
             value1: data.x,
             value2: data.y,
@@ -54,9 +50,9 @@ class SimpleSequenceHandler extends OrchestratorHandler<
           }
         )
 
-        .lambdaInvokeAsync<AddTwoNumbersRequest, AddTwoNumbersResponse>(
+        .lambdaInvokeAsync(
           'AddZ&Total',
-          AddTwoNumbersTaskHandler.name,
+          AddTwoNumbersTaskHandler,
           (data) => ({
             value1: data.z,
             value2: data.total,

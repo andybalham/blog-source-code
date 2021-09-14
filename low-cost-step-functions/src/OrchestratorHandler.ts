@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid';
 import { LambdaInvokeResponse } from './exchanges/LambdaInvokeExchange';
 import { ListExecutionRequest, ListExecutionResponse } from './exchanges/ListExecutionExchange';
 import { StartExecutionRequest, StartExecutionResponse } from './exchanges/StartExecutionExchange';
-import ExecutionRepository, { ExecutionState, ExecutionStatus } from './ExecutionRepository';
+import ExecutionRepository, { ExecutionStatus } from './ExecutionRepository';
 import OrchestrationDefinition from './OrchestrationDefinition';
 
 const executionRepository = new ExecutionRepository();
@@ -97,14 +97,14 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
 
   async handleLambdaInvokeResponseAsync(response: LambdaInvokeResponse): Promise<void> {
     //
-    const message = await executionRepository.retrieveExecutionMessageAsync(
-      response.executionId,
-      response.messageId
-    );
+    // const message = await executionRepository.retrieveExecutionMessageAsync(
+    //   response.executionId,
+    //   response.messageId
+    // );
 
-    const data = await executionRepository.retrieveExecutionDataAsync(response.executionId);
+    // const data = await executionRepository.retrieveExecutionDataAsync(response.executionId);
 
-    const responsePayload = response.payload ?? {};
+    // const responsePayload = response.payload ?? {};
 
     // TODO 13Sep21: Resume the flow
 

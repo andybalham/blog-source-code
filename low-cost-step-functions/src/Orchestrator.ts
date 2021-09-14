@@ -5,9 +5,12 @@ import * as snsSubs from '@aws-cdk/aws-sns-subscriptions';
 import * as dynamodb from '@aws-cdk/aws-dynamodb';
 import LambdaTaskHandler from './LambdaTaskHandler';
 
-export interface OrchestratorProps {
-  handlerFunction: lambda.Function;
+export interface OrchestratorBaseProps {
   executionTable: dynamodb.ITable;
+}
+
+export interface OrchestratorProps extends OrchestratorBaseProps {
+  handlerFunction: lambda.Function;
 }
 
 export default abstract class Orchestrator extends cdk.Construct {

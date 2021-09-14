@@ -1,22 +1,19 @@
 /* eslint-disable no-new */
 import * as cdk from '@aws-cdk/core';
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
-import { LambdaTask, Orchestrator, OrchestratorHandler, OrchestratorProps } from '../../src';
-import { AddTwoNumbersTaskHandler } from './SimpleSequence.AddTwoNumbersHandler';
-
-export type SimpleSequenceProps = Omit<OrchestratorProps, 'handlerFunction'>;
+import { Orchestrator, OrchestratorBaseProps } from '../../src';
+import AddTwoNumbersTask from './AddTwoNumbersTask';
 
 export default class SimpleSequence extends Orchestrator {
   //
-  constructor(scope: cdk.Construct, id: string, props: SimpleSequenceProps) {
+  constructor(scope: cdk.Construct, id: string, props: OrchestratorBaseProps) {
     super(scope, id, {
       ...props,
-      handlerFunction: new lambdaNodejs.NodejsFunction(scope, OrchestratorHandler.name),
+      handlerFunction: new lambdaNodejs.NodejsFunction(scope, "handler"),
     });
 
-    new LambdaTask(this, 'AddTwoNumbersTask', {
+    new AddTwoNumbersTask(this, 'AddTwoNumbersTask', {
       eventTopic: this.eventTopic,
-      handlerFunction: new lambdaNodejs.NodejsFunction(this, AddTwoNumbersTaskHandler.name),
     });
   }
 }

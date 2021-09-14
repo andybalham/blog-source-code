@@ -1,23 +1,19 @@
+/* eslint-disable @typescript-eslint/no-empty-interface */
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable import/prefer-default-export */
 
-import { OrchestratorHandler } from '../../src';
+import { OrchestrationDefinitionBuilder, OrchestratorHandler } from '../../src';
 
-class EmptyOrchestratorHandler extends OrchestratorHandler {
-  // TODO 11Sep21: This is where we define the flow
+export interface Input {}
+export interface Output {}
+export interface Data {}
 
-  // TODO 11Sep21: How do we reference lambdas?
-
-  // TODO 11Sep21: What would be needed at runtime?
-  /*
-  TargetFunctionId - Where would we get this from? The construct?
-  */
+class EmptyOrchestratorHandler extends OrchestratorHandler<Input, Output, Data> {
+  constructor() {
+    super(new OrchestrationDefinitionBuilder<Input, Output, Data>(() => ({})).build());
+  }
 }
 
-// TODO 11Sep21: Could we make this more functional?
-
-const emptyOrchestratorHandler = new EmptyOrchestratorHandler();
-
 export const handler = async (event: any): Promise<any> =>
-  emptyOrchestratorHandler.handleAsync(event);
+  new EmptyOrchestratorHandler().handleAsync(event);

@@ -1,4 +1,5 @@
 /* eslint-disable class-methods-use-this */
+import LambdaTaskHandler from './LambdaTaskHandler';
 import OrchestrationDefinition from './OrchestrationDefinition';
 
 export default class OrchestrationDefinitionBuilder<TInput, TOutput, TData> {
@@ -7,7 +8,7 @@ export default class OrchestrationDefinitionBuilder<TInput, TOutput, TData> {
 
   lambdaInvokeAsync<TReq, TRes>(
     stateId: string,
-    handlerName: string,
+    handlerType: new () => LambdaTaskHandler<TReq, TRes>,
     getRequest: (data: TData) => TReq,
     updateData: (data: TData, response: TRes) => void
   ): OrchestrationDefinitionBuilder<TInput, TOutput, TData> {

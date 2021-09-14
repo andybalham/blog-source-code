@@ -1,8 +1,8 @@
 import { ListExecutionRequest, ListExecutionResponse } from './exchanges/ListExecutionExchange';
-import Orchestrator, { OrchestratorProps } from './Orchestrator';
+import Orchestrator, { OrchestratorBaseProps, OrchestratorProps } from './Orchestrator';
 import { StartExecutionRequest, StartExecutionResponse } from './exchanges/StartExecutionExchange';
 import OrchestratorHandler from './OrchestratorHandler';
-import LambdaTask from './LambdaTask';
+import LambdaTask, { LambdaTaskBaseProps, LambdaTaskProps } from './LambdaTask';
 import LambdaTaskHandler from './LambdaTaskHandler';
 import OrchestrationDefinition from './OrchestrationDefinition';
 import OrchestrationDefinitionBuilder from './OrchestrationDefinitionBuilder';
@@ -13,6 +13,7 @@ export {
   OrchestrationDefinitionBuilder,
   Orchestrator,
   OrchestratorProps,
+  OrchestratorBaseProps,
   OrchestratorHandler,
   ExecutionStatus,
   ListExecutionRequest,
@@ -20,5 +21,7 @@ export {
   StartExecutionRequest,
   StartExecutionResponse,
   LambdaTask,
+  LambdaTaskProps,
+  LambdaTaskBaseProps,
   LambdaTaskHandler,
 };
