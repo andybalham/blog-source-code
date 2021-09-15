@@ -6,7 +6,7 @@ import Orchestrator from './Orchestrator';
 import LambdaTaskHandler from './LambdaTaskHandler';
 
 export interface LambdaTaskBaseProps {
-  eventTopic: sns.ITopic;
+  orchestrator: Orchestrator;
 }
 
 export interface LambdaTaskProps<TReq, TRes> extends LambdaTaskBaseProps {
@@ -16,22 +16,30 @@ export interface LambdaTaskProps<TReq, TRes> extends LambdaTaskBaseProps {
 
 export default abstract class LambdaTask<TReq, TRes> extends cdk.Construct {
   //
+  readonly requestTopic: sns.ITopic;
+
   constructor(scope: cdk.Construct, id: string, props: LambdaTaskProps<TReq, TRes>) {
     super(scope, id);
 
     props.handlerFunction.addEnvironment(
-      Orchestrator.EnvVars.EVENT_TOPIC_ARN,
-      props.eventTopic.topicArn
+      Orchestrator.EnvVars.RESPONSE_EVENT_TOPIC_ARN,
+      props.orchestrator.responseTopic.topicArn
     );
 
-    props.eventTopic.addSubscription(
-      new snsSubs.LambdaSubscription(props.handlerFunction, {
-        filterPolicy: {
-          // TODO 11Sep21: What is the correct policy here? props.handlerType.name
-        },
-      })
-    );
+    props.orchestrator.responseTopic.grantPublish(props.handlerFunction);
 
-    props.eventTopic.grantPublish(props.handlerFunction);
+    this.requestTopic = new sns.Topic(this, `${props.handlerType.name}RequestTopic`);
+    this.requestTopic.addSubscription(new snsSubs.LambdaSubscription(props.handlerFunction));
+
+    props.orchestrator.handlerFunction.addEnvironment(
+      LambdaTask.getRequestTopicArnEnvVarName(props.handlerType),
+      this.requestTopic.topicArn
+    );
+  }
+
+  static getRequestTopicArnEnvVarName<TReq, TRes>(
+    handlerType: new () => LambdaTaskHandler<TReq, TRes>
+  ): string {
+    return `${handlerType.name.toUpperCase()}_REQUEST_TOPIC_ARN`;
   }
 }

@@ -1,3 +1,5 @@
 export default class OrchestrationDefinition<TInput, TOutput, TData> {
-  constructor(public getData: (input: TInput) => TData) {}
+  getData: (input: TInput) => TData;
+
+  getOutput?: (data: TData) => TOutput;
 }

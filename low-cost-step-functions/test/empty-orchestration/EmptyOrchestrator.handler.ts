@@ -11,7 +11,9 @@ export interface Data {}
 
 class EmptyOrchestratorHandler extends OrchestratorHandler<Input, Output, Data> {
   constructor() {
-    super(new OrchestrationDefinitionBuilder<Input, Output, Data>(() => ({})).build());
+    super(
+      new OrchestrationDefinitionBuilder<Input, Output, Data>({ initialiseData: (): Data => ({}) }).build()
+    );
   }
 }
 

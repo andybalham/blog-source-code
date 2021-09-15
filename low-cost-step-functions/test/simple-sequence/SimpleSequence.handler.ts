@@ -33,36 +33,39 @@ class SimpleSequenceHandler extends OrchestratorHandler<
         SimpleSequenceInput,
         SimpleSequenceOutput,
         SimpleSequenceData
-      >((input) => ({
-        ...input,
-        total: 0,
-      }))
+      >({
+        initialiseData: (input): SimpleSequenceData => ({
+          ...input,
+          total: 0,
+        }),
+        getOutput: (data): SimpleSequenceOutput => ({ total: data.total }),
+      })
 
-        .lambdaInvokeAsync(
-          'AddX&Y',
-          AddTwoNumbersTaskHandler,
-          (data) => ({
+        .invokeLambdaAsync({
+          stateId: 'AddX&Y',
+          handlerType: AddTwoNumbersTaskHandler,
+          getRequest: (data) => ({
             value1: data.x,
             value2: data.y,
           }),
-          (data, response) => {
+          updateData: (data, response) => {
             data.total = response.total;
-          }
-        )
+          },
+        })
 
-        .lambdaInvokeAsync(
-          'AddZ&Total',
-          AddTwoNumbersTaskHandler,
-          (data) => ({
+        .invokeLambdaAsync({
+          stateId: 'AddZ&Total',
+          handlerType: AddTwoNumbersTaskHandler,
+          getRequest: (data) => ({
             value1: data.z,
             value2: data.total,
           }),
-          (data, response) => {
+          updateData: (data, response) => {
             data.total = response.total;
-          }
-        )
+          },
+        })
 
-        .build((data) => ({ total: data.total }))
+        .build()
     );
   }
 }
