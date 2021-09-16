@@ -34,7 +34,7 @@ class SimpleSequenceHandler extends OrchestratorHandler<
         SimpleSequenceOutput,
         SimpleSequenceData
       >({
-        initialiseData: (input): SimpleSequenceData => ({
+        getData: (input): SimpleSequenceData => ({
           ...input,
           total: 0,
         }),

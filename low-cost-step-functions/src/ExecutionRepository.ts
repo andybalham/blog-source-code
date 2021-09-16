@@ -1,63 +1,70 @@
 /* eslint-disable class-methods-use-this */
+import Orchestrator from './Orchestrator';
+import DynamoDBClient from './utils/DynamoDBClient';
+
 export enum ExecutionStatus {
   Running = 'RUNNING',
   Completed = 'SUCCEEDED',
   Failed = 'FAILED',
 }
 
-export interface ExecutionState {
+export interface ExecutionSummary {
   status: ExecutionStatus;
-  startDate: Date;
-  stopDate?: Date;
+  startTime: number;
+  endTime?: number;
   output?: Record<string, any>;
 }
 
-export interface ExecutionData {
+export interface ExecutionState {
+  messageCount: number;
   data: Record<string, any>;
 }
 
 export interface ExecutionMessage {
-  sentDate: Date;
-  stepId: string;
+  sentTime: number;
+  stateId: string;
 }
+
+const dynamoDBClient = new DynamoDBClient(
+  process.env[Orchestrator.EnvVars.EXECUTION_TABLE_NAME],
+  Orchestrator.ExecutionTableSchema.partitionKey.name,
+  Orchestrator.ExecutionTableSchema.sortKey.name
+);
 
 export default class ExecutionRepository {
   //
-  async createExecutionStateAsync(
+  async putExecutionSummaryAsync(
     executionId: string,
-    executionState: ExecutionState
+    executionSummary: ExecutionSummary
   ): Promise<void> {
-    throw new Error(`Not implemented`);
+    //
+    await dynamoDBClient.putAsync({
+      PK: executionId,
+      SK: 'EXECUTION_STATE',
+      executionSummary,
+    });
   }
 
-  async retrieveExecutionStateAsync(executionId: string): Promise<ExecutionState | undefined> {
-    throw new Error(`Not implemented`);
+  async getExecutionSummaryAsync(executionId: string): Promise<ExecutionSummary | undefined> {
+    //
+    const executionSummaryItem = await dynamoDBClient.getAsync<any>({
+      PK: executionId,
+      SK: 'EXECUTION_STATE',
+    });
+
+    return executionSummaryItem?.executionSummary;
   }
 
-  async updateExecutionStateAsync(
-    executionId: string,
-    executionState: ExecutionState
-  ): Promise<void> {
-    throw new Error(`Not implemented`);
+  async putExecutionStateAsync(executionId: string, executionState: ExecutionState): Promise<void> {
+    //
+    await dynamoDBClient.putAsync({
+      PK: executionId,
+      SK: 'EXECUTION_DATA',
+      executionState,
+    });
   }
 
-  async deleteExecutionStateAsync(executionId: string): Promise<void> {
-    throw new Error(`Not implemented`);
-  }
-
-  async createExecutionDataAsync(executionId: string, executionData: ExecutionData): Promise<void> {
-    throw new Error(`Not implemented`);
-  }
-
-  async retrieveExecutionDataAsync(executionId: string): Promise<ExecutionData> {
-    throw new Error(`Not implemented`);
-  }
-
-  async updateExecutionDataAsync(executionId: string, executionData: ExecutionData): Promise<void> {
-    throw new Error(`Not implemented`);
-  }
-
-  async deleteExecutionDataAsync(executionId: string): Promise<void> {
+  async getExecutionStateAsync(executionId: string): Promise<ExecutionState> {
     throw new Error(`Not implemented`);
   }
 

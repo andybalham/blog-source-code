@@ -3,7 +3,7 @@ import LambdaTaskHandler from './LambdaTaskHandler';
 import OrchestrationDefinition from './OrchestrationDefinition';
 
 export interface OrchestrationDefinitionBuilderProps<TInput, TOutput, TData> {
-  initialiseData: (input: TInput) => TData;
+  getData: (input: TInput) => TData;
   getOutput?: (data: TData) => TOutput;
 }
 
@@ -26,6 +26,9 @@ export default class OrchestrationDefinitionBuilder<TInput, TOutput, TData> {
   }
 
   build(): OrchestrationDefinition<TInput, TOutput, TData> {
-    return new OrchestrationDefinition<TInput, TOutput, TData>();
+    const definition = new OrchestrationDefinition<TInput, TOutput, TData>();
+    definition.getData = this.props.getData;
+    definition.getOutput = this.props.getOutput;
+    return definition;
   }
 }

@@ -5,14 +5,14 @@ import { nanoid } from 'nanoid';
 import { LambdaInvokeResponse } from './exchanges/LambdaInvokeExchange';
 import { ListExecutionRequest, ListExecutionResponse } from './exchanges/ListExecutionExchange';
 import { StartExecutionRequest, StartExecutionResponse } from './exchanges/StartExecutionExchange';
-import ExecutionRepository, { ExecutionStatus } from './ExecutionRepository';
+import ExecutionRepository, { ExecutionSummary, ExecutionStatus } from './ExecutionRepository';
 import OrchestrationDefinition from './OrchestrationDefinition';
 
 const executionRepository = new ExecutionRepository();
 
 export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
   //
-  constructor(private definition: OrchestrationDefinition<TInput, TOutput, TData>) {}
+  constructor(public definition: OrchestrationDefinition<TInput, TOutput, TData>) {}
 
   // eslint-disable-next-line class-methods-use-this
   async handleAsync(
@@ -22,7 +22,7 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     // eslint-disable-next-line no-console
     console.log(JSON.stringify({ event }, null, 2));
 
-    // TODO 12Sep21: Raise an event on completion with the output
+    // TODO 12Sep21: Raise an event on completion with the output? No, keep behaviour like Step Functions
 
     if ('isStartExecutionResponse' in event) {
       return this.handleStartExecutionAsync(event);
@@ -45,20 +45,29 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     //
     const executionId = nanoid();
 
-    await executionRepository.createExecutionStateAsync(executionId, {
-      startDate: new Date(),
+    const initialExecutionSummary: ExecutionSummary = {
+      startTime: Date.now(),
       status: ExecutionStatus.Running,
-    });
+    };
+
+    await executionRepository.putExecutionSummaryAsync(executionId, initialExecutionSummary);
 
     const data = this.definition.getData((request.input ?? {}) as TInput);
 
-    await executionRepository.createExecutionDataAsync(executionId, {
+    await executionRepository.putExecutionStateAsync(executionId, {
+      messageCount: 0,
       data,
     });
 
     // TODO 13Sep21: Run the orchestration from the start as far as it will go
 
-    // TODO 13Sep21: If it got to the end then do the 'on completion' steps, e.g. delete data and update state
+    const finalExecutionSummary: ExecutionSummary = {
+      ...initialExecutionSummary,
+      endTime: Date.now(),
+      status: ExecutionStatus.Completed,
+    };
+
+    await executionRepository.putExecutionSummaryAsync(executionId, finalExecutionSummary);
 
     return {
       isStartExecutionResponse: null,
@@ -70,13 +79,13 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     request: ListExecutionRequest
   ): Promise<ListExecutionResponse> {
     //
-    const executionState = await executionRepository.retrieveExecutionStateAsync(
+    const executionSummary = await executionRepository.getExecutionSummaryAsync(
       request.executionId
     );
 
     return {
       isListExecutionResponse: null,
-      executionState,
+      executionSummary,
     };
   }
 
@@ -85,6 +94,8 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     const lambdaInvokeResponses = event.Records.map(
       (r) => JSON.parse(r.Sns.Message) as LambdaInvokeResponse
     );
+
+    // TODO 16Sep21: Handle in parallel?
 
     for await (const lambdaInvokeResponse of lambdaInvokeResponses) {
       try {
@@ -101,13 +112,9 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     //   response.executionId,
     //   response.messageId
     // );
-
-    // const data = await executionRepository.retrieveExecutionDataAsync(response.executionId);
-
+    // const data = await executionRepository.retrieveExecutionStateAsync(response.executionId);
     // const responsePayload = response.payload ?? {};
-
     // TODO 13Sep21: Resume the flow
-
     // TODO 13Sep21: If it got to the end then do the 'on completion' steps, e.g. delete data and update state
   }
 }

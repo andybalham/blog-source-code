@@ -62,7 +62,7 @@ describe('Simple sequence tests', () => {
             isListExecutionResponse: null,
             executionId,
           })
-        )?.executionState?.status === ExecutionStatus.Completed,
+        )?.executionSummary?.status === ExecutionStatus.Completed,
     });
 
     // Assert
@@ -77,6 +77,6 @@ describe('Simple sequence tests', () => {
       executionId,
     });
 
-    expect(listExecutionResponse?.executionState?.output).to.deep.equal(expectedOutput);
+    expect(listExecutionResponse?.executionSummary?.output).to.deep.equal(expectedOutput);
   });
 });

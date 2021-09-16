@@ -1,4 +1,4 @@
-import { ExecutionState } from '../ExecutionRepository';
+import { ExecutionSummary } from '../ExecutionRepository';
 
 export interface ListExecutionRequest {
   isListExecutionResponse: null;
@@ -7,5 +7,5 @@ export interface ListExecutionRequest {
 
 export interface ListExecutionResponse {
   isListExecutionResponse: null;
-  executionState?: ExecutionState;
+  executionSummary?: ExecutionSummary;
 }

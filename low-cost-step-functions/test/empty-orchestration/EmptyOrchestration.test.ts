@@ -50,10 +50,15 @@ describe('Empty orchestration tests', () => {
             isListExecutionResponse: null,
             executionId,
           })
-        )?.executionState?.status === ExecutionStatus.Completed,
+        )?.executionSummary?.status === ExecutionStatus.Completed,
     });
 
     // Assert
+
+    const response = await sut.invokeAsync<ListExecutionRequest, ListExecutionResponse>({
+      isListExecutionResponse: null,
+      executionId,
+    });
 
     expect(timedOut, 'timedOut').to.be.false;
   });
