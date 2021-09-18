@@ -5,11 +5,8 @@ import * as sns from '@aws-cdk/aws-sns';
 import * as snsSubs from '@aws-cdk/aws-sns-subscriptions';
 import * as dynamodb from '@aws-cdk/aws-dynamodb';
 
-export interface OrchestratorBaseProps {
-  executionTable: dynamodb.ITable;
-}
-
-export interface OrchestratorProps extends OrchestratorBaseProps {
+export interface OrchestratorProps {
+  executionTable?: dynamodb.ITable;
   handlerFunction: lambda.Function;
 }
 
@@ -34,12 +31,15 @@ export default abstract class Orchestrator extends cdk.Construct {
 
     this.handlerFunction = props.handlerFunction;
 
-    this.handlerFunction.addEnvironment(
-      Orchestrator.EnvVars.EXECUTION_TABLE_NAME,
-      props.executionTable.tableName
-    );
+    if (props.executionTable) {
+      //
+      this.handlerFunction.addEnvironment(
+        Orchestrator.EnvVars.EXECUTION_TABLE_NAME,
+        props.executionTable?.tableName
+      );
 
-    props.executionTable.grantReadWriteData(this.handlerFunction);
+      props.executionTable.grantReadWriteData(this.handlerFunction);
+    }
 
     this.responseTopic = new sns.Topic(this, 'ResponseTopic');
     this.responseTopic.addSubscription(new snsSubs.LambdaSubscription(this.handlerFunction));

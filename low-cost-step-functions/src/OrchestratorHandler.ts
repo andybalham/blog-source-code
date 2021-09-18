@@ -60,7 +60,7 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     // TODO 13Sep21: Run the orchestration from the start as far as it will go
 
     for await (const step of this.orchestration.steps) {
-      if ('isLambdaInvoke' in step) {
+      if ('isAsyncTask' in step) {
         const stepRequest = step.getRequest(data);
         console.log(`${JSON.stringify({ step })}: ${JSON.stringify({ stepRequest })}`);
         // TODO 18Sep21: Instead of invoking directly, invoke via SNS

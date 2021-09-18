@@ -41,7 +41,7 @@ class SimpleSequenceHandler extends OrchestratorHandler<
         getOutput: (data): SimpleSequenceOutput => ({ total: data.total }),
       })
 
-        .invokeLambdaAsync({
+        .invokeAsync({
           stepId: 'AddX&Y',
           HandlerType: AddTwoNumbersTaskHandler,
           getRequest: (data) => ({
@@ -53,7 +53,7 @@ class SimpleSequenceHandler extends OrchestratorHandler<
           },
         })
 
-        .invokeLambdaAsync({
+        .invokeAsync({
           stepId: 'AddZ&Total',
           HandlerType: AddTwoNumbersTaskHandler,
           getRequest: (data) => ({

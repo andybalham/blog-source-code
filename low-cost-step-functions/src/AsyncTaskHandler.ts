@@ -5,22 +5,23 @@ import { SNSEvent } from 'aws-lambda/trigger/sns';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import SNS, { PublishInput } from 'aws-sdk/clients/sns';
 import { LambdaInvokeRequest, LambdaInvokeResponse } from './exchanges/LambdaInvokeExchange';
+import { TaskHandler } from './TaskHandler';
 
 const sns = new SNS();
 
-export default abstract class LambdaTaskHandler<TReq, TRes> {
+export default abstract class AsyncTaskHandler<TReq, TRes> implements TaskHandler<TReq, TRes> {
   //
   static readonly Env = {
     REQUEST_TOPIC_ARN: 'REQUEST_TOPIC_ARN',
   };
 
-  static readonly eventTopicArn = process.env[LambdaTaskHandler.Env.REQUEST_TOPIC_ARN];
+  static readonly eventTopicArn = process.env[AsyncTaskHandler.Env.REQUEST_TOPIC_ARN];
 
   async handleAsync(event: SNSEvent): Promise<void> {
     //
     console.log(JSON.stringify({ event }, null, 2));
 
-    if (LambdaTaskHandler.eventTopicArn === undefined)
+    if (AsyncTaskHandler.eventTopicArn === undefined)
       throw new Error('LambdaTaskHandler.eventTopicArn === undefined');
 
     const requests = event.Records.map((r) => JSON.parse(r.Sns.Message) as LambdaInvokeRequest);
@@ -37,7 +38,7 @@ export default abstract class LambdaTaskHandler<TReq, TRes> {
         };
 
         const responsePublishInput: PublishInput = {
-          TopicArn: LambdaTaskHandler.eventTopicArn,
+          TopicArn: AsyncTaskHandler.eventTopicArn,
           Message: JSON.stringify(lambdaInvokeResponse),
         };
 

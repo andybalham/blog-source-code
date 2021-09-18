@@ -3,42 +3,38 @@ import * as lambda from '@aws-cdk/aws-lambda';
 import * as sns from '@aws-cdk/aws-sns';
 import * as snsSubs from '@aws-cdk/aws-sns-subscriptions';
 import Orchestrator from './Orchestrator';
-import LambdaTaskHandler from './LambdaTaskHandler';
+import AsyncTaskHandler from './AsyncTaskHandler';
 
-export interface LambdaTaskBaseProps {
-  orchestrator: Orchestrator;
-}
-
-export interface LambdaTaskProps<TReq, TRes> extends LambdaTaskBaseProps {
-  handlerType: new () => LambdaTaskHandler<TReq, TRes>;
+export interface AsyncTaskProps<TReq, TRes> {
+  handlerType: new () => AsyncTaskHandler<TReq, TRes>;
   handlerFunction: lambda.Function;
 }
 
-export default abstract class LambdaTask<TReq, TRes> extends cdk.Construct {
+export default abstract class AsyncTask<TReq, TRes> extends cdk.Construct {
   //
   readonly requestTopic: sns.ITopic;
 
-  constructor(scope: cdk.Construct, id: string, props: LambdaTaskProps<TReq, TRes>) {
-    super(scope, id);
+  constructor(orchestrator: Orchestrator, id: string, props: AsyncTaskProps<TReq, TRes>) {
+    super(orchestrator, id);
 
     props.handlerFunction.addEnvironment(
       Orchestrator.EnvVars.RESPONSE_EVENT_TOPIC_ARN,
-      props.orchestrator.responseTopic.topicArn
+      orchestrator.responseTopic.topicArn
     );
 
-    props.orchestrator.responseTopic.grantPublish(props.handlerFunction);
+    orchestrator.responseTopic.grantPublish(props.handlerFunction);
 
     this.requestTopic = new sns.Topic(this, `${props.handlerType.name}RequestTopic`);
     this.requestTopic.addSubscription(new snsSubs.LambdaSubscription(props.handlerFunction));
 
-    props.orchestrator.handlerFunction.addEnvironment(
-      LambdaTask.getRequestTopicArnEnvVarName(props.handlerType),
+    orchestrator.handlerFunction.addEnvironment(
+      AsyncTask.getRequestTopicArnEnvVarName(props.handlerType),
       this.requestTopic.topicArn
     );
   }
 
   static getRequestTopicArnEnvVarName<TReq, TRes>(
-    handlerType: new () => LambdaTaskHandler<TReq, TRes>
+    handlerType: new () => AsyncTaskHandler<TReq, TRes>
   ): string {
     return `${handlerType.name.toUpperCase()}_REQUEST_TOPIC_ARN`;
   }

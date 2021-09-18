@@ -1,14 +1,11 @@
 import * as cdk from '@aws-cdk/core';
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
-import { Orchestrator, OrchestratorProps } from '../../src';
-
-export type EmptyOrchestratorProps = Omit<OrchestratorProps, 'handlerFunction'>;
+import { Orchestrator } from '../../src';
 
 export default class EmptyOrchestrator extends Orchestrator {
   //
-  constructor(scope: cdk.Construct, id: string, props: EmptyOrchestratorProps) {
+  constructor(scope: cdk.Construct, id: string) {
     super(scope, id, {
-      ...props,
       handlerFunction: new lambdaNodejs.NodejsFunction(scope, 'handler'),
     });
   }

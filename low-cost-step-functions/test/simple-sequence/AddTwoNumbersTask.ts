@@ -1,23 +1,20 @@
 /* eslint-disable no-new */
-import * as cdk from '@aws-cdk/core';
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
-import { LambdaTask } from '../../src';
-import { LambdaTaskBaseProps } from '../../src/LambdaTask';
+import { AsyncTask, Orchestrator } from '../../src';
 import {
   AddTwoNumbersRequest,
   AddTwoNumbersResponse,
   AddTwoNumbersTaskHandler,
 } from './AddTwoNumbersTask.handler';
 
-export default class AddTwoNumbersTask extends LambdaTask<
+export default class AddTwoNumbersTask extends AsyncTask<
   AddTwoNumbersRequest,
   AddTwoNumbersResponse
 > {
-  constructor(scope: cdk.Construct, id: string, props: LambdaTaskBaseProps) {
-    super(scope, id, {
-      ...props,
+  constructor(orchestrator: Orchestrator, id: string) {
+    super(orchestrator, id, {
       handlerType: AddTwoNumbersTaskHandler,
-      handlerFunction: new lambdaNodejs.NodejsFunction(scope, 'handler'),
+      handlerFunction: new lambdaNodejs.NodejsFunction(orchestrator, 'handler'),
     });
   }
 }

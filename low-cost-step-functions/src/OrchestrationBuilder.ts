@@ -1,5 +1,5 @@
 /* eslint-disable class-methods-use-this */
-import LambdaTaskHandler from './LambdaTaskHandler';
+import { TaskHandler } from './TaskHandler';
 
 export interface OrchestrationStep {
   stepId: string;
@@ -8,15 +8,23 @@ export interface OrchestrationStep {
 export interface Orchestration<TInput, TOutput, TData> {
   getData: (input: TInput) => TData;
   getOutput?: (data: TData) => TOutput;
-  steps: Array<LambdaInvokeOrchestrationStep<any, any, TData>>;
+  steps: Array<TaskOrchestrationStep<any, any, TData>>;
 }
 
-export interface LambdaInvokeOrchestrationStep<TReq, TRes, TData> extends OrchestrationStep {
-  isLambdaInvoke: null;
-  stepId: string;
-  HandlerType: new () => LambdaTaskHandler<TReq, TRes>;
+export interface TaskOrchestrationStep<TReq, TRes, TData> extends OrchestrationStep {
+  HandlerType: new () => TaskHandler<TReq, TRes>;
   getRequest: (data: TData) => TReq;
   updateData: (data: TData, response: TRes) => void;
+}
+
+export interface SyncTaskOrchestrationStep<TReq, TRes, TData>
+  extends TaskOrchestrationStep<TReq, TRes, TData> {
+  isSyncTask: null;
+}
+
+export interface AsyncTaskOrchestrationStep<TReq, TRes, TData>
+  extends TaskOrchestrationStep<TReq, TRes, TData> {
+  isAsyncTask: null;
 }
 
 export interface OrchestrationBuilderProps<TInput, TOutput, TData> {
@@ -26,17 +34,31 @@ export interface OrchestrationBuilderProps<TInput, TOutput, TData> {
 
 export default class OrchestrationBuilder<TInput, TOutput, TData> {
   //
-  private readonly orchestrationSteps = new Array<LambdaInvokeOrchestrationStep<any, any, TData>>();
+  private readonly orchestrationSteps = new Array<TaskOrchestrationStep<any, any, TData>>();
 
   constructor(public props: OrchestrationBuilderProps<TInput, TOutput, TData>) {}
 
-  invokeLambdaAsync<TReq, TRes>(
-    lambdaInvokeProps: Omit<LambdaInvokeOrchestrationStep<TReq, TRes, TData>, 'isLambdaInvoke'>
+  invoke<TReq, TRes>(
+    taskProps: TaskOrchestrationStep<TReq, TRes, TData>
   ): OrchestrationBuilder<TInput, TOutput, TData> {
     //
-    const lambdaInvokeStep: LambdaInvokeOrchestrationStep<TReq, TRes, TData> = {
-      isLambdaInvoke: null,
-      ...lambdaInvokeProps,
+    const lambdaInvokeStep: SyncTaskOrchestrationStep<TReq, TRes, TData> = {
+      isSyncTask: null,
+      ...taskProps,
+    };
+
+    this.orchestrationSteps.push(lambdaInvokeStep);
+
+    return this;
+  }
+
+  invokeAsync<TReq, TRes>(
+    taskProps: TaskOrchestrationStep<TReq, TRes, TData>
+  ): OrchestrationBuilder<TInput, TOutput, TData> {
+    //
+    const lambdaInvokeStep: AsyncTaskOrchestrationStep<TReq, TRes, TData> = {
+      isAsyncTask: null,
+      ...taskProps,
     };
 
     this.orchestrationSteps.push(lambdaInvokeStep);

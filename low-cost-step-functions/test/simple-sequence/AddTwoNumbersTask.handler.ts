@@ -1,5 +1,5 @@
 /* eslint-disable class-methods-use-this */
-import { LambdaTaskHandler } from '../../src';
+import { AsyncTaskHandler } from '../../src';
 
 export interface AddTwoNumbersRequest {
   value1: number;
@@ -10,7 +10,7 @@ export interface AddTwoNumbersResponse {
   total: number;
 }
 
-export class AddTwoNumbersTaskHandler extends LambdaTaskHandler<
+export class AddTwoNumbersTaskHandler extends AsyncTaskHandler<
   AddTwoNumbersRequest,
   AddTwoNumbersResponse
 > {
