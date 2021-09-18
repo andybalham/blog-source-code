@@ -4,13 +4,11 @@ import { StartExecutionRequest, StartExecutionResponse } from './exchanges/Start
 import OrchestratorHandler from './OrchestratorHandler';
 import LambdaTask, { LambdaTaskBaseProps, LambdaTaskProps } from './LambdaTask';
 import LambdaTaskHandler from './LambdaTaskHandler';
-import OrchestrationDefinition from './OrchestrationDefinition';
-import OrchestrationDefinitionBuilder from './OrchestrationDefinitionBuilder';
+import OrchestrationBuilder from './OrchestrationBuilder';
 import { ExecutionStatus } from './ExecutionRepository';
 
 export {
-  OrchestrationDefinition,
-  OrchestrationDefinitionBuilder,
+  OrchestrationBuilder,
   Orchestrator,
   OrchestratorProps,
   OrchestratorBaseProps,

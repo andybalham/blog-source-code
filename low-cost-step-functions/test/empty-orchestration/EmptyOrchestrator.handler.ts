@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable import/prefer-default-export */
 
-import { OrchestrationDefinitionBuilder, OrchestratorHandler } from '../../src';
+import { OrchestrationBuilder, OrchestratorHandler } from '../../src';
 
 export interface Input {}
 export interface Output {}
@@ -12,7 +12,7 @@ export interface Data {}
 class EmptyOrchestratorHandler extends OrchestratorHandler<Input, Output, Data> {
   constructor() {
     super(
-      new OrchestrationDefinitionBuilder<Input, Output, Data>({ getData: (): Data => ({}) }).build()
+      new OrchestrationBuilder<Input, Output, Data>({ getData: (): Data => ({}) }).build()
     );
   }
 }

@@ -11,10 +11,10 @@ const sns = new SNS();
 export default abstract class LambdaTaskHandler<TReq, TRes> {
   //
   static readonly Env = {
-    EVENT_TOPIC_ARN: 'EVENT_TOPIC_ARN',
+    REQUEST_TOPIC_ARN: 'REQUEST_TOPIC_ARN',
   };
 
-  static readonly eventTopicArn = process.env[LambdaTaskHandler.Env.EVENT_TOPIC_ARN];
+  static readonly eventTopicArn = process.env[LambdaTaskHandler.Env.REQUEST_TOPIC_ARN];
 
   async handleAsync(event: SNSEvent): Promise<void> {
     //
@@ -27,27 +27,28 @@ export default abstract class LambdaTaskHandler<TReq, TRes> {
 
     for await (const request of requests) {
       //
-      // TODO 11Sep21: Error handling
+      try {
+        const responsePayload = await this.handleRequestAsync(request.payload as TReq);
 
-      const responsePayload = await this.handleRequestAsync(request.payload as TReq);
+        const lambdaInvokeResponse: LambdaInvokeResponse = {
+          executionId: request.executionId,
+          messageId: request.messageId,
+          payload: responsePayload,
+        };
 
-      const lambdaInvokeResponse: LambdaInvokeResponse = {
-        isLambdaInvokeResponse: null,
-        executionId: request.executionId,
-        messageId: request.messageId,
-        payload: responsePayload,
-      };
+        const responsePublishInput: PublishInput = {
+          TopicArn: LambdaTaskHandler.eventTopicArn,
+          Message: JSON.stringify(lambdaInvokeResponse),
+        };
 
-      const responsePublishInput: PublishInput = {
-        TopicArn: LambdaTaskHandler.eventTopicArn,
-        Message: JSON.stringify(lambdaInvokeResponse),
-        // TODO 13Sep21: Routing attributes
-        // MessageAttributes
-      };
+        const responsePublishResponse = await sns.publish(responsePublishInput).promise();
 
-      const responsePublishResponse = await sns.publish(responsePublishInput).promise();
-
-      console.log(JSON.stringify({ responsePublishResponse }, null, 2));
+        console.log(JSON.stringify({ responsePublishResponse }, null, 2));
+        //
+      } catch (error: any) {
+        // eslint-disable-next-line no-console
+        console.error(`${error.stack}\n\nError handling request: ${JSON.stringify(request)}`);
+      }
     }
   }
 

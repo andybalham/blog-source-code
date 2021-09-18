@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable class-methods-use-this */
 import { SNSEvent } from 'aws-lambda/trigger/sns';
@@ -6,13 +7,13 @@ import { LambdaInvokeResponse } from './exchanges/LambdaInvokeExchange';
 import { ListExecutionRequest, ListExecutionResponse } from './exchanges/ListExecutionExchange';
 import { StartExecutionRequest, StartExecutionResponse } from './exchanges/StartExecutionExchange';
 import ExecutionRepository, { ExecutionState, ExecutionStatus } from './ExecutionRepository';
-import OrchestrationDefinition from './OrchestrationDefinition';
+import { Orchestration } from './OrchestrationBuilder';
 
 const executionRepository = new ExecutionRepository();
 
 export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
   //
-  constructor(public definition: OrchestrationDefinition<TInput, TOutput, TData>) {}
+  constructor(public orchestration: Orchestration<TInput, TOutput, TData>) {}
 
   // eslint-disable-next-line class-methods-use-this
   async handleAsync(
@@ -45,7 +46,7 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     //
     const executionId = nanoid();
 
-    const data = this.definition.getData((request.input ?? {}) as TInput);
+    const data = this.orchestration.getData((request.input ?? {}) as TInput);
 
     const initialExecutionState: ExecutionState = {
       startTime: Date.now(),
@@ -58,7 +59,21 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
 
     // TODO 13Sep21: Run the orchestration from the start as far as it will go
 
-    const output = this.definition.getOutput ? this.definition.getOutput(data) : undefined;
+    for await (const step of this.orchestration.steps) {
+      if ('isLambdaInvoke' in step) {
+        const stepRequest = step.getRequest(data);
+        console.log(`${JSON.stringify({ step })}: ${JSON.stringify({ stepRequest })}`);
+        // TODO 18Sep21: Instead of invoking directly, invoke via SNS
+        const stepHandler = new step.HandlerType();
+        const stepResponse = await stepHandler.handleRequestAsync(stepRequest);
+        console.log(`${JSON.stringify({ step })}: ${JSON.stringify({ stepResponse })}`);
+        step.updateData(data, stepResponse);
+      } else {
+        throw new Error(`Unhandled step type: ${JSON.stringify(step)}`);
+      }
+    }
+
+    const output = this.orchestration.getOutput ? this.orchestration.getOutput(data) : undefined;
 
     const finalExecutionState: ExecutionState = {
       ...initialExecutionState,
@@ -103,8 +118,12 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     for await (const lambdaInvokeResponse of lambdaInvokeResponses) {
       try {
         await this.handleLambdaInvokeResponseAsync(lambdaInvokeResponse);
-      } catch (error) {
+      } catch (error: any) {
         // TODO 13Sep21: Prevent one orchestration from bringing down another
+        // eslint-disable-next-line no-console
+        console.error(
+          `${error.stack}\n\nError handling response: ${JSON.stringify(lambdaInvokeResponse)}`
+        );
       }
     }
   }
