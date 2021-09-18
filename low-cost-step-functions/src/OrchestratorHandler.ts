@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid';
 import { LambdaInvokeResponse } from './exchanges/LambdaInvokeExchange';
 import { ListExecutionRequest, ListExecutionResponse } from './exchanges/ListExecutionExchange';
 import { StartExecutionRequest, StartExecutionResponse } from './exchanges/StartExecutionExchange';
-import ExecutionRepository, { ExecutionSummary, ExecutionStatus } from './ExecutionRepository';
+import ExecutionRepository, { ExecutionState, ExecutionStatus } from './ExecutionRepository';
 import OrchestrationDefinition from './OrchestrationDefinition';
 
 const executionRepository = new ExecutionRepository();
@@ -45,32 +45,31 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     //
     const executionId = nanoid();
 
-    const initialExecutionSummary: ExecutionSummary = {
-      startTime: Date.now(),
-      status: ExecutionStatus.Running,
-    };
-
-    await executionRepository.putExecutionSummaryAsync(executionId, initialExecutionSummary);
-
     const data = this.definition.getData((request.input ?? {}) as TInput);
 
-    await executionRepository.putExecutionStateAsync(executionId, {
+    const initialExecutionState: ExecutionState = {
+      startTime: Date.now(),
+      status: ExecutionStatus.Running,
       messageCount: 0,
       data,
-    });
+    };
+
+    await executionRepository.putExecutionStateAsync(executionId, initialExecutionState);
 
     // TODO 13Sep21: Run the orchestration from the start as far as it will go
 
-    const finalExecutionSummary: ExecutionSummary = {
-      ...initialExecutionSummary,
+    const output = this.definition.getOutput ? this.definition.getOutput(data) : undefined;
+
+    const finalExecutionState: ExecutionState = {
+      ...initialExecutionState,
       endTime: Date.now(),
       status: ExecutionStatus.Completed,
+      output,
     };
 
-    await executionRepository.putExecutionSummaryAsync(executionId, finalExecutionSummary);
+    await executionRepository.putExecutionStateAsync(executionId, finalExecutionState);
 
     return {
-      isStartExecutionResponse: null,
       executionId,
     };
   }
@@ -79,13 +78,17 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     request: ListExecutionRequest
   ): Promise<ListExecutionResponse> {
     //
-    const executionSummary = await executionRepository.getExecutionSummaryAsync(
-      request.executionId
-    );
+    const executionState = await executionRepository.getExecutionStateAsync(request.executionId);
+
+    if (executionState === undefined) {
+      return {};
+    }
 
     return {
-      isListExecutionResponse: null,
-      executionSummary,
+      status: executionState.status,
+      startTime: executionState.startTime,
+      endTime: executionState.endTime,
+      output: executionState.output,
     };
   }
 

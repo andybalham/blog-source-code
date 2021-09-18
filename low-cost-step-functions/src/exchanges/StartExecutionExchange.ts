@@ -4,6 +4,5 @@ export interface StartExecutionRequest {
 }
 
 export interface StartExecutionResponse {
-  isStartExecutionResponse: null;
   executionId: string;
 }

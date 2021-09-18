@@ -8,21 +8,19 @@ export enum ExecutionStatus {
   Failed = 'FAILED',
 }
 
-export interface ExecutionSummary {
+export interface ExecutionState {
   status: ExecutionStatus;
   startTime: number;
+  messageCount: number;
+  data: Record<string, any>;
   endTime?: number;
   output?: Record<string, any>;
 }
 
-export interface ExecutionState {
-  messageCount: number;
-  data: Record<string, any>;
-}
-
 export interface ExecutionMessage {
+  messageId: string;
+  executionStateId: string;
   sentTime: number;
-  stateId: string;
 }
 
 const dynamoDBClient = new DynamoDBClient(
@@ -31,59 +29,86 @@ const dynamoDBClient = new DynamoDBClient(
   Orchestrator.ExecutionTableSchema.sortKey.name
 );
 
+interface ExecutionItemKey {
+  PK: string;
+  SK: string;
+}
+
+interface ExecutionItem extends ExecutionItemKey {
+  item: Record<string, any>;
+}
+
 export default class ExecutionRepository {
   //
-  async putExecutionSummaryAsync(
-    executionId: string,
-    executionSummary: ExecutionSummary
-  ): Promise<void> {
-    //
-    await dynamoDBClient.putAsync({
-      PK: executionId,
-      SK: 'EXECUTION_STATE',
-      executionSummary,
-    });
-  }
+  static readonly StateSK = 'STATE';
 
-  async getExecutionSummaryAsync(executionId: string): Promise<ExecutionSummary | undefined> {
-    //
-    const executionSummaryItem = await dynamoDBClient.getAsync<any>({
-      PK: executionId,
-      SK: 'EXECUTION_STATE',
-    });
-
-    return executionSummaryItem?.executionSummary;
-  }
+  static readonly MessageSKPrefix = 'MSG_';
 
   async putExecutionStateAsync(executionId: string, executionState: ExecutionState): Promise<void> {
     //
-    await dynamoDBClient.putAsync({
+    const stateItem: ExecutionItem = {
       PK: executionId,
-      SK: 'EXECUTION_DATA',
-      executionState,
-    });
+      SK: ExecutionRepository.StateSK,
+      item: executionState,
+    };
+
+    await dynamoDBClient.putAsync(stateItem);
   }
 
-  async getExecutionStateAsync(executionId: string): Promise<ExecutionState> {
-    throw new Error(`Not implemented`);
+  async getExecutionStateAsync(executionId: string): Promise<ExecutionState | undefined> {
+    //
+    const executionStateItemKey: ExecutionItemKey = {
+      PK: executionId,
+      SK: ExecutionRepository.StateSK,
+    };
+
+    const executionStateItem = await dynamoDBClient.getAsync<ExecutionItem>(executionStateItemKey);
+
+    return executionStateItem?.item as ExecutionState;
   }
 
   async createExecutionMessageAsync(
     executionId: string,
-    messageId: string,
     executionMessage: ExecutionMessage
   ): Promise<void> {
-    throw new Error(`Not implemented`);
+    //
+    const stateItem: ExecutionItem = {
+      PK: executionId,
+      SK: ExecutionRepository.getExecutionMessageSK(executionMessage.messageId),
+      item: executionMessage,
+    };
+
+    await dynamoDBClient.putAsync(stateItem);
   }
 
-  async retrieveExecutionMessageAsync(
+  async getExecutionMessageAsync(
     executionId: string,
     messageId: string
-  ): Promise<ExecutionMessage> {
-    throw new Error(`Not implemented`);
+  ): Promise<ExecutionMessage | undefined> {
+    //
+    const executionMessageItemKey: ExecutionItemKey = {
+      PK: executionId,
+      SK: ExecutionRepository.getExecutionMessageSK(messageId),
+    };
+
+    const executionMessageItem = await dynamoDBClient.getAsync<ExecutionItem>(
+      executionMessageItemKey
+    );
+
+    return executionMessageItem?.item as ExecutionMessage;
   }
 
   async deleteExecutionMessageAsync(executionId: string, messageId: string): Promise<void> {
-    throw new Error(`Not implemented`);
+    //
+    const executionMessageItemKey: ExecutionItemKey = {
+      PK: executionId,
+      SK: ExecutionRepository.getExecutionMessageSK(messageId),
+    };
+
+    await dynamoDBClient.deleteAsync(executionMessageItemKey);
+  }
+
+  private static getExecutionMessageSK(messageId: string): string {
+    return ExecutionRepository.MessageSKPrefix + messageId;
   }
 }

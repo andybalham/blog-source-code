@@ -24,6 +24,23 @@ describe('Empty orchestration tests', () => {
     sut = testClient.getLambdaTestClient(EmptyOrchestrationTestStack.OrchestrationHandlerId);
   });
 
+  it('returns unknown status', async () => {
+    // Arrange
+
+    // Act
+
+    const response = await sut.invokeAsync<ListExecutionRequest, ListExecutionResponse>({
+      isListExecutionResponse: null,
+      executionId: 'unknown',
+    });
+
+    // Assert
+
+    console.log(JSON.stringify({ response }, null, 2));
+
+    expect(response?.status).to.be.undefined;
+  });
+
   it('returns completed status', async () => {
     // Arrange
 
@@ -50,7 +67,7 @@ describe('Empty orchestration tests', () => {
             isListExecutionResponse: null,
             executionId,
           })
-        )?.executionSummary?.status === ExecutionStatus.Completed,
+        )?.status === ExecutionStatus.Completed,
     });
 
     // Assert
@@ -59,6 +76,8 @@ describe('Empty orchestration tests', () => {
       isListExecutionResponse: null,
       executionId,
     });
+
+    console.log(JSON.stringify({ response }, null, 2));
 
     expect(timedOut, 'timedOut').to.be.false;
   });

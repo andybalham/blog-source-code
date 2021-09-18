@@ -6,7 +6,6 @@ export interface LambdaInvokeRequest {
 }
 
 export interface LambdaInvokeResponse {
-  isLambdaInvokeResponse: null;
   executionId: string;
   messageId: string;
   payload?: Record<string, any>;
