@@ -169,7 +169,7 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     const stepRequest = step.getRequest(data);
     const stepHandler = new step.HandlerType();
     const stepResponse = await stepHandler.handleRequestAsync(stepRequest);
-    step.updateData(data, stepResponse);
+    if (step.updateData) step.updateData(data, stepResponse);
   }
 
   private async executeAsyncTaskAsync(
@@ -299,7 +299,13 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
 
     const resumeStepIndex = this.getStepIndex(executionMessage.stepId);
 
-    this.orchestration.steps[resumeStepIndex].updateData(executionState.data, response.payload);
+    const resumeStep = this.orchestration.steps[resumeStepIndex] as TaskOrchestrationStep<
+      any,
+      any,
+      TData
+    >;
+
+    if (resumeStep.updateData) resumeStep.updateData(executionState.data, response.payload);
 
     const nextStepIndex = resumeStepIndex + 1;
 
