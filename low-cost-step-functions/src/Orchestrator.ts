@@ -14,7 +14,7 @@ export default abstract class Orchestrator extends cdk.Construct {
   //
   static readonly EnvVars = {
     EXECUTION_TABLE_NAME: 'EXECUTION_TABLE_NAME',
-    RESPONSE_EVENT_TOPIC_ARN: 'RESPONSE_EVENT_TOPIC_ARN',
+    RESPONSE_TOPIC_ARN: 'RESPONSE_TOPIC_ARN',
   };
 
   static readonly ExecutionTableSchema = {

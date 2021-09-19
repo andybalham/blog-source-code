@@ -1,43 +1,56 @@
+/* eslint-disable consistent-return */
+/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable no-await-in-loop */
 /* eslint-disable no-console */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable class-methods-use-this */
 import { SNSEvent } from 'aws-lambda/trigger/sns';
+import SNS, { PublishInput } from 'aws-sdk/clients/sns';
 import { nanoid } from 'nanoid';
-import { LambdaInvokeResponse } from './exchanges/LambdaInvokeExchange';
+import AsyncTask from './AsyncTask';
+import { AsyncTaskRequest, AsyncTaskResponse } from './exchanges/AsyncTaskExchange';
 import { ListExecutionRequest, ListExecutionResponse } from './exchanges/ListExecutionExchange';
 import { StartExecutionRequest, StartExecutionResponse } from './exchanges/StartExecutionExchange';
 import ExecutionRepository, { ExecutionState, ExecutionStatus } from './ExecutionRepository';
-import { Orchestration } from './OrchestrationBuilder';
+import { Orchestration, TaskOrchestrationStep } from './OrchestrationBuilder';
 
 const executionRepository = new ExecutionRepository();
 
+const sns = new SNS();
+
 export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
   //
+  static readonly MaxMessageCount = 1000;
+
   constructor(public orchestration: Orchestration<TInput, TOutput, TData>) {}
 
-  // eslint-disable-next-line class-methods-use-this
   async handleAsync(
     event: StartExecutionRequest | ListExecutionRequest | SNSEvent
   ): Promise<StartExecutionResponse | ListExecutionResponse | void> {
-    //
-    // eslint-disable-next-line no-console
-    console.log(JSON.stringify({ event }, null, 2));
+    try {
+      //
+      console.log(JSON.stringify({ event }, null, 2));
 
-    // TODO 12Sep21: Raise an event on completion with the output? No, keep behaviour like Step Functions
+      // TODO 12Sep21: Raise an event on completion with the output? No, keep behaviour like Step Functions
 
-    if ('isStartExecutionResponse' in event) {
-      return this.handleStartExecutionAsync(event);
+      if ('isStartExecutionResponse' in event) {
+        return await this.handleStartExecutionAsync(event);
+      }
+
+      if ('isListExecutionResponse' in event) {
+        return await this.handleListExecutionAsync(event);
+      }
+
+      if ('Records' in event) {
+        return await this.handleResumeExecutionAsync(event);
+      }
+
+      throw new Error(`Unhandled event type`);
+      //
+    } catch (error: any) {
+      // eslint-disable-next-line no-console
+      console.error(`${error.stack}\n\nError handling event: ${JSON.stringify(event)}`);
     }
-
-    if ('isListExecutionResponse' in event) {
-      return this.handleListExecutionAsync(event);
-    }
-
-    if ('Records' in event) {
-      return this.handleResumeExecutionAsync(event);
-    }
-
-    throw new Error(`Unhandled event type`);
   }
 
   private async handleStartExecutionAsync(
@@ -48,7 +61,7 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
 
     const data = this.orchestration.getData((request.input ?? {}) as TInput);
 
-    const initialExecutionState: ExecutionState = {
+    const initialExecutionState: ExecutionState<TData> = {
       startTime: Date.now(),
       status: ExecutionStatus.Running,
       messageCount: 0,
@@ -57,36 +70,156 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
 
     await executionRepository.putExecutionStateAsync(executionId, initialExecutionState);
 
-    // TODO 13Sep21: Run the orchestration from the start as far as it will go
+    if (this.orchestration.steps.length > 0) {
+      //
+      await this.executeFromStepAsync(executionId, initialExecutionState, 0);
+      //
+    } else {
+      //
+      // No steps mean we have nothing to do
 
-    for await (const step of this.orchestration.steps) {
-      if ('isAsyncTask' in step) {
-        const stepRequest = step.getRequest(data);
-        console.log(`${JSON.stringify({ step })}: ${JSON.stringify({ stepRequest })}`);
-        // TODO 18Sep21: Instead of invoking directly, invoke via SNS
-        const stepHandler = new step.HandlerType();
-        const stepResponse = await stepHandler.handleRequestAsync(stepRequest);
-        console.log(`${JSON.stringify({ step })}: ${JSON.stringify({ stepResponse })}`);
-        step.updateData(data, stepResponse);
-      } else {
-        throw new Error(`Unhandled step type: ${JSON.stringify(step)}`);
-      }
+      const output = this.orchestration.getOutput ? this.orchestration.getOutput(data) : undefined;
+
+      const finalExecutionState: ExecutionState<TData> = {
+        ...initialExecutionState,
+        endTime: Date.now(),
+        status: ExecutionStatus.Succeeded,
+        output,
+      };
+
+      await executionRepository.putExecutionStateAsync(executionId, finalExecutionState);
     }
-
-    const output = this.orchestration.getOutput ? this.orchestration.getOutput(data) : undefined;
-
-    const finalExecutionState: ExecutionState = {
-      ...initialExecutionState,
-      endTime: Date.now(),
-      status: ExecutionStatus.Completed,
-      output,
-    };
-
-    await executionRepository.putExecutionStateAsync(executionId, finalExecutionState);
 
     return {
       executionId,
     };
+  }
+
+  private async executeFromStepAsync(
+    executionId: string,
+    executionState: ExecutionState<TData>,
+    initialStepIndex: number
+  ): Promise<void> {
+    //
+    console.log(JSON.stringify({ initialState: executionState.data }, null, 2));
+
+    let stepIndex = initialStepIndex;
+
+    const isExecutionRunning = (): boolean =>
+      stepIndex < this.orchestration.steps.length && stepIndex !== -1;
+
+    let failSafeStepCount = 0; // Prevent accidental infinite loops
+    const maxFailSafeStepCount = 10000;
+
+    while (isExecutionRunning()) {
+      //
+      const step = this.orchestration.steps[stepIndex];
+
+      if ('isAsyncTask' in step) {
+        await this.executeAsyncTaskAsync(executionId, step, executionState.data);
+        break;
+      } else if ('isSyncTask' in step) {
+        await this.executeSyncTaskAsync(step, executionState.data);
+        stepIndex += 1;
+      } else {
+        throw new Error(`Unhandled step type: ${JSON.stringify(step)}`);
+      }
+
+      failSafeStepCount += 1;
+
+      if (failSafeStepCount > maxFailSafeStepCount) {
+        throw new Error(`Max fail safe step count has been reached: ${maxFailSafeStepCount}`);
+      }
+    }
+
+    if (isExecutionRunning()) {
+      //
+      const suspendedExecutionState: ExecutionState<TData> = {
+        ...executionState,
+        messageCount: executionState.messageCount + 1,
+      };
+
+      await executionRepository.putExecutionStateAsync(executionId, suspendedExecutionState);
+
+      console.log(JSON.stringify({ suspendedExecutionState }, null, 2));
+      //
+    } else {
+      //
+      const output = this.orchestration.getOutput
+        ? this.orchestration.getOutput(executionState.data)
+        : undefined;
+
+      const finalExecutionState: ExecutionState<TData> = {
+        ...executionState,
+        endTime: Date.now(),
+        status: ExecutionStatus.Succeeded,
+        output,
+      };
+
+      await executionRepository.putExecutionStateAsync(executionId, finalExecutionState);
+
+      console.log(JSON.stringify({ finalExecutionState }, null, 2));
+    }
+  }
+
+  private async executeSyncTaskAsync(
+    step: TaskOrchestrationStep<any, any, any>,
+    data: any
+  ): Promise<void> {
+    const stepRequest = step.getRequest(data);
+    const stepHandler = new step.HandlerType();
+    const stepResponse = await stepHandler.handleRequestAsync(stepRequest);
+    step.updateData(data, stepResponse);
+  }
+
+  private async executeAsyncTaskAsync(
+    executionId: string,
+    step: TaskOrchestrationStep<any, any, any>,
+    data: any
+  ): Promise<void> {
+    //
+    const stepRequest = step.getRequest(data);
+
+    const messageId = nanoid();
+
+    await executionRepository.putExecutionMessageAsync(executionId, {
+      messageId,
+      stepId: step.stepId,
+      sentTime: Date.now(),
+    });
+
+    const asyncTaskRequest: AsyncTaskRequest = {
+      isAsyncTaskRequest: null,
+      executionId,
+      messageId,
+      payload: stepRequest,
+    };
+
+    const taskHandlerRequestTopicArn =
+      process.env[AsyncTask.getRequestTopicArnEnvVarName(step.HandlerType)];
+
+    if (taskHandlerRequestTopicArn === undefined)
+      throw new Error('taskHandlerRequestTopicArn === undefined');
+
+    const requestPublishInput: PublishInput = {
+      TopicArn: taskHandlerRequestTopicArn,
+      Message: JSON.stringify(asyncTaskRequest),
+    };
+
+    console.log(JSON.stringify({ requestPublishInput }, null, 2));
+
+    await sns.publish(requestPublishInput).promise();
+  }
+
+  private getStepIndex(stepId: string): number {
+    //
+    const stepIndex = this.orchestration.steps.findIndex((s) => s.stepId === stepId);
+
+    if (stepIndex === -1) {
+      throw new Error(`Unknown stepId: ${stepId}`);
+    }
+
+    return stepIndex;
   }
 
   private async handleListExecutionAsync(
@@ -99,18 +232,22 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
       return {};
     }
 
-    return {
+    const listExecutionResponse: ListExecutionResponse = {
       status: executionState.status,
       startTime: executionState.startTime,
       endTime: executionState.endTime,
       output: executionState.output,
     };
+
+    console.log(JSON.stringify({ listExecutionResponse }, null, 2));
+
+    return listExecutionResponse;
   }
 
   async handleResumeExecutionAsync(event: SNSEvent): Promise<void> {
     //
     const lambdaInvokeResponses = event.Records.map(
-      (r) => JSON.parse(r.Sns.Message) as LambdaInvokeResponse
+      (r) => JSON.parse(r.Sns.Message) as AsyncTaskResponse
     );
 
     // TODO 16Sep21: Handle in parallel?
@@ -119,8 +256,6 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
       try {
         await this.handleLambdaInvokeResponseAsync(lambdaInvokeResponse);
       } catch (error: any) {
-        // TODO 13Sep21: Prevent one orchestration from bringing down another
-        // eslint-disable-next-line no-console
         console.error(
           `${error.stack}\n\nError handling response: ${JSON.stringify(lambdaInvokeResponse)}`
         );
@@ -128,15 +263,46 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     }
   }
 
-  async handleLambdaInvokeResponseAsync(response: LambdaInvokeResponse): Promise<void> {
+  async handleLambdaInvokeResponseAsync(response: AsyncTaskResponse): Promise<void> {
     //
-    // const message = await executionRepository.retrieveExecutionMessageAsync(
-    //   response.executionId,
-    //   response.messageId
-    // );
-    // const data = await executionRepository.retrieveExecutionStateAsync(response.executionId);
-    // const responsePayload = response.payload ?? {};
-    // TODO 13Sep21: Resume the flow
-    // TODO 13Sep21: If it got to the end then do the 'on completion' steps, e.g. delete data and update state
+    console.log(JSON.stringify({ response }, null, 2));
+
+    const executionState = await executionRepository.getExecutionStateAsync<TData>(
+      response.executionId
+    );
+
+    if (executionState === undefined) {
+      console.error(`No state found for: ${JSON.stringify(response)}`);
+      return;
+    }
+
+    if (executionState.messageCount > OrchestratorHandler.MaxMessageCount) {
+      console.error(`Max message cound exceeded: ${OrchestratorHandler.MaxMessageCount}`);
+      return;
+    }
+
+    console.log(JSON.stringify({ executionState }, null, 2));
+
+    const executionMessage = await executionRepository.getExecutionMessageAsync(
+      response.executionId,
+      response.messageId
+    );
+
+    if (executionMessage === undefined) {
+      console.error(`No message found for: ${JSON.stringify(response)}`);
+      return;
+    }
+
+    console.log(JSON.stringify({ executionMessage }, null, 2));
+
+    await executionRepository.deleteExecutionMessageAsync(response.executionId, response.messageId);
+
+    const resumeStepIndex = this.getStepIndex(executionMessage.stepId);
+
+    this.orchestration.steps[resumeStepIndex].updateData(executionState.data, response.payload);
+
+    const nextStepIndex = resumeStepIndex + 1;
+
+    await this.executeFromStepAsync(response.executionId, executionState, nextStepIndex);
   }
 }

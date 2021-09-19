@@ -4,52 +4,53 @@
 import { SNSEvent } from 'aws-lambda/trigger/sns';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import SNS, { PublishInput } from 'aws-sdk/clients/sns';
-import { LambdaInvokeRequest, LambdaInvokeResponse } from './exchanges/LambdaInvokeExchange';
+import { AsyncTaskRequest, AsyncTaskResponse } from './exchanges/AsyncTaskExchange';
+import Orchestrator from './Orchestrator';
 import { TaskHandler } from './TaskHandler';
 
 const sns = new SNS();
 
 export default abstract class AsyncTaskHandler<TReq, TRes> implements TaskHandler<TReq, TRes> {
   //
-  static readonly Env = {
-    REQUEST_TOPIC_ARN: 'REQUEST_TOPIC_ARN',
-  };
-
-  static readonly eventTopicArn = process.env[AsyncTaskHandler.Env.REQUEST_TOPIC_ARN];
+  static readonly responseTopicArn = process.env[Orchestrator.EnvVars.RESPONSE_TOPIC_ARN];
 
   async handleAsync(event: SNSEvent): Promise<void> {
     //
-    console.log(JSON.stringify({ event }, null, 2));
+    try {
+      console.log(JSON.stringify({ event }, null, 2));
 
-    if (AsyncTaskHandler.eventTopicArn === undefined)
-      throw new Error('LambdaTaskHandler.eventTopicArn === undefined');
+      if (AsyncTaskHandler.responseTopicArn === undefined)
+        throw new Error('AsyncTaskHandler.responseTopicArn === undefined');
 
-    const requests = event.Records.map((r) => JSON.parse(r.Sns.Message) as LambdaInvokeRequest);
+      const requests = event.Records.map((r) => JSON.parse(r.Sns.Message) as AsyncTaskRequest);
 
-    for await (const request of requests) {
-      //
-      try {
-        const responsePayload = await this.handleRequestAsync(request.payload as TReq);
-
-        const lambdaInvokeResponse: LambdaInvokeResponse = {
-          executionId: request.executionId,
-          messageId: request.messageId,
-          payload: responsePayload,
-        };
-
-        const responsePublishInput: PublishInput = {
-          TopicArn: AsyncTaskHandler.eventTopicArn,
-          Message: JSON.stringify(lambdaInvokeResponse),
-        };
-
-        const responsePublishResponse = await sns.publish(responsePublishInput).promise();
-
-        console.log(JSON.stringify({ responsePublishResponse }, null, 2));
+      for await (const request of requests) {
         //
-      } catch (error: any) {
-        // eslint-disable-next-line no-console
-        console.error(`${error.stack}\n\nError handling request: ${JSON.stringify(request)}`);
+        try {
+          const responsePayload = await this.handleRequestAsync(request.payload as TReq);
+
+          const asyncTaskResponse: AsyncTaskResponse = {
+            isAsyncTaskResponse: null,
+            executionId: request.executionId,
+            messageId: request.messageId,
+            payload: responsePayload,
+          };
+
+          const responsePublishInput: PublishInput = {
+            TopicArn: AsyncTaskHandler.responseTopicArn,
+            Message: JSON.stringify(asyncTaskResponse),
+          };
+
+          console.log(JSON.stringify({ responsePublishInput }, null, 2));
+
+          await sns.publish(responsePublishInput).promise();
+          //
+        } catch (error: any) {
+          console.error(`${error.stack}\n\nError handling request: ${JSON.stringify(request)}`);
+        }
       }
+    } catch (error: any) {
+      console.error(`${error.stack}\n\nError handling event: ${JSON.stringify(event)}`);
     }
   }
 

@@ -62,7 +62,7 @@ describe('Simple sequence tests', () => {
             isListExecutionResponse: null,
             executionId,
           })
-        )?.status === ExecutionStatus.Completed,
+        )?.status === ExecutionStatus.Succeeded,
     });
 
     // Assert

@@ -4,22 +4,22 @@ import DynamoDBClient from './utils/DynamoDBClient';
 
 export enum ExecutionStatus {
   Running = 'RUNNING',
-  Completed = 'SUCCEEDED',
+  Succeeded = 'SUCCEEDED',
   Failed = 'FAILED',
 }
 
-export interface ExecutionState {
+export interface ExecutionState<TData> {
   status: ExecutionStatus;
   startTime: number;
   messageCount: number;
-  data: Record<string, any>;
+  data: TData;
   endTime?: number;
   output?: Record<string, any>;
 }
 
 export interface ExecutionMessage {
   messageId: string;
-  executionStateId: string;
+  stepId: string;
   sentTime: number;
 }
 
@@ -44,7 +44,10 @@ export default class ExecutionRepository {
 
   static readonly MessageSKPrefix = 'MSG_';
 
-  async putExecutionStateAsync(executionId: string, executionState: ExecutionState): Promise<void> {
+  async putExecutionStateAsync<TData>(
+    executionId: string,
+    executionState: ExecutionState<TData>
+  ): Promise<void> {
     //
     const stateItem: ExecutionItem = {
       PK: executionId,
@@ -55,7 +58,9 @@ export default class ExecutionRepository {
     await dynamoDBClient.putAsync(stateItem);
   }
 
-  async getExecutionStateAsync(executionId: string): Promise<ExecutionState | undefined> {
+  async getExecutionStateAsync<TData>(
+    executionId: string
+  ): Promise<ExecutionState<TData> | undefined> {
     //
     const executionStateItemKey: ExecutionItemKey = {
       PK: executionId,
@@ -64,10 +69,10 @@ export default class ExecutionRepository {
 
     const executionStateItem = await dynamoDBClient.getAsync<ExecutionItem>(executionStateItemKey);
 
-    return executionStateItem?.item as ExecutionState;
+    return executionStateItem?.item as ExecutionState<TData>;
   }
 
-  async createExecutionMessageAsync(
+  async putExecutionMessageAsync(
     executionId: string,
     executionMessage: ExecutionMessage
   ): Promise<void> {

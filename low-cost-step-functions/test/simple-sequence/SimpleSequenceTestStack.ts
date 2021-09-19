@@ -3,6 +3,7 @@ import * as dynamodb from '@aws-cdk/aws-dynamodb';
 import { IntegrationTestStack } from '@andybalham/sls-testing-toolkit';
 import { Orchestrator } from '../../src';
 import SimpleSequence from './SimpleSequence';
+import { AddTwoNumbersTaskHandler } from './AddTwoNumbersTask.handler';
 
 export default class SimpleSequenceTestStack extends IntegrationTestStack {
   //
@@ -26,5 +27,6 @@ export default class SimpleSequenceTestStack extends IntegrationTestStack {
     });
 
     this.addTestResourceTag(sut.handlerFunction, SimpleSequenceTestStack.OrchestrationHandlerId);
+    this.addTestResourceTag(sut.addTwoNumbersTask.handlerFunction, AddTwoNumbersTaskHandler.name);
   }
 }

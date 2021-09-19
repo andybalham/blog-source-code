@@ -67,7 +67,7 @@ describe('Empty orchestration tests', () => {
             isListExecutionResponse: null,
             executionId,
           })
-        )?.status === ExecutionStatus.Completed,
+        )?.status === ExecutionStatus.Succeeded,
     });
 
     // Assert
