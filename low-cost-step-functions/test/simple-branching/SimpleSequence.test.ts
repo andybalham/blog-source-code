@@ -8,13 +8,13 @@ import {
   StartExecutionRequest,
   StartExecutionResponse,
 } from '../../src';
-import { SimpleSequenceInput, SimpleSequenceOutput } from './SimpleBranching.handler';
-import SimpleSequenceTestStack from './SimpleSequenceTestStack';
+import { SimpleBranchingInput } from './SimpleBranching.handler';
+import SimpleBranchingTestStack from './SimpleBranchingTestStack';
 
 describe('Simple sequence tests', () => {
   //
   const testClient = new IntegrationTestClient({
-    testStackId: SimpleSequenceTestStack.Id,
+    testStackId: SimpleBranchingTestStack.Id,
     deleteLogs: true,
   });
 
@@ -22,20 +22,16 @@ describe('Simple sequence tests', () => {
 
   before(async () => {
     await testClient.initialiseClientAsync();
-    sut = testClient.getLambdaTestClient(SimpleSequenceTestStack.OrchestrationHandlerId);
+    sut = testClient.getLambdaTestClient(SimpleBranchingTestStack.OrchestrationHandlerId);
   });
 
   it('returns expected total', async () => {
     // Arrange
 
-    const input: SimpleSequenceInput = {
+    const input: SimpleBranchingInput = {
+      operationText: 'plus',
       x: 1,
       y: 2,
-      z: 3,
-    };
-
-    const expectedOutput: SimpleSequenceOutput = {
-      total: 6,
     };
 
     // Act
@@ -77,6 +73,6 @@ describe('Simple sequence tests', () => {
       executionId,
     });
 
-    expect(listExecutionResponse?.output).to.deep.equal(expectedOutput);
+    expect(listExecutionResponse?.output).to.be.undefined;
   });
 });
