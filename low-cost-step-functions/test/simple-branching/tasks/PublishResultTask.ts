@@ -2,7 +2,10 @@
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
 import * as sns from '@aws-cdk/aws-sns';
 import { AsyncTask, Orchestrator } from '../../../src';
-import { PublishResultRequest, PublishResultTaskHandler } from './PublishResultTask.handler';
+import {
+  PublishResultRequest,
+  PublishResultTaskHandler,
+} from './PublishResultTask.PublishResultHandler';
 
 export default class PublishResultTask extends AsyncTask<PublishResultRequest, void> {
   //
@@ -11,7 +14,7 @@ export default class PublishResultTask extends AsyncTask<PublishResultRequest, v
   constructor(orchestrator: Orchestrator, id: string) {
     super(orchestrator, id, {
       handlerType: PublishResultTaskHandler,
-      handlerFunction: new lambdaNodejs.NodejsFunction(orchestrator, 'handler'),
+      handlerFunction: new lambdaNodejs.NodejsFunction(orchestrator, 'PublishResultHandler'),
     });
 
     this.resultTopic = new sns.Topic(this, 'ResultTopic');

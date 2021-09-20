@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 /* eslint-disable consistent-return */
 /* eslint-disable import/no-extraneous-dependencies */
 /* eslint-disable no-await-in-loop */
@@ -12,7 +13,11 @@ import { AsyncTaskRequest, AsyncTaskResponse } from './exchanges/AsyncTaskExchan
 import { ListExecutionRequest, ListExecutionResponse } from './exchanges/ListExecutionExchange';
 import { StartExecutionRequest, StartExecutionResponse } from './exchanges/StartExecutionExchange';
 import ExecutionRepository, { ExecutionState, ExecutionStatus } from './ExecutionRepository';
-import { Orchestration, TaskOrchestrationStep } from './OrchestrationBuilder';
+import {
+  ChoiceOrchestrationStep,
+  Orchestration,
+  TaskOrchestrationStep,
+} from './OrchestrationBuilder';
 
 const executionRepository = new ExecutionRepository();
 
@@ -109,15 +114,31 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
       stepIndex < this.orchestration.steps.length && stepIndex !== -1;
 
     let failSafeStepCount = 0; // Prevent accidental infinite loops
-    const maxFailSafeStepCount = 10000;
+    const maxFailSafeStepCount = 1000;
 
     while (isExecutionRunning()) {
       //
       const step = this.orchestration.steps[stepIndex];
 
+      console.log(JSON.stringify({ step }, null, 2));
+
+      // TODO 20Sep21: Error handling
+
       if ('isAsyncTask' in step) {
         await this.executeAsyncTaskAsync(executionId, step, executionState.data);
         break;
+      }
+
+      if ('isChoice' in step) {
+        stepIndex = this.getChoiceStepIndex(step, executionState.data);
+      } else if ('isNext' in step) {
+        stepIndex = this.getStepIndex(step.stepId);
+      } else if ('isSucceed' in step) {
+        executionState.status = ExecutionStatus.Succeeded;
+        stepIndex = -1;
+      } else if ('isFail' in step) {
+        executionState.status = ExecutionStatus.Failed;
+        stepIndex = -1;
       } else if ('isSyncTask' in step) {
         await this.executeSyncTaskAsync(step, executionState.data);
         stepIndex += 1;
@@ -162,6 +183,17 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     }
   }
 
+  private getChoiceStepIndex(step: ChoiceOrchestrationStep<TData>, data: TData): number {
+    //
+    const choice = step.choices.find((c) => c.when(data));
+
+    const nextStepId = choice ? choice.next : step.otherwise;
+
+    const nextStepIndex = this.getStepIndex(nextStepId);
+
+    return nextStepIndex;
+  }
+
   private async executeSyncTaskAsync(
     step: TaskOrchestrationStep<any, any, any>,
     data: any
@@ -195,11 +227,20 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
       payload: stepRequest,
     };
 
-    const taskHandlerRequestTopicArn =
-      process.env[AsyncTask.getRequestTopicArnEnvVarName(step.HandlerType)];
+    const stepHandlerTypeName = step.HandlerType.name;
+    const requestTopicArnEnvVarName = AsyncTask.getRequestTopicArnEnvVarName(step.HandlerType);
+    const taskHandlerRequestTopicArn = process.env[requestTopicArnEnvVarName];
+
+    console.log(
+      JSON.stringify(
+        { stepHandlerTypeName, requestTopicArnEnvVarName, taskHandlerRequestTopicArn },
+        null,
+        2
+      )
+    );
 
     if (taskHandlerRequestTopicArn === undefined)
-      throw new Error('taskHandlerRequestTopicArn === undefined');
+      throw new Error(`taskHandlerRequestTopicArn === undefined`);
 
     const requestPublishInput: PublishInput = {
       TopicArn: taskHandlerRequestTopicArn,

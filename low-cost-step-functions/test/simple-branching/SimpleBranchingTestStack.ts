@@ -3,8 +3,8 @@ import * as dynamodb from '@aws-cdk/aws-dynamodb';
 import { IntegrationTestStack } from '@andybalham/sls-testing-toolkit';
 import { Orchestrator } from '../../src';
 import SimpleBranching from './SimpleBranching';
-import { PerformNumericOperationTaskHandler } from './tasks/PerformNumericOperationTask.handler';
-import { PublishResultTaskHandler } from './tasks/PublishResultTask.handler';
+import { PerformNumericOperationTaskHandler } from './tasks/PerformNumericOperationTask.PerformNumericOperationHandler';
+import { PublishResultTaskHandler } from './tasks/PublishResultTask.PublishResultHandler';
 
 export default class SimpleBranchingTestStack extends IntegrationTestStack {
   //

@@ -6,8 +6,8 @@ import { OrchestrationBuilder, OrchestratorHandler } from '../../src';
 import {
   NumericOperation,
   PerformNumericOperationTaskHandler,
-} from './tasks/PerformNumericOperationTask.handler';
-import { PublishResultTaskHandler } from './tasks/PublishResultTask.handler';
+} from './tasks/PerformNumericOperationTask.PerformNumericOperationHandler';
+import { PublishResultTaskHandler } from './tasks/PublishResultTask.PublishResultHandler';
 
 export interface SimpleBranchingInput {
   operationText: string;

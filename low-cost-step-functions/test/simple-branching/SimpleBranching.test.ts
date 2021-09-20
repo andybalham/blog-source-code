@@ -8,7 +8,7 @@ import {
   StartExecutionRequest,
   StartExecutionResponse,
 } from '../../src';
-import { SimpleBranchingInput } from './SimpleBranching.handler';
+import { SimpleBranchingInput } from './SimpleBranching.OrchestrationHandler';
 import SimpleBranchingTestStack from './SimpleBranchingTestStack';
 
 describe('Simple sequence tests', () => {

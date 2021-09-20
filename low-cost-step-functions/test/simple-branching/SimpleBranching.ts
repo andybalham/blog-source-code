@@ -19,7 +19,7 @@ export default class SimpleBranching extends Orchestrator {
   constructor(scope: cdk.Construct, id: string, props: SimpleBranchingProps) {
     super(scope, id, {
       ...props,
-      handlerFunction: new lambdaNodejs.NodejsFunction(scope, 'handler'),
+      handlerFunction: new lambdaNodejs.NodejsFunction(scope, 'OrchestrationHandler'),
     });
 
     this.performNumericOperationTask = new PerformNumericOperationTask(
