@@ -91,7 +91,7 @@ class SimpleBranchingHandler extends OrchestratorHandler<
           stepId: 'publish_subtract_result',
           HandlerType: PublishResultTaskHandler,
           getRequest: (data) => ({
-            summary: `Subtracted ${data.input.y} to ${data.input.x} and got ${data.result}`,
+            summary: `Subtracted ${data.input.y} from ${data.input.x} and got ${data.result}`,
           }),
         })
 

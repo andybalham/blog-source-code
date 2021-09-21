@@ -43,6 +43,11 @@ export default abstract class AsyncTask<TReq, TRes> extends cdk.Construct {
   }
 
   static getRequestTopicArnEnvVarName(handlerType: new () => TaskHandler<any, any>): string {
-    return `${handlerType.name.toUpperCase()}_REQUEST_TOPIC_ARN`;
+    let envVarName = `${handlerType.name.toUpperCase()}_REQUEST_TOPIC_ARN`;
+    if (envVarName.startsWith('_')) {
+      // For some reason, the name sometimes comes back with a starting underscore
+      envVarName = envVarName.substring(1);
+    }
+    return envVarName;
   }
 }

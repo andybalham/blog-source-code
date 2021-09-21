@@ -19,6 +19,7 @@ export default class PublishResultTask extends AsyncTask<PublishResultRequest, v
 
     this.resultTopic = new sns.Topic(this, 'ResultTopic');
 
+    this.resultTopic.grantPublish(this.handlerFunction);
     this.handlerFunction.addEnvironment(
       PublishResultTaskHandler.EnvVars.ResultTopicArn,
       this.resultTopic.topicArn

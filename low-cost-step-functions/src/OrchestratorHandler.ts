@@ -173,7 +173,10 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
       const finalExecutionState: ExecutionState<TData> = {
         ...executionState,
         endTime: Date.now(),
-        status: ExecutionStatus.Succeeded,
+        status:
+          executionState.status === ExecutionStatus.Running
+            ? ExecutionStatus.Succeeded
+            : executionState.status,
         output,
       };
 
@@ -231,16 +234,13 @@ export default abstract class OrchestratorHandler<TInput, TOutput, TData> {
     const requestTopicArnEnvVarName = AsyncTask.getRequestTopicArnEnvVarName(step.HandlerType);
     const taskHandlerRequestTopicArn = process.env[requestTopicArnEnvVarName];
 
-    console.log(
-      JSON.stringify(
-        { stepHandlerTypeName, requestTopicArnEnvVarName, taskHandlerRequestTopicArn },
-        null,
-        2
-      )
-    );
-
     if (taskHandlerRequestTopicArn === undefined)
-      throw new Error(`taskHandlerRequestTopicArn === undefined`);
+      throw new Error(
+        `taskHandlerRequestTopicArn === undefined (${JSON.stringify({
+          stepHandlerTypeName,
+          requestTopicArnEnvVarName,
+        })})`
+      );
 
     const requestPublishInput: PublishInput = {
       TopicArn: taskHandlerRequestTopicArn,

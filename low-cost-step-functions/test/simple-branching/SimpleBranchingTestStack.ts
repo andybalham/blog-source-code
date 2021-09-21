@@ -12,11 +12,12 @@ export default class SimpleBranchingTestStack extends IntegrationTestStack {
 
   static readonly OrchestrationHandlerId = 'OrchestrationHandler';
 
-  static readonly ResultTopicId = 'ResultTopic';
+  static readonly ResultTopicObserverId = 'ResultTopicObserver';
 
   constructor(scope: cdk.Construct, id: string) {
     super(scope, id, {
       testStackId: SimpleBranchingTestStack.Id,
+      testFunctionIds: [SimpleBranchingTestStack.ResultTopicObserverId],
     });
 
     const executionTable = new dynamodb.Table(this, 'ExecutionTable', {
@@ -31,15 +32,16 @@ export default class SimpleBranchingTestStack extends IntegrationTestStack {
 
     this.addTestResourceTag(sut.handlerFunction, SimpleBranchingTestStack.OrchestrationHandlerId);
 
+    this.addSNSTopicSubscriber(
+      sut.publishResultTask.resultTopic,
+      SimpleBranchingTestStack.ResultTopicObserverId
+    );
+
+    // Tag the resources to keep their logs trimmed
     this.addTestResourceTag(
       sut.performNumericOperationTask.handlerFunction,
       PerformNumericOperationTaskHandler.name
     );
-
     this.addTestResourceTag(sut.publishResultTask.handlerFunction, PublishResultTaskHandler.name);
-    this.addTestResourceTag(
-      sut.publishResultTask.resultTopic,
-      SimpleBranchingTestStack.ResultTopicId
-    );
   }
 }
