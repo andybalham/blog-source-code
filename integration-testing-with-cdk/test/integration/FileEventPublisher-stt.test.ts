@@ -44,9 +44,9 @@ describe('FileEventPublisher Tests', () => {
 
     // Assert
 
-    const fileEvents = getFileEvents(observations);
-
     expect(timedOut).to.equal(false);
+
+    const fileEvents = getFileEvents(observations);
 
     expect(fileEvents.length).to.equal(2);
 

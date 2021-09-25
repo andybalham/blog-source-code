@@ -3,8 +3,9 @@ import * as lambda from '@aws-cdk/aws-lambda';
 import * as sns from '@aws-cdk/aws-sns';
 import * as snsSubs from '@aws-cdk/aws-sns-subscriptions';
 import Orchestrator from './Orchestrator';
-import AsyncTaskHandler from './AsyncTaskHandler';
 import { TaskHandler } from './TaskHandler';
+import { AsyncTaskEnvVars } from './AsyncTaskEnvVars';
+import AsyncTaskHandler from './AsyncTaskHandler';
 
 export interface AsyncTaskProps<TReq, TRes> {
   handlerType: new () => AsyncTaskHandler<TReq, TRes>;
@@ -36,7 +37,7 @@ export default abstract class AsyncTask<TReq, TRes> extends cdk.Construct {
     // Allow ourselves to publish responses back to the orchestrator
 
     props.handlerFunction.addEnvironment(
-      Orchestrator.EnvVars.RESPONSE_TOPIC_ARN,
+      AsyncTaskEnvVars.RESPONSE_TOPIC_ARN,
       orchestrator.responseTopic.topicArn
     );
     orchestrator.responseTopic.grantPublish(props.handlerFunction);

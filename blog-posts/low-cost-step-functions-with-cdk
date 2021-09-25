@@ -1,0 +1,76 @@
+# Low Cost Step Functions With CDK
+
+Step Functions are great. They let you orchestrate your Lambda functions in a declarative manner, allowing you to avoid combine those functions without directly chaining them together (and thus compounding your costs). However, they are expensive. The first 4000 transitions are free, but the rest are [$0.025 per 1,000 state transitions](https://aws.amazon.com/step-functions/pricing/). You could use [Express Workflows](https://aws.amazon.com/blogs/aws/new-aws-step-functions-express-workflows-high-performance-low-cost/) instead, but they can only run for five minutes of wall-clock time. So how can we have a cheap, long-running way of easily orchestrating Lambda functions? Perhaps CDK can help us build such a thing.
+
+TODO: TL;DR and GitHub link
+
+> Note, Step Functions also have error-handling, retries, parallel processing and more very useful functionality that we won't be trying to replicate here. Well, at least not yet 😉
+
+## The Aim
+
+The aim is to have a single orchestrator Lambda function that uses SNS topics to send asynchronous requests to Lambda functions that perform the various tasks. The orchestrator function then subscribes to a response topic in order to process the output from those tasks. A DynamoDB table is to be used to hold the state of the orchestration between the asynchronous calls. The resulting architecture should look something like the following.
+
+![blog-low-cost-step-functions-aim.jpg](https://cdn.hashnode.com/res/hashnode/image/upload/v1632574098336/VZ2iHlMjW.jpeg)
+
+## CDK Best Practices
+
+The following is taken from [Best practices for developing and deploying cloud infrastructure with the AWS CDK ](https://docs.aws.amazon.com/cdk/latest/guide/best-practices.html) and will inform how we build the solution. I would recommend anyone interested in CDK to read the whole thing. 
+
+> ## Infrastructure and runtime code live in the same package 
+> A construct that is self-contained, in other words that completely describes a piece of functionality including its infrastructure and logic, makes it easy to evolve the two kinds of code together, test them in isolation, share and reuse the code across projects, and version all the code in sync. 
+
+> ## Model your app through constructs, not stacks
+> When breaking down your application into logical units, represent each unit as a descendant of Construct and not of Stack. Stacks are a unit of deployment, and so tend to be oriented to specific applications. By using constructs instead of stacks, you give yourself and your users the flexibility to build stacks in the way that makes the most sense for each deployment scenario.
+
+## Thinking In Constructs
+
+With this advice in mind, the components are to be organised as follows.
+
+![blog-low-cost-step-functions-aim-constructs.jpg](https://cdn.hashnode.com/res/hashnode/image/upload/v1632574104919/-39Sh-ygV.jpeg)
+
+An orchestration is to be composed of a single orchestrator construct and one or more task constructs. The orchestrator and task constructs are each made up of a Lambda function and an SNS topic. The topics are to used for the request/response communication between the orchestrator and the tasks. The trick is going to be how we make wiring up these interdependent constructs.
+
+Note that the orchestration state is not part of these constructs. This is in line with the following guidance from the [best practices](https://docs.aws.amazon.com/cdk/latest/guide/best-practices.html). 
+
+> ## Don't change the logical ID of stateful resources
+> Changing the logical ID of a resource results in the resource being replaced with a new one at the next deployment. For stateful resources like databases and buckets this is almost never what you want. Be careful about any refactor of your AWS CDK code that could cause the ID to change, and write unit tests that assert that the logical IDs of your stateful resources remain static.
+
+> ## Separate your application into multiple stacks as dictated by deployment requirements
+> * Consider keeping stateful resources (like databases) in a separate stack from stateless resources. You can then turn on termination protection on the stateful stack, and can freely destroy or create multiple copies of the stateless stack without risk of data loss.
+
+If we have long-running orchestrations, then we may have state that needs to persist between deployments of the orchestration implementation. Perhaps there was a bug-fix that required a patch release. We want to be careful that such state is not deleted in such scenarios. Given this, the state 
+
+## The Orchestrator Construct
+
+TODO
+
+```TypeScript
+export interface OrchestratorProps {
+  executionTable: dynamodb.ITable;
+  handlerFunction: lambda.Function;
+}
+
+export default abstract class Orchestrator extends cdk.Construct {
+  readonly handlerFunction: lambda.Function;
+  readonly responseTopic: sns.ITopic;
+}
+```
+
+TODO
+
+```TypeScript
+constructor(scope: cdk.Construct, id: string, props: OrchestratorProps) {
+  super(scope, id);
+
+  this.handlerFunction = props.handlerFunction;
+
+  this.handlerFunction.addEnvironment(
+    OrchestratorEnvVars.EXECUTION_TABLE_NAME,
+    props.executionTable?.tableName
+  );
+  props.executionTable.grantReadWriteData(this.handlerFunction);
+
+  this.responseTopic = new sns.Topic(this, 'ResponseTopic');
+  this.responseTopic.addSubscription(new snsSubs.LambdaSubscription(this.handlerFunction));
+}
+```

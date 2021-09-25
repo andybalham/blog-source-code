@@ -4,15 +4,15 @@
 import { SNSEvent } from 'aws-lambda/trigger/sns';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import SNS, { PublishInput } from 'aws-sdk/clients/sns';
+import { AsyncTaskEnvVars } from './AsyncTaskEnvVars';
 import { AsyncTaskRequest, AsyncTaskResponse } from './exchanges/AsyncTaskExchange';
-import Orchestrator from './Orchestrator';
 import { TaskHandler } from './TaskHandler';
 
 const sns = new SNS();
 
 export default abstract class AsyncTaskHandler<TReq, TRes> implements TaskHandler<TReq, TRes> {
   //
-  static readonly responseTopicArn = process.env[Orchestrator.EnvVars.RESPONSE_TOPIC_ARN];
+  static readonly responseTopicArn = process.env[AsyncTaskEnvVars.RESPONSE_TOPIC_ARN];
 
   async handleAsync(event: SNSEvent): Promise<void> {
     //

@@ -1,5 +1,6 @@
 /* eslint-disable class-methods-use-this */
 import Orchestrator from './Orchestrator';
+import { OrchestratorEnvVars } from './OrchestratorEnvVars';
 import DynamoDBClient from './utils/DynamoDBClient';
 
 export enum ExecutionStatus {
@@ -24,7 +25,7 @@ export interface ExecutionMessage {
 }
 
 const dynamoDBClient = new DynamoDBClient(
-  process.env[Orchestrator.EnvVars.EXECUTION_TABLE_NAME],
+  process.env[OrchestratorEnvVars.EXECUTION_TABLE_NAME],
   Orchestrator.ExecutionTableSchema.partitionKey.name,
   Orchestrator.ExecutionTableSchema.sortKey.name
 );
