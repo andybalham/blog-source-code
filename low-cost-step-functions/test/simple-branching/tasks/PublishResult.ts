@@ -4,24 +4,24 @@ import * as sns from '@aws-cdk/aws-sns';
 import { AsyncTask, Orchestrator } from '../../../src';
 import {
   PublishResultRequest,
-  PublishResultTaskHandler,
-} from './PublishResultTask.PublishResultHandler';
+  PublishResultHandler,
+} from './PublishResult.PublishResultHandler';
 
-export default class PublishResultTask extends AsyncTask<PublishResultRequest, void> {
+export default class PublishResult extends AsyncTask<PublishResultRequest, void> {
   //
   readonly resultTopic: sns.Topic;
 
   constructor(orchestrator: Orchestrator, id: string) {
     super(orchestrator, id, {
-      handlerType: PublishResultTaskHandler,
-      handlerFunction: new lambdaNodejs.NodejsFunction(orchestrator, 'PublishResultHandler'),
+      handlerType: PublishResultHandler,
+      handlerFunction: new lambdaNodejs.NodejsFunction(orchestrator, PublishResultHandler.name),
     });
 
     this.resultTopic = new sns.Topic(this, 'ResultTopic');
 
     this.resultTopic.grantPublish(this.handlerFunction);
     this.handlerFunction.addEnvironment(
-      PublishResultTaskHandler.EnvVars.ResultTopicArn,
+      PublishResultHandler.EnvVars.ResultTopicArn,
       this.resultTopic.topicArn
     );
   }

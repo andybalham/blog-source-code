@@ -14,12 +14,14 @@ The aim is to have a single orchestrator Lambda function that uses SNS topics to
 
 ## CDK Best Practices
 
-The following is taken from [Best practices for developing and deploying cloud infrastructure with the AWS CDK ](https://docs.aws.amazon.com/cdk/latest/guide/best-practices.html) and will inform how we build the solution. I would recommend anyone interested in CDK to read the whole thing. 
+The following is taken from [Best practices for developing and deploying cloud infrastructure with the AWS CDK ](https://docs.aws.amazon.com/cdk/latest/guide/best-practices.html) and will inform how we build the solution. I would recommend anyone interested in CDK to read the whole thing.
 
-> ## Infrastructure and runtime code live in the same package 
-> A construct that is self-contained, in other words that completely describes a piece of functionality including its infrastructure and logic, makes it easy to evolve the two kinds of code together, test them in isolation, share and reuse the code across projects, and version all the code in sync. 
+> ## Infrastructure and runtime code live in the same package
+>
+> A construct that is self-contained, in other words that completely describes a piece of functionality including its infrastructure and logic, makes it easy to evolve the two kinds of code together, test them in isolation, share and reuse the code across projects, and version all the code in sync.
 
 > ## Model your app through constructs, not stacks
+>
 > When breaking down your application into logical units, represent each unit as a descendant of Construct and not of Stack. Stacks are a unit of deployment, and so tend to be oriented to specific applications. By using constructs instead of stacks, you give yourself and your users the flexibility to build stacks in the way that makes the most sense for each deployment scenario.
 
 ## Thinking In Constructs
@@ -30,19 +32,21 @@ With this advice in mind, the components are to be organised as follows.
 
 An orchestration is to be composed of a single orchestrator construct and one or more task constructs. The orchestrator and task constructs are each made up of a Lambda function and an SNS topic. The topics are to used for the request/response communication between the orchestrator and the tasks. The trick is going to be how we make wiring up these interdependent constructs.
 
-Note that the orchestration state is not part of these constructs. This is in line with the following guidance from the [best practices](https://docs.aws.amazon.com/cdk/latest/guide/best-practices.html). 
+Note that the orchestration state is not part of these constructs. This is in line with the following guidance from the [best practices](https://docs.aws.amazon.com/cdk/latest/guide/best-practices.html).
 
 > ## Don't change the logical ID of stateful resources
+>
 > Changing the logical ID of a resource results in the resource being replaced with a new one at the next deployment. For stateful resources like databases and buckets this is almost never what you want. Be careful about any refactor of your AWS CDK code that could cause the ID to change, and write unit tests that assert that the logical IDs of your stateful resources remain static.
 
 > ## Separate your application into multiple stacks as dictated by deployment requirements
-> * Consider keeping stateful resources (like databases) in a separate stack from stateless resources. You can then turn on termination protection on the stateful stack, and can freely destroy or create multiple copies of the stateless stack without risk of data loss.
+>
+> - Consider keeping stateful resources (like databases) in a separate stack from stateless resources. You can then turn on termination protection on the stateful stack, and can freely destroy or create multiple copies of the stateless stack without risk of data loss.
 
-If we have long-running orchestrations, then we may have state that needs to persist between deployments of the orchestration implementation. Perhaps there was a bug-fix that required a patch release. We want to be careful that such state is not deleted in such scenarios. Given this, the state 
+If we have long-running orchestrations, then we may have state that needs to persist between deployments of the orchestration implementation. Perhaps there was a bug-fix that required a patch release. We want to be careful that such state is not deleted in such scenarios. Given this, the state
 
 ## The Orchestrator Construct
 
-TODO
+The Orchestrator construct is an abstract class that provides the base functionality for concrete implementations. The first thing to consider with the Orchestrator construct is the inputs and the outputs. For constructs, the inputs are passed in as a `props` object and the outputs are properties exposed by the construct itself. For the Orchestrator construct, these are as follows.
 
 ```TypeScript
 export interface OrchestratorProps {
@@ -51,17 +55,25 @@ export interface OrchestratorProps {
 }
 
 export default abstract class Orchestrator extends cdk.Construct {
-  readonly handlerFunction: lambda.Function;
   readonly responseTopic: sns.ITopic;
+  readonly handlerFunction: lambda.Function;
 }
 ```
 
-TODO
+### Inputs
+
+`executionTable` is used to pass in a reference to the DynamoDB table that will be used to store the orchestration state. The construct could create this itself, but as we saw from the best practices, it can be wise to keep stateful resources external.
+
+`handlerFunction` is used to pass in a reference to the Lambda function that will do the orchestration. This resource will be instantiated by the concrete sub-class.
+
+### Outputs
+
+TODO: Describe the outputs
 
 ```TypeScript
 constructor(scope: cdk.Construct, id: string, props: OrchestratorProps) {
   super(scope, id);
-
+ 
   this.handlerFunction = props.handlerFunction;
 
   this.handlerFunction.addEnvironment(
@@ -71,6 +83,53 @@ constructor(scope: cdk.Construct, id: string, props: OrchestratorProps) {
   props.executionTable.grantReadWriteData(this.handlerFunction);
 
   this.responseTopic = new sns.Topic(this, 'ResponseTopic');
-  this.responseTopic.addSubscription(new snsSubs.LambdaSubscription(this.handlerFunction));
+  this.responseTopic.addSubscription(
+    new snsSubs.LambdaSubscription(this.handlerFunction));
 }
 ```
+
+TODO: Talk through the constructor
+
+Then:
+
+* `AsyncTask`? 
+
+```TypeScript
+export interface AsyncTaskProps<TReq, TRes> {
+  handlerType: new () => AsyncTaskHandler<TReq, TRes>;
+  handlerFunction: lambda.Function;
+}
+
+export default abstract class AsyncTask<TReq, TRes> extends cdk.Construct {
+  readonly requestTopic: sns.ITopic;
+}
+```
+
+```TypeScript
+constructor(orchestrator: Orchestrator, id: string, props: AsyncTaskProps<TReq, TRes>) {
+  super(orchestrator, id);
+
+  //  Create the request topic, subscribe and allow the orchestrator to publish
+
+  this.requestTopic = new sns.Topic(this, `${props.handlerType.name}RequestTopic`);
+  this.requestTopic.addSubscription(new snsSubs.LambdaSubscription(props.handlerFunction));
+
+  orchestrator.handlerFunction.addEnvironment(
+    `${props.handlerType.name.toUpperCase()}_REQUEST_TOPIC_ARN`
+    this.requestTopic.topicArn
+  );
+  this.requestTopic.grantPublish(orchestrator.handlerFunction);
+
+  // Allow ourselves to publish responses back to the orchestrator
+
+  props.handlerFunction.addEnvironment(
+    AsyncTaskEnvVars.RESPONSE_TOPIC_ARN,
+    orchestrator.responseTopic.topicArn
+  );
+  orchestrator.responseTopic.grantPublish(props.handlerFunction);
+}
+```
+
+Then:
+
+* Simple sequence?

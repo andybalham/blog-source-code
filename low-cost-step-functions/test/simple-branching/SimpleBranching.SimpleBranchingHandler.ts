@@ -3,11 +3,7 @@
 /* eslint-disable no-console */
 /* eslint-disable import/prefer-default-export */
 import { OrchestrationBuilder, OrchestratorHandler } from '../../src';
-import {
-  NumericOperation,
-  PerformNumericOperationTaskHandler,
-} from './tasks/PerformNumericOperationTask.PerformNumericOperationHandler';
-import { PublishResultTaskHandler } from './tasks/PublishResultTask.PublishResultHandler';
+import { NumericOperation, PerformNumericOperationHandler, PublishResultHandler } from './tasks';
 
 export interface SimpleBranchingInput {
   operationText: string;
@@ -20,7 +16,7 @@ export interface SimpleBranchingData {
   result?: number;
 }
 
-class SimpleBranchingHandler extends OrchestratorHandler<
+export class SimpleBranchingHandler extends OrchestratorHandler<
   SimpleBranchingInput,
   undefined,
   SimpleBranchingData
@@ -51,7 +47,7 @@ class SimpleBranchingHandler extends OrchestratorHandler<
 
         .invokeAsync({
           stepId: 'add_operation',
-          HandlerType: PerformNumericOperationTaskHandler,
+          HandlerType: PerformNumericOperationHandler,
           getRequest: (data) => ({
             operation: NumericOperation.Add,
             value1: data.input.x,
@@ -64,7 +60,7 @@ class SimpleBranchingHandler extends OrchestratorHandler<
 
         .invokeAsync({
           stepId: 'publish_add_result',
-          HandlerType: PublishResultTaskHandler,
+          HandlerType: PublishResultHandler,
           getRequest: (data) => ({
             summary: `Added ${data.input.x} to ${data.input.y} and got ${data.result}`,
           }),
@@ -76,7 +72,7 @@ class SimpleBranchingHandler extends OrchestratorHandler<
 
         .invokeAsync({
           stepId: 'subtract_operation',
-          HandlerType: PerformNumericOperationTaskHandler,
+          HandlerType: PerformNumericOperationHandler,
           getRequest: (data) => ({
             operation: NumericOperation.Subtract,
             value1: data.input.x,
@@ -89,7 +85,7 @@ class SimpleBranchingHandler extends OrchestratorHandler<
 
         .invokeAsync({
           stepId: 'publish_subtract_result',
-          HandlerType: PublishResultTaskHandler,
+          HandlerType: PublishResultHandler,
           getRequest: (data) => ({
             summary: `Subtracted ${data.input.y} from ${data.input.x} and got ${data.result}`,
           }),

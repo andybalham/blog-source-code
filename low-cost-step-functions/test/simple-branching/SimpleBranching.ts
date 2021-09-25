@@ -3,8 +3,8 @@ import * as cdk from '@aws-cdk/core';
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
 import * as dynamodb from '@aws-cdk/aws-dynamodb';
 import { Orchestrator } from '../../src';
-import PerformNumericOperationTask from './tasks/PerformNumericOperationTask';
-import PublishResultTask from './tasks/PublishResultTask';
+import { PerformNumericOperation, PublishResult } from './tasks';
+import { SimpleBranchingHandler } from './SimpleBranching.SimpleBranchingHandler';
 
 export interface SimpleBranchingProps {
   executionTable: dynamodb.ITable;
@@ -12,21 +12,21 @@ export interface SimpleBranchingProps {
 
 export default class SimpleBranching extends Orchestrator {
   //
-  readonly performNumericOperationTask: PerformNumericOperationTask;
+  readonly performNumericOperationTask: PerformNumericOperation;
 
-  readonly publishResultTask: PublishResultTask;
+  readonly publishResultTask: PublishResult;
 
   constructor(scope: cdk.Construct, id: string, props: SimpleBranchingProps) {
     super(scope, id, {
       ...props,
-      handlerFunction: new lambdaNodejs.NodejsFunction(scope, 'OrchestrationHandler'),
+      handlerFunction: new lambdaNodejs.NodejsFunction(scope, SimpleBranchingHandler.name),
     });
 
-    this.performNumericOperationTask = new PerformNumericOperationTask(
+    this.performNumericOperationTask = new PerformNumericOperation(
       this,
       'PerformNumericOperationTask'
     );
 
-    this.publishResultTask = new PublishResultTask(this, 'PublishResultTask');
+    this.publishResultTask = new PublishResult(this, 'PublishResultTask');
   }
 }

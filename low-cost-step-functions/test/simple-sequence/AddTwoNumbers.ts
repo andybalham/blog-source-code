@@ -4,17 +4,17 @@ import { AsyncTask, Orchestrator } from '../../src';
 import {
   AddTwoNumbersRequest,
   AddTwoNumbersResponse,
-  AddTwoNumbersTaskHandler,
-} from './AddTwoNumbersTask.handler';
+  AddTwoNumbersHandler,
+} from './AddTwoNumbers.AddTwoNumbersHandler';
 
-export default class AddTwoNumbersTask extends AsyncTask<
+export default class AddTwoNumbers extends AsyncTask<
   AddTwoNumbersRequest,
   AddTwoNumbersResponse
 > {
   constructor(orchestrator: Orchestrator, id: string) {
     super(orchestrator, id, {
-      handlerType: AddTwoNumbersTaskHandler,
-      handlerFunction: new lambdaNodejs.NodejsFunction(orchestrator, 'handler'),
+      handlerType: AddTwoNumbersHandler,
+      handlerFunction: new lambdaNodejs.NodejsFunction(orchestrator, AddTwoNumbersHandler.name),
     });
   }
 }

@@ -3,7 +3,7 @@
 /* eslint-disable no-console */
 /* eslint-disable import/prefer-default-export */
 import { OrchestrationBuilder, OrchestratorHandler } from '../../src';
-import { AddTwoNumbersTaskHandler } from './AddTwoNumbersTask.handler';
+import { AddTwoNumbersHandler } from './AddTwoNumbers.AddTwoNumbersHandler';
 
 export interface SimpleSequenceInput {
   x: number;
@@ -22,18 +22,14 @@ export interface SimpleSequenceData {
   total: number;
 }
 
-class SimpleSequenceHandler extends OrchestratorHandler<
+export class SimpleSequenceHandler extends OrchestratorHandler<
   SimpleSequenceInput,
   SimpleSequenceOutput,
   SimpleSequenceData
 > {
   constructor() {
     super(
-      new OrchestrationBuilder<
-        SimpleSequenceInput,
-        SimpleSequenceOutput,
-        SimpleSequenceData
-      >({
+      new OrchestrationBuilder<SimpleSequenceInput, SimpleSequenceOutput, SimpleSequenceData>({
         getData: (input): SimpleSequenceData => ({
           ...input,
           total: 0,
@@ -43,7 +39,7 @@ class SimpleSequenceHandler extends OrchestratorHandler<
 
         .invokeAsync({
           stepId: 'AddX&Y',
-          HandlerType: AddTwoNumbersTaskHandler,
+          HandlerType: AddTwoNumbersHandler,
           getRequest: (data) => ({
             value1: data.x,
             value2: data.y,
@@ -55,7 +51,7 @@ class SimpleSequenceHandler extends OrchestratorHandler<
 
         .invokeAsync({
           stepId: 'AddZ&Total',
-          HandlerType: AddTwoNumbersTaskHandler,
+          HandlerType: AddTwoNumbersHandler,
           getRequest: (data) => ({
             value1: data.z,
             value2: data.total,

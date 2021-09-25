@@ -16,7 +16,7 @@ export interface PerformNumericOperationResponse {
   result: number;
 }
 
-export class PerformNumericOperationTaskHandler extends AsyncTaskHandler<
+export class PerformNumericOperationHandler extends AsyncTaskHandler<
   PerformNumericOperationRequest,
   PerformNumericOperationResponse
 > {
@@ -47,4 +47,4 @@ export class PerformNumericOperationTaskHandler extends AsyncTaskHandler<
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const handler = async (event: any): Promise<void> =>
-  new PerformNumericOperationTaskHandler().handleAsync(event);
+  new PerformNumericOperationHandler().handleAsync(event);

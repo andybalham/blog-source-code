@@ -3,7 +3,8 @@ import * as cdk from '@aws-cdk/core';
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
 import * as dynamodb from '@aws-cdk/aws-dynamodb';
 import { Orchestrator } from '../../src';
-import AddTwoNumbersTask from './AddTwoNumbersTask';
+import AddTwoNumbers from './AddTwoNumbers';
+import { SimpleSequenceHandler } from './SimpleSequence.SimpleSequenceHandler';
 
 export interface SimpleSequenceProps {
   executionTable: dynamodb.ITable;
@@ -11,14 +12,14 @@ export interface SimpleSequenceProps {
 
 export default class SimpleSequence extends Orchestrator {
   //
-  addTwoNumbersTask: AddTwoNumbersTask;
+  addTwoNumbersTask: AddTwoNumbers;
 
   constructor(scope: cdk.Construct, id: string, props: SimpleSequenceProps) {
     super(scope, id, {
       ...props,
-      handlerFunction: new lambdaNodejs.NodejsFunction(scope, 'handler'),
+      handlerFunction: new lambdaNodejs.NodejsFunction(scope, SimpleSequenceHandler.name),
     });
 
-    this.addTwoNumbersTask = new AddTwoNumbersTask(this, 'AddTwoNumbersTask');
+    this.addTwoNumbersTask = new AddTwoNumbers(this, 'AddTwoNumbersTask');
   }
 }

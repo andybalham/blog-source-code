@@ -4,19 +4,19 @@ import { AsyncTask, Orchestrator } from '../../../src';
 import {
   PerformNumericOperationRequest,
   PerformNumericOperationResponse,
-  PerformNumericOperationTaskHandler,
-} from './PerformNumericOperationTask.PerformNumericOperationHandler';
+  PerformNumericOperationHandler,
+} from './PerformNumericOperation.PerformNumericOperationHandler';
 
-export default class PerformNumericOperationTask extends AsyncTask<
+export default class PerformNumericOperation extends AsyncTask<
   PerformNumericOperationRequest,
   PerformNumericOperationResponse
 > {
   constructor(orchestrator: Orchestrator, id: string) {
     super(orchestrator, id, {
-      handlerType: PerformNumericOperationTaskHandler,
+      handlerType: PerformNumericOperationHandler,
       handlerFunction: new lambdaNodejs.NodejsFunction(
         orchestrator,
-        'PerformNumericOperationHandler'
+        PerformNumericOperationHandler.name
       ),
     });
   }

@@ -3,8 +3,8 @@ import * as dynamodb from '@aws-cdk/aws-dynamodb';
 import { IntegrationTestStack } from '@andybalham/sls-testing-toolkit';
 import { Orchestrator } from '../../src';
 import SimpleBranching from './SimpleBranching';
-import { PerformNumericOperationTaskHandler } from './tasks/PerformNumericOperationTask.PerformNumericOperationHandler';
-import { PublishResultTaskHandler } from './tasks/PublishResultTask.PublishResultHandler';
+import { PerformNumericOperationHandler } from './tasks/PerformNumericOperation.PerformNumericOperationHandler';
+import { PublishResultHandler } from './tasks/PublishResult.PublishResultHandler';
 
 export default class SimpleBranchingTestStack extends IntegrationTestStack {
   //
@@ -40,8 +40,8 @@ export default class SimpleBranchingTestStack extends IntegrationTestStack {
     // Tag the resources to keep their logs trimmed
     this.addTestResourceTag(
       sut.performNumericOperationTask.handlerFunction,
-      PerformNumericOperationTaskHandler.name
+      PerformNumericOperationHandler.name
     );
-    this.addTestResourceTag(sut.publishResultTask.handlerFunction, PublishResultTaskHandler.name);
+    this.addTestResourceTag(sut.publishResultTask.handlerFunction, PublishResultHandler.name);
   }
 }

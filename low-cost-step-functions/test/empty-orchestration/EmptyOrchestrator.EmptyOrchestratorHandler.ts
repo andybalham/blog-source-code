@@ -9,7 +9,7 @@ export interface Input {}
 export interface Output {}
 export interface Data {}
 
-class EmptyOrchestratorHandler extends OrchestratorHandler<Input, Output, Data> {
+export class EmptyOrchestratorHandler extends OrchestratorHandler<Input, Output, Data> {
   constructor() {
     super(
       new OrchestrationBuilder<Input, Output, Data>({ getData: (): Data => ({}) }).build()

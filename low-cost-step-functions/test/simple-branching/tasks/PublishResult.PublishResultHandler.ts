@@ -8,7 +8,7 @@ export interface PublishResultRequest {
 
 const sns = new SNS();
 
-export class PublishResultTaskHandler extends AsyncTaskHandler<PublishResultRequest, void> {
+export class PublishResultHandler extends AsyncTaskHandler<PublishResultRequest, void> {
   //
   static readonly EnvVars = {
     ResultTopicArn: 'RESULT_TOPIC_ARN',
@@ -17,7 +17,7 @@ export class PublishResultTaskHandler extends AsyncTaskHandler<PublishResultRequ
   async handleRequestAsync(request: PublishResultRequest): Promise<void> {
     //
     const resultPublishInput: PublishInput = {
-      TopicArn: process.env[PublishResultTaskHandler.EnvVars.ResultTopicArn],
+      TopicArn: process.env[PublishResultHandler.EnvVars.ResultTopicArn],
       Message: request.summary,
     };
 
@@ -27,4 +27,4 @@ export class PublishResultTaskHandler extends AsyncTaskHandler<PublishResultRequ
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const handler = async (event: any): Promise<void> =>
-  new PublishResultTaskHandler().handleAsync(event);
+  new PublishResultHandler().handleAsync(event);

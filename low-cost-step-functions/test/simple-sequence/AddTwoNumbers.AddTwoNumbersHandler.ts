@@ -10,7 +10,7 @@ export interface AddTwoNumbersResponse {
   total: number;
 }
 
-export class AddTwoNumbersTaskHandler extends AsyncTaskHandler<
+export class AddTwoNumbersHandler extends AsyncTaskHandler<
   AddTwoNumbersRequest,
   AddTwoNumbersResponse
 > {
@@ -23,4 +23,4 @@ export class AddTwoNumbersTaskHandler extends AsyncTaskHandler<
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const handler = async (event: any): Promise<void> =>
-  new AddTwoNumbersTaskHandler().handleAsync(event);
+  new AddTwoNumbersHandler().handleAsync(event);
