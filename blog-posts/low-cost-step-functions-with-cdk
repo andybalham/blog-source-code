@@ -152,9 +152,62 @@ Next it uses the `orchestrator` parameter to access underlying `handlerFunction`
 
 ### Overview
 
-Simple sequence
+To demonstrate the constructs in action, we are going to build a simple orchestration that takes three numbers and adds them together. It is going to do this using a sequence of two tasks, each adding two numbers together.
+
+1. Take the inputs x, y, and z and store them
+1. Set the running total to 0
+1. Call a task to add a and b together
+1. Store the result as the running total
+1. Call a task to add c and the running total together
+1. Store the result as the running total
+1. Return the running total as the output
 
 ### Add Two Number Task
+
+The first thing to do is define the request and response for the task. This is done by creating two interfaces as follows.
+
+```TypeScript
+export interface AddTwoNumbersRequest {
+  value1: number;
+  value2: number;
+}
+
+export interface AddTwoNumbersResponse {
+  total: number;
+}
+```
+
+Next, a sub-class of `AsyncTaskHandler` is created to handle the request and return the response. `AsyncTaskHandler` is doing the heavy lifting of handling SNS events and turning them into `AddTwoNumbersRequest` instances, then taking `AddTwoNumbersResponse` and publishing them to the orchestrator response topic.
+
+```TypeScript
+export class AddTwoNumbersHandler extends AsyncTaskHandler<
+  AddTwoNumbersRequest,
+  AddTwoNumbersResponse
+> {
+  async handleRequestAsync(
+    request: AddTwoNumbersRequest
+  ): Promise<AddTwoNumbersResponse> {
+    return {
+      total: request.value1 + request.value2,
+    };
+  }
+}
+```
+
+Finally, a handler function is exported. This simply despatches the incoming event to the `handleAsync` method on the `AsyncTaskHandler` base class.
+
+```TypeScript
+export const handler = async (event: any): Promise<void> =>
+  new AddTwoNumbersHandler().handleAsync(event);
+```
+
+> The AWS CDK not only generates AWS CloudFormation templates for deploying infrastructure, it also bundles runtime assets like Lambda functions and Docker images and deploys them alongside your infrastructure.
+
+[`NodejsFunction`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_nodejs.NodejsFunction.html)
+
+> If the NodejsFunction is defined in stack.ts with my-handler as id (new NodejsFunction(this, 'my-handler')), the construct will look at stack.my-handler.ts and stack.my-handler.js.)
+
+TODO: Bundling including picture
 
 ```TypeScript
 export default class AddTwoNumbers extends AsyncTask<
@@ -171,33 +224,6 @@ export default class AddTwoNumbers extends AsyncTask<
     });
   }
 }
-```
-
-```TypeScript
-export interface AddTwoNumbersRequest {
-  value1: number;
-  value2: number;
-}
-
-export interface AddTwoNumbersResponse {
-  total: number;
-}
-
-export class AddTwoNumbersHandler extends AsyncTaskHandler<
-  AddTwoNumbersRequest,
-  AddTwoNumbersResponse
-> {
-  async handleRequestAsync(
-    request: AddTwoNumbersRequest
-  ): Promise<AddTwoNumbersResponse> {
-    return {
-      total: request.value1 + request.value2,
-    };
-  }
-}
-
-export const handler = async (event: any): Promise<void> =>
-  new AddTwoNumbersHandler().handleAsync(event);
 ```
 
 ### Simple Sequence Orchestration
@@ -239,59 +265,66 @@ export interface SimpleSequenceData {
 ```
 
 ```TypeScript
+const orchestrationProps: OrchestrationBuilderProps<
+  SimpleSequenceInput,
+  SimpleSequenceOutput,
+  SimpleSequenceData
+> = {
+  getData: (input): SimpleSequenceData => ({
+    ...input,
+    total: 0,
+  }),
+  getOutput: (data): SimpleSequenceOutput => ({ total: data.total }),
+};
+```
+
+```TypeScript
+const orchestration = new OrchestrationBuilder<
+  SimpleSequenceInput,
+  SimpleSequenceOutput,
+  SimpleSequenceData
+>(orchestrationProps)
+
+  .invokeAsync({
+    stepId: 'AddX&Y',
+    HandlerType: AddTwoNumbersHandler,
+    getRequest: (data) => ({
+      value1: data.x,
+      value2: data.y,
+    }),
+    updateData: (data, response) => {
+      data.total = response.total;
+    },
+  })
+
+  .invokeAsync({
+    stepId: 'AddZ&Total',
+    HandlerType: AddTwoNumbersHandler,
+    getRequest: (data) => ({
+      value1: data.z,
+      value2: data.total,
+    }),
+    updateData: (data, response) => {
+      data.total = response.total;
+    },
+  })
+
+  .build();
+```
+
+```TypeScript
 export class SimpleSequenceHandler extends OrchestratorHandler<
   SimpleSequenceInput,
   SimpleSequenceOutput,
   SimpleSequenceData
 > {
+  constructor() {
+    super(orchestration);
+  }
 }
 
 export const handler = async (event: any): Promise<any> =>
   new SimpleSequenceHandler().handleAsync(event);
-```
-
-```TypeScript
-constructor() {
-  super(
-    new OrchestrationBuilder<
-      SimpleSequenceInput,
-      SimpleSequenceOutput,
-      SimpleSequenceData
-    >({
-      getData: (input): SimpleSequenceData => ({
-        ...input,
-        total: 0,
-      }),
-      getOutput: (data): SimpleSequenceOutput => ({ total: data.total }),
-    })
-
-      .invokeAsync({
-        stepId: 'AddX&Y',
-        HandlerType: AddTwoNumbersHandler,
-        getRequest: (data) => ({
-          value1: data.x,
-          value2: data.y,
-        }),
-        updateData: (data, response) => {
-          data.total = response.total;
-        },
-      })
-
-      .invokeAsync({
-        stepId: 'AddZ&Total',
-        HandlerType: AddTwoNumbersHandler,
-        getRequest: (data) => ({
-          value1: data.z,
-          value2: data.total,
-        }),
-        updateData: (data, response) => {
-          data.total = response.total;
-        },
-      })
-
-      .build()
-  );
-}
 ```
 
 ## The Test

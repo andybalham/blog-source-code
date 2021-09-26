@@ -4,11 +4,12 @@ import { StartExecutionRequest, StartExecutionResponse } from './exchanges/Start
 import OrchestratorHandler from './OrchestratorHandler';
 import AsyncTask, { AsyncTaskProps } from './AsyncTask';
 import AsyncTaskHandler from './AsyncTaskHandler';
-import OrchestrationBuilder from './OrchestrationBuilder';
+import OrchestrationBuilder, { OrchestrationBuilderProps } from './OrchestrationBuilder';
 import { ExecutionStatus } from './ExecutionRepository';
 
 export {
   OrchestrationBuilder,
+  OrchestrationBuilderProps,
   Orchestrator,
   OrchestratorProps,
   OrchestratorHandler,

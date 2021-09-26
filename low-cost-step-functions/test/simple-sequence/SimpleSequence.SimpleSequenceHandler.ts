@@ -3,7 +3,11 @@
 /* eslint-disable class-methods-use-this */
 /* eslint-disable no-console */
 /* eslint-disable import/prefer-default-export */
-import { OrchestrationBuilder, OrchestratorHandler } from '../../src';
+import {
+  OrchestrationBuilder,
+  OrchestrationBuilderProps,
+  OrchestratorHandler,
+} from '../../src';
 import { AddTwoNumbersHandler } from './AddTwoNumbers.AddTwoNumbersHandler';
 
 export interface SimpleSequenceInput {
@@ -23,51 +27,57 @@ export interface SimpleSequenceData {
   total: number;
 }
 
+const orchestrationProps: OrchestrationBuilderProps<
+  SimpleSequenceInput,
+  SimpleSequenceOutput,
+  SimpleSequenceData
+> = {
+  getData: (input): SimpleSequenceData => ({
+    ...input,
+    total: 0,
+  }),
+  getOutput: (data): SimpleSequenceOutput => ({ total: data.total }),
+};
+
+const orchestration = new OrchestrationBuilder<
+  SimpleSequenceInput,
+  SimpleSequenceOutput,
+  SimpleSequenceData
+>(orchestrationProps)
+
+  .invokeAsync({
+    stepId: 'AddX&Y',
+    HandlerType: AddTwoNumbersHandler,
+    getRequest: (data) => ({
+      value1: data.x,
+      value2: data.y,
+    }),
+    updateData: (data, response) => {
+      data.total = response.total;
+    },
+  })
+
+  .invokeAsync({
+    stepId: 'AddZ&Total',
+    HandlerType: AddTwoNumbersHandler,
+    getRequest: (data) => ({
+      value1: data.z,
+      value2: data.total,
+    }),
+    updateData: (data, response) => {
+      data.total = response.total;
+    },
+  })
+
+  .build();
+
 export class SimpleSequenceHandler extends OrchestratorHandler<
   SimpleSequenceInput,
   SimpleSequenceOutput,
   SimpleSequenceData
 > {
   constructor() {
-    super(
-      new OrchestrationBuilder<
-        SimpleSequenceInput,
-        SimpleSequenceOutput,
-        SimpleSequenceData
-      >({
-        getData: (input): SimpleSequenceData => ({
-          ...input,
-          total: 0,
-        }),
-        getOutput: (data): SimpleSequenceOutput => ({ total: data.total }),
-      })
-
-        .invokeAsync({
-          stepId: 'AddX&Y',
-          HandlerType: AddTwoNumbersHandler,
-          getRequest: (data) => ({
-            value1: data.x,
-            value2: data.y,
-          }),
-          updateData: (data, response) => {
-            data.total = response.total;
-          },
-        })
-
-        .invokeAsync({
-          stepId: 'AddZ&Total',
-          HandlerType: AddTwoNumbersHandler,
-          getRequest: (data) => ({
-            value1: data.z,
-            value2: data.total,
-          }),
-          updateData: (data, response) => {
-            data.total = response.total;
-          },
-        })
-
-        .build()
-    );
+    super(orchestration);
   }
 }
 
