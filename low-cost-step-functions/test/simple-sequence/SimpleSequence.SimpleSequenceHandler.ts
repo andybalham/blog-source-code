@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable no-param-reassign */
 /* eslint-disable class-methods-use-this */
 /* eslint-disable no-console */
@@ -29,7 +30,11 @@ export class SimpleSequenceHandler extends OrchestratorHandler<
 > {
   constructor() {
     super(
-      new OrchestrationBuilder<SimpleSequenceInput, SimpleSequenceOutput, SimpleSequenceData>({
+      new OrchestrationBuilder<
+        SimpleSequenceInput,
+        SimpleSequenceOutput,
+        SimpleSequenceData
+      >({
         getData: (input): SimpleSequenceData => ({
           ...input,
           total: 0,
@@ -66,6 +71,5 @@ export class SimpleSequenceHandler extends OrchestratorHandler<
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const handler = async (event: any): Promise<any> =>
   new SimpleSequenceHandler().handleAsync(event);

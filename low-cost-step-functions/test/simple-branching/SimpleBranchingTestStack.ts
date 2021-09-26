@@ -33,15 +33,15 @@ export default class SimpleBranchingTestStack extends IntegrationTestStack {
     this.addTestResourceTag(sut.handlerFunction, SimpleBranchingTestStack.OrchestrationHandlerId);
 
     this.addSNSTopicSubscriber(
-      sut.publishResultTask.resultTopic,
+      sut.publishResult.resultTopic,
       SimpleBranchingTestStack.ResultTopicObserverId
     );
 
     // Tag the resources to keep their logs trimmed
     this.addTestResourceTag(
-      sut.performNumericOperationTask.handlerFunction,
+      sut.performNumericOperation.handlerFunction,
       PerformNumericOperationHandler.name
     );
-    this.addTestResourceTag(sut.publishResultTask.handlerFunction, PublishResultHandler.name);
+    this.addTestResourceTag(sut.publishResult.handlerFunction, PublishResultHandler.name);
   }
 }

@@ -14,7 +14,10 @@ export default class AddTwoNumbers extends AsyncTask<
   constructor(orchestrator: Orchestrator, id: string) {
     super(orchestrator, id, {
       handlerType: AddTwoNumbersHandler,
-      handlerFunction: new lambdaNodejs.NodejsFunction(orchestrator, AddTwoNumbersHandler.name),
+      handlerFunction: new lambdaNodejs.NodejsFunction(
+        orchestrator,
+        AddTwoNumbersHandler.name
+      ),
     });
   }
 }

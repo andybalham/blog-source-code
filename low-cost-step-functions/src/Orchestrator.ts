@@ -27,13 +27,15 @@ export default abstract class Orchestrator extends cdk.Construct {
 
     this.handlerFunction = props.handlerFunction;
 
-    this.handlerFunction.addEnvironment(
+    props.executionTable.grantReadWriteData(props.handlerFunction);
+    props.handlerFunction.addEnvironment(
       OrchestratorEnvVars.EXECUTION_TABLE_NAME,
-      props.executionTable?.tableName
+      props.executionTable.tableName
     );
-    props.executionTable.grantReadWriteData(this.handlerFunction);
 
-    this.responseTopic = new sns.Topic(this, 'ResponseTopic');
-    this.responseTopic.addSubscription(new snsSubs.LambdaSubscription(this.handlerFunction));
+    this.responseTopic = new sns.Topic(this, `ResponseTopic`);
+    this.responseTopic.addSubscription(
+      new snsSubs.LambdaSubscription(props.handlerFunction)
+    );
   }
 }

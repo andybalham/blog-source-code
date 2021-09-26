@@ -28,6 +28,6 @@ export default class SimpleSequenceTestStack extends IntegrationTestStack {
 
     this.addTestResourceTag(sut.handlerFunction, SimpleSequenceTestStack.OrchestrationHandlerId);
 
-    this.addTestResourceTag(sut.addTwoNumbersTask.handlerFunction, AddTwoNumbersHandler.name);
+    this.addTestResourceTag(sut.addTwoNumbers.handlerFunction, AddTwoNumbersHandler.name);
   }
 }

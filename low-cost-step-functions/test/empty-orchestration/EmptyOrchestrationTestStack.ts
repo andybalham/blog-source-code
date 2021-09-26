@@ -8,7 +8,7 @@ export default class EmptyOrchestrationTestStack extends IntegrationTestStack {
   //
   static readonly Id = `EmptyOrchestrationTestStack`;
 
-  static readonly OrchestrationHandlerId = 'nOrchestrationHandler';
+  static readonly OrchestrationHandlerId = 'OrchestrationHandler';
 
   constructor(scope: cdk.Construct, id: string) {
     super(scope, id, {

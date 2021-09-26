@@ -12,9 +12,9 @@ export interface SimpleBranchingProps {
 
 export default class SimpleBranching extends Orchestrator {
   //
-  readonly performNumericOperationTask: PerformNumericOperation;
+  readonly performNumericOperation: PerformNumericOperation;
 
-  readonly publishResultTask: PublishResult;
+  readonly publishResult: PublishResult;
 
   constructor(scope: cdk.Construct, id: string, props: SimpleBranchingProps) {
     super(scope, id, {
@@ -22,11 +22,11 @@ export default class SimpleBranching extends Orchestrator {
       handlerFunction: new lambdaNodejs.NodejsFunction(scope, SimpleBranchingHandler.name),
     });
 
-    this.performNumericOperationTask = new PerformNumericOperation(
+    this.performNumericOperation = new PerformNumericOperation(
       this,
-      'PerformNumericOperationTask'
+      'PerformNumericOperation'
     );
 
-    this.publishResultTask = new PublishResult(this, 'PublishResultTask');
+    this.publishResult = new PublishResult(this, 'PublishResult');
   }
 }

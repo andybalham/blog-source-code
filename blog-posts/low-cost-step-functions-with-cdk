@@ -16,11 +16,11 @@ The aim is to have a single orchestrator Lambda function that uses SNS topics to
 
 The following is taken from [Best practices for developing and deploying cloud infrastructure with the AWS CDK ](https://docs.aws.amazon.com/cdk/latest/guide/best-practices.html) and will inform how we build the solution. I would recommend anyone interested in CDK to read the whole thing.
 
-> ## Infrastructure and runtime code live in the same package
+> #### Infrastructure and runtime code live in the same package
 >
 > A construct that is self-contained, in other words that completely describes a piece of functionality including its infrastructure and logic, makes it easy to evolve the two kinds of code together, test them in isolation, share and reuse the code across projects, and version all the code in sync.
-
-> ## Model your app through constructs, not stacks
+>
+> #### Model your app through constructs, not stacks
 >
 > When breaking down your application into logical units, represent each unit as a descendant of Construct and not of Stack. Stacks are a unit of deployment, and so tend to be oriented to specific applications. By using constructs instead of stacks, you give yourself and your users the flexibility to build stacks in the way that makes the most sense for each deployment scenario.
 
@@ -34,11 +34,11 @@ An orchestration is to be composed of a single orchestrator construct and one or
 
 Note that the orchestration state is not part of these constructs. This is in line with the following guidance from the [best practices](https://docs.aws.amazon.com/cdk/latest/guide/best-practices.html).
 
-> ## Don't change the logical ID of stateful resources
+> #### Don't change the logical ID of stateful resources
 >
 > Changing the logical ID of a resource results in the resource being replaced with a new one at the next deployment. For stateful resources like databases and buckets this is almost never what you want. Be careful about any refactor of your AWS CDK code that could cause the ID to change, and write unit tests that assert that the logical IDs of your stateful resources remain static.
 
-> ## Separate your application into multiple stacks as dictated by deployment requirements
+> #### Separate your application into multiple stacks as dictated by deployment requirements
 >
 > - Consider keeping stateful resources (like databases) in a separate stack from stateless resources. You can then turn on termination protection on the stateful stack, and can freely destroy or create multiple copies of the stateless stack without risk of data loss.
 
@@ -60,39 +60,42 @@ export default abstract class Orchestrator extends cdk.Construct {
 }
 ```
 
-### Inputs
+Inputs:
 
-`executionTable` is used to pass in a reference to the DynamoDB table that will be used to store the orchestration state. The construct could create this itself, but as we saw from the best practices, it can be wise to keep stateful resources external.
+- `executionTable` is a reference to the DynamoDB table that will be used to store the orchestration state. The construct could create this itself, but as we saw from the best practices, it can be wise to keep stateful resources external.
+- `handlerFunction` is a reference to the Lambda function that will do the orchestration. This resource will be instantiated by the concrete sub-class, as it will provide functionality specific to the concrete orchestration.
 
-`handlerFunction` is used to pass in a reference to the Lambda function that will do the orchestration. This resource will be instantiated by the concrete sub-class.
+Outputs:
 
-### Outputs
+- `responseTopic` is the SNS topic that tasks use in order to publish their responses back to the orchestrator.
+- `handlerFunction` is the same function as passed in via the inputs. We expose a reference to it, as it is needed in order to interact with the orchestration.
 
-TODO: Describe the outputs
+With the inputs and outputs defined, we move on to the constructor where we create and wire up the resources.
 
 ```TypeScript
 constructor(scope: cdk.Construct, id: string, props: OrchestratorProps) {
   super(scope, id);
- 
+
   this.handlerFunction = props.handlerFunction;
 
-  this.handlerFunction.addEnvironment(
+  props.executionTable.grantReadWriteData(props.handlerFunction);
+  props.handlerFunction.addEnvironment(
     OrchestratorEnvVars.EXECUTION_TABLE_NAME,
-    props.executionTable?.tableName
+    props.executionTable.tableName
   );
-  props.executionTable.grantReadWriteData(this.handlerFunction);
 
-  this.responseTopic = new sns.Topic(this, 'ResponseTopic');
+  this.responseTopic = new sns.Topic(this, `ResponseTopic`);
   this.responseTopic.addSubscription(
-    new snsSubs.LambdaSubscription(this.handlerFunction));
+    new snsSubs.LambdaSubscription(props.handlerFunction)
+  );
 }
 ```
 
-TODO: Talk through the constructor
+Here the `handlerFunction` is exposed. It is then granted access to the state table and an environment variable is added to provide it with the name. The response topic is then created and the `handlerFunction` subscribed to it to receive the response messages.
 
-Then:
+## The Task Construct
 
-* `AsyncTask`? 
+As with the orchestration construct, the first thing to define are the inputs and outputs.
 
 ```TypeScript
 export interface AsyncTaskProps<TReq, TRes> {
@@ -100,36 +103,199 @@ export interface AsyncTaskProps<TReq, TRes> {
   handlerFunction: lambda.Function;
 }
 
-export default abstract class AsyncTask<TReq, TRes> extends cdk.Construct {
+constructor(
+  orchestrator: Orchestrator,
+  id: string,
+  props: AsyncTaskProps<TReq, TRes>
+) {
   readonly requestTopic: sns.ITopic;
 }
 ```
+
+Inputs:
+
+- `handlerType` is a parameterless constructor function that is used to retrieve the name of the concrete implementation, see `props.handlerType.name`.
+- `handlerFunction` is a reference to the Lambda function that will do the orchestration. This function will delegate the handling to a sub-class of `AsyncTaskHandler`.
+
+Outputs:
+
+- `requestTopic` is the SNS topic created that the orchestration will use to send requests to the task function.
 
 ```TypeScript
 constructor(orchestrator: Orchestrator, id: string, props: AsyncTaskProps<TReq, TRes>) {
   super(orchestrator, id);
 
-  //  Create the request topic, subscribe and allow the orchestrator to publish
+  this.requestTopic = new sns.Topic(this, 'RequestTopic');
+  this.requestTopic.addSubscription(
+    new snsSubs.LambdaSubscription(props.handlerFunction)
+  );
 
-  this.requestTopic = new sns.Topic(this, `${props.handlerType.name}RequestTopic`);
-  this.requestTopic.addSubscription(new snsSubs.LambdaSubscription(props.handlerFunction));
-
+  this.requestTopic.grantPublish(orchestrator.handlerFunction);
   orchestrator.handlerFunction.addEnvironment(
     `${props.handlerType.name.toUpperCase()}_REQUEST_TOPIC_ARN`
     this.requestTopic.topicArn
   );
-  this.requestTopic.grantPublish(orchestrator.handlerFunction);
 
-  // Allow ourselves to publish responses back to the orchestrator
-
+  orchestrator.responseTopic.grantPublish(props.handlerFunction);
   props.handlerFunction.addEnvironment(
     AsyncTaskEnvVars.RESPONSE_TOPIC_ARN,
     orchestrator.responseTopic.topicArn
   );
-  orchestrator.responseTopic.grantPublish(props.handlerFunction);
 }
 ```
 
-Then:
+The constructor first creates the `requestTopic` and subscribes the task `handlerFunction` to it to receive requests.
 
-* Simple sequence?
+Next it uses the `orchestrator` parameter to access underlying `handlerFunction`. It grants this function access to publish requests to the task, then it adds an environment variable to the function. The environment variable is named following a convention based on the name of the `handlerType`. The orchestrator function will follow the same convention in order to derive the SNS topic ARN for a particular `handlerType`. Finally, the task `handlerFunction` is granted access to the orchestrator response topic and an environment variable added with the SNS topic ARN.
+
+## The Constructs In Action
+
+### Overview
+
+Simple sequence
+
+### Add Two Number Task
+
+```TypeScript
+export default class AddTwoNumbers extends AsyncTask<
+  AddTwoNumbersRequest,
+  AddTwoNumbersResponse
+> {
+  constructor(orchestrator: Orchestrator, id: string) {
+    super(orchestrator, id, {
+      handlerType: AddTwoNumbersHandler,
+      handlerFunction: new lambdaNodejs.NodejsFunction(
+        orchestrator,
+        AddTwoNumbersHandler.name
+      ),
+    });
+  }
+}
+```
+
+```TypeScript
+export interface AddTwoNumbersRequest {
+  value1: number;
+  value2: number;
+}
+
+export interface AddTwoNumbersResponse {
+  total: number;
+}
+
+export class AddTwoNumbersHandler extends AsyncTaskHandler<
+  AddTwoNumbersRequest,
+  AddTwoNumbersResponse
+> {
+  async handleRequestAsync(
+    request: AddTwoNumbersRequest
+  ): Promise<AddTwoNumbersResponse> {
+    return {
+      total: request.value1 + request.value2,
+    };
+  }
+}
+
+export const handler = async (event: any): Promise<void> =>
+  new AddTwoNumbersHandler().handleAsync(event);
+```
+
+### Simple Sequence Orchestration
+
+```TypeScript
+export default class SimpleSequence extends Orchestrator {
+
+  constructor(scope: cdk.Construct, id: string, props: SimpleSequenceProps) {
+    super(scope, id, {
+      ...props,
+      handlerFunction: new lambdaNodejs.NodejsFunction(
+        scope,
+        SimpleSequenceHandler.name
+      ),
+    });
+
+    AddTwoNumbers(this, AddTwoNumbersHandler.name);
+  }
+}
+```
+
+```TypeScript
+export interface SimpleSequenceInput {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface SimpleSequenceOutput {
+  total: number;
+}
+
+export interface SimpleSequenceData {
+  x: number;
+  y: number;
+  z: number;
+  total: number;
+}
+```
+
+```TypeScript
+export class SimpleSequenceHandler extends OrchestratorHandler<
+  SimpleSequenceInput,
+  SimpleSequenceOutput,
+  SimpleSequenceData
+> {
+}
+
+export const handler = async (event: any): Promise<any> =>
+  new SimpleSequenceHandler().handleAsync(event);
+```
+
+```TypeScript
+constructor() {
+  super(
+    new OrchestrationBuilder<
+      SimpleSequenceInput,
+      SimpleSequenceOutput,
+      SimpleSequenceData
+    >({
+      getData: (input): SimpleSequenceData => ({
+        ...input,
+        total: 0,
+      }),
+      getOutput: (data): SimpleSequenceOutput => ({ total: data.total }),
+    })
+
+      .invokeAsync({
+        stepId: 'AddX&Y',
+        HandlerType: AddTwoNumbersHandler,
+        getRequest: (data) => ({
+          value1: data.x,
+          value2: data.y,
+        }),
+        updateData: (data, response) => {
+          data.total = response.total;
+        },
+      })
+
+      .invokeAsync({
+        stepId: 'AddZ&Total',
+        HandlerType: AddTwoNumbersHandler,
+        getRequest: (data) => ({
+          value1: data.z,
+          value2: data.total,
+        }),
+        updateData: (data, response) => {
+          data.total = response.total;
+        },
+      })
+
+      .build()
+  );
+}
+```
+
+## The Test
+
+TODO
+
+## Summary
