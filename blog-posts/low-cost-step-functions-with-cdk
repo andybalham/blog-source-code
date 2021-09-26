@@ -2,7 +2,9 @@
 
 Step Functions are great. They let you orchestrate your Lambda functions in a declarative manner, allowing you to avoid combine those functions without directly chaining them together (and thus compounding your costs). However, they are expensive. The first 4000 transitions are free, but the rest are [$0.025 per 1,000 state transitions](https://aws.amazon.com/step-functions/pricing/). You could use [Express Workflows](https://aws.amazon.com/blogs/aws/new-aws-step-functions-express-workflows-high-performance-low-cost/) instead, but they can only run for five minutes of wall-clock time. So how can we have a cheap, long-running way of easily orchestrating Lambda functions? Perhaps CDK can help us build such a thing.
 
-TODO: TL;DR and GitHub link
+## TL;DR
+
+Using CDK, Lambda functions, SNS, and DynamoDB, it is possible to build a simple analog of Step Functions. See the [GitHub repo](TODO) for the full code and working examples.
 
 > Note, Step Functions also have error-handling, retries, parallel processing and more very useful functionality that we won't be trying to replicate here. Well, at least not yet 😉
 
@@ -34,10 +36,6 @@ An orchestration is to be composed of a single orchestrator construct and one or
 
 Note that the orchestration state is not part of these constructs. This is in line with the following guidance from the [best practices](https://docs.aws.amazon.com/cdk/latest/guide/best-practices.html).
 
-> #### Don't change the logical ID of stateful resources
->
-> Changing the logical ID of a resource results in the resource being replaced with a new one at the next deployment. For stateful resources like databases and buckets this is almost never what you want. Be careful about any refactor of your AWS CDK code that could cause the ID to change, and write unit tests that assert that the logical IDs of your stateful resources remain static.
-
 > #### Separate your application into multiple stacks as dictated by deployment requirements
 >
 > - Consider keeping stateful resources (like databases) in a separate stack from stateless resources. You can then turn on termination protection on the stateful stack, and can freely destroy or create multiple copies of the stateless stack without risk of data loss.
@@ -63,7 +61,7 @@ export default abstract class Orchestrator extends cdk.Construct {
 Inputs:
 
 - `executionTable` is a reference to the DynamoDB table that will be used to store the orchestration state. The construct could create this itself, but as we saw from the best practices, it can be wise to keep stateful resources external.
-- `handlerFunction` is a reference to the Lambda function that will do the orchestration. This resource will be instantiated by the concrete sub-class, as it will provide functionality specific to the concrete orchestration.
+- `handlerFunction` is a reference to the Lambda function that will do the orchestration. This resource will be instantiated by the concrete subclass, as it will provide functionality specific to the concrete orchestration.
 
 Outputs:
 
@@ -115,7 +113,7 @@ constructor(
 Inputs:
 
 - `handlerType` is a parameterless constructor function that is used to retrieve the name of the concrete implementation, see `props.handlerType.name`.
-- `handlerFunction` is a reference to the Lambda function that will do the orchestration. This function will delegate the handling to a sub-class of `AsyncTaskHandler`.
+- `handlerFunction` is a reference to the Lambda function that will do the orchestration. This function will delegate the handling to a subclass of `AsyncTaskHandler`.
 
 Outputs:
 
@@ -177,7 +175,7 @@ export interface AddTwoNumbersResponse {
 }
 ```
 
-Next, a sub-class of `AsyncTaskHandler` is created to handle the request and return the response. `AsyncTaskHandler` is doing the heavy lifting of handling SNS events and turning them into `AddTwoNumbersRequest` instances, then taking `AddTwoNumbersResponse` and publishing them to the orchestrator response topic.
+Next, a subclass of `AsyncTaskHandler` is created to handle the request and return the response. `AsyncTaskHandler` is doing the heavy lifting of handling SNS events and turning them into `AddTwoNumbersRequest` instances, then taking `AddTwoNumbersResponse` and publishing them to the orchestrator response topic.
 
 ```TypeScript
 export class AddTwoNumbersHandler extends AsyncTaskHandler<
@@ -201,13 +199,15 @@ export const handler = async (event: any): Promise<void> =>
   new AddTwoNumbersHandler().handleAsync(event);
 ```
 
-> The AWS CDK not only generates AWS CloudFormation templates for deploying infrastructure, it also bundles runtime assets like Lambda functions and Docker images and deploys them alongside your infrastructure.
+The CDK best practices guide mentions the following:
 
-[`NodejsFunction`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_nodejs.NodejsFunction.html)
+> The AWS CDK not only generates AWS CloudFormation templates for deploying infrastructure, it also bundles runtime assets like Lambda functions and deploys them alongside your infrastructure.
 
-> If the NodejsFunction is defined in stack.ts with my-handler as id (new NodejsFunction(this, 'my-handler')), the construct will look at stack.my-handler.ts and stack.my-handler.js.)
+We can take advantage of this by using the [`NodejsFunction`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_nodejs.NodejsFunction.html) construct and noting the following convention.
 
-TODO: Bundling including picture
+> If the `NodejsFunction` is defined in stack.ts with my-handler as id (new NodejsFunction(this, 'my-handler')), the construct will look at stack.my-handler.ts and stack.my-handler.js.)
+
+So if we put following code in `AddTwoNumbers.ts`, then the CDK will look in `AddTwoNumbers.AddTwoNumbersHandler.ts` for a `handler` function.
 
 ```TypeScript
 export default class AddTwoNumbers extends AsyncTask<
@@ -226,24 +226,13 @@ export default class AddTwoNumbers extends AsyncTask<
 }
 ```
 
+Here we are again using the constructor for `AddTwoNumbersHandler`. Once to pass in to the base class and again as a convention for the Lambda function id. This means that if we structure the code into the following two files then the CDK will bundle the code using esbuild, which is one proven way to minimise cold starts.
+
+![lambda-bundling.png](https://cdn.hashnode.com/res/hashnode/image/upload/v1632688196592/OgQ20eiN9.png)
+
 ### Simple Sequence Orchestration
 
-```TypeScript
-export default class SimpleSequence extends Orchestrator {
-
-  constructor(scope: cdk.Construct, id: string, props: SimpleSequenceProps) {
-    super(scope, id, {
-      ...props,
-      handlerFunction: new lambdaNodejs.NodejsFunction(
-        scope,
-        SimpleSequenceHandler.name
-      ),
-    });
-
-    AddTwoNumbers(this, AddTwoNumbersHandler.name);
-  }
-}
-```
+Now we have a task to call, we come to defining the orchestration itself. First up, we need to define the inputs, the outputs, and the structure of the data the orchestration works upon. These are all defined as interfaces as follows.
 
 ```TypeScript
 export interface SimpleSequenceInput {
@@ -264,6 +253,8 @@ export interface SimpleSequenceData {
 }
 ```
 
+Next we need to define how to get the initial data, based on the inputs, and how we get the output based on the data. This is done as follows, providing a `getData` function for the former and a `getOutput` function for the latter.
+
 ```TypeScript
 const orchestrationProps: OrchestrationBuilderProps<
   SimpleSequenceInput,
@@ -277,6 +268,8 @@ const orchestrationProps: OrchestrationBuilderProps<
   getOutput: (data): SimpleSequenceOutput => ({ total: data.total }),
 };
 ```
+
+The next step, no pun intended, is to define the steps of our orchestration. This is done using the [builder pattern](TODO) and the `OrchestrationBuilder` class. Each step has a unique id, a reference to the type of handler, and two functions. The `getRequest` function returns a request instance based on the current data. This is the request that is sent to the task handler. The `updateData` function takes the response returned by the task and updates the data. In contrast to Step Functions, this approach has some level of type safety thanks to TypeScript.
 
 ```TypeScript
 const orchestration = new OrchestrationBuilder<
@@ -312,6 +305,8 @@ const orchestration = new OrchestrationBuilder<
   .build();
 ```
 
+Now we have our orchestration defined, we need to subclass `OrchestratorHandler` as follows and export a `handler` function to despatch events to it.
+
 ```TypeScript
 export class SimpleSequenceHandler extends OrchestratorHandler<
   SimpleSequenceInput,
@@ -327,8 +322,29 @@ export const handler = async (event: any): Promise<any> =>
   new SimpleSequenceHandler().handleAsync(event);
 ```
 
-## The Test
+`OrchestratorHandler` is doing a lot of heaving lifting here behind the scenes. It handles the events to start the orchestration and it steps through the orchestration, pausing when an asynchronous task is called. When a response event is received, it then resumes stepping through. It also handles events to list the state of an execution.
 
-TODO
+The final piece in the puzzle is the orchestrator construct as follows.
+
+```TypeScript
+export default class SimpleSequence extends Orchestrator {
+
+  constructor(scope: cdk.Construct, id: string, props: SimpleSequenceProps) {
+    super(scope, id, {
+      ...props,
+      handlerFunction: new lambdaNodejs.NodejsFunction(
+        scope,
+        SimpleSequenceHandler.name
+      ),
+    });
+
+    AddTwoNumbers(this, AddTwoNumbersHandler.name);
+  }
+}
+```
+
+Again, we use the `NodejsFunction` construct and the convention to wire it up to the appropriate `handler`. We also wire up the `AddTwoNumbers` to the orchestrator with one line of code. I hope you can see how the `AddTwoNumbers` code could easily be packaged and reused across orchestrations. This might be useful if a task held its own state, perhaps a call to an external service with a circuit breaker.
 
 ## Summary
+
+TODO
