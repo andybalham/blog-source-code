@@ -2,17 +2,17 @@
 
 Step Functions are great. They let you orchestrate your Lambda functions in a declarative manner, allowing you to avoid combine those functions without directly chaining them together (and thus compounding your costs). However, they are expensive. The first 4000 transitions are free, but the rest are [$0.025 per 1,000 state transitions](https://aws.amazon.com/step-functions/pricing/). You could use [Express Workflows](https://aws.amazon.com/blogs/aws/new-aws-step-functions-express-workflows-high-performance-low-cost/) instead, but they can only run for five minutes of wall-clock time. So how can we have a cheap, long-running way of easily orchestrating Lambda functions? Perhaps CDK can help us build such a thing.
 
+> Note, Step Functions also have error-handling, retries, parallel processing and more very useful functionality that we won't be trying to replicate here. Well, at least not yet 😉
+
 ## TL;DR
 
-Using CDK, Lambda functions, SNS, and DynamoDB, it is possible to build a simple analog of Step Functions. See the [GitHub repo](TODO) for the full code and working examples.
-
-> Note, Step Functions also have error-handling, retries, parallel processing and more very useful functionality that we won't be trying to replicate here. Well, at least not yet 😉
+Using CDK, Lambda functions, SNS, and DynamoDB, it is possible to build a simple analog of Step Functions. See the [GitHub repo](https://github.com/andybalham/blog-source-code/tree/master/low-cost-step-functions) for the full code and working examples.
 
 ## The Aim
 
 The aim is to have a single orchestrator Lambda function that uses SNS topics to send asynchronous requests to Lambda functions that perform the various tasks. The orchestrator function then subscribes to a response topic in order to process the output from those tasks. A DynamoDB table is to be used to hold the state of the orchestration between the asynchronous calls. The resulting architecture should look something like the following.
 
-![blog-low-cost-step-functions-aim.jpg](https://cdn.hashnode.com/res/hashnode/image/upload/v1632574098336/VZ2iHlMjW.jpeg)
+![blog-low-cost-step-functions-aim.jpg](https://cdn.hashnode.com/res/hashnode/image/upload/v1632761660698/yUoPBN1Wa.jpeg)
 
 ## CDK Best Practices
 
@@ -30,9 +30,9 @@ The following is taken from [Best practices for developing and deploying cloud i
 
 With this advice in mind, the components are to be organised as follows.
 
-![blog-low-cost-step-functions-aim-constructs.jpg](https://cdn.hashnode.com/res/hashnode/image/upload/v1632574104919/-39Sh-ygV.jpeg)
+![blog-low-cost-step-functions-aim-constructs.jpg](https://cdn.hashnode.com/res/hashnode/image/upload/v1632761671710/ufeafRn_L.jpeg)
 
-An orchestration is to be composed of a single orchestrator construct and one or more task constructs. The orchestrator and task constructs are each made up of a Lambda function and an SNS topic. The topics are to used for the request/response communication between the orchestrator and the tasks. The trick is going to be how we make wiring up these interdependent constructs.
+An orchestration is to be composed of a single orchestrator construct and one or more task constructs. The orchestrator and task constructs are each made up of a Lambda function and an SNS topic. The topics are to used for the request/response communication between the orchestrator and the tasks. The trick is going to be how we make wiring up these interdependent constructs as straightforward as possible.
 
 Note that the orchestration state is not part of these constructs. This is in line with the following guidance from the [best practices](https://docs.aws.amazon.com/cdk/latest/guide/best-practices.html).
 
@@ -40,11 +40,11 @@ Note that the orchestration state is not part of these constructs. This is in li
 >
 > - Consider keeping stateful resources (like databases) in a separate stack from stateless resources. You can then turn on termination protection on the stateful stack, and can freely destroy or create multiple copies of the stateless stack without risk of data loss.
 
-If we have long-running orchestrations, then we may have state that needs to persist between deployments of the orchestration implementation. Perhaps there was a bug-fix that required a patch release. We want to be careful that such state is not deleted in such scenarios. Given this, the state
+If we have long-running orchestrations, then we may have state that needs to persist between deployments of the orchestration implementation. Perhaps there was a bug-fix that required a patch release. We want to be careful that such state is not deleted in such scenarios. Given this, the decision is to keep the state external.
 
 ## The Orchestrator Construct
 
-The Orchestrator construct is an abstract class that provides the base functionality for concrete implementations. The first thing to consider with the Orchestrator construct is the inputs and the outputs. For constructs, the inputs are passed in as a `props` object and the outputs are properties exposed by the construct itself. For the Orchestrator construct, these are as follows.
+The Orchestrator construct is an abstract class that provides the base functionality for Orchestrators. The first thing to consider with the Orchestrator construct is the inputs and the outputs. For constructs, the inputs are passed in as a `props` object and the outputs are properties exposed by the construct itself. For the Orchestrator construct, these are as follows.
 
 ```TypeScript
 export interface OrchestratorProps {
@@ -226,7 +226,9 @@ export default class AddTwoNumbers extends AsyncTask<
 }
 ```
 
-Here we are again using the constructor for `AddTwoNumbersHandler`. Once to pass in to the base class and again as a convention for the Lambda function id. This means that if we structure the code into the following two files then the CDK will bundle the code using esbuild, which is one proven way to minimise cold starts.
+Here we are again using the constructor for `AddTwoNumbersHandler`. Once to pass in to the base class and again as a convention for the Lambda function id. This means that if we structure the code into the following two files then the CDK will bundle the code using [esbuild](https://esbuild.github.io/), which is one proven way to minimise cold starts.
+
+The resulting files look as follows:
 
 ![lambda-bundling.png](https://cdn.hashnode.com/res/hashnode/image/upload/v1632688196592/OgQ20eiN9.png)
 
@@ -269,7 +271,7 @@ const orchestrationProps: OrchestrationBuilderProps<
 };
 ```
 
-The next step, no pun intended, is to define the steps of our orchestration. This is done using the [builder pattern](TODO) and the `OrchestrationBuilder` class. Each step has a unique id, a reference to the type of handler, and two functions. The `getRequest` function returns a request instance based on the current data. This is the request that is sent to the task handler. The `updateData` function takes the response returned by the task and updates the data. In contrast to Step Functions, this approach has some level of type safety thanks to TypeScript.
+The next step, no pun intended, is to define the steps of our orchestration. This is done using the [fluent builder pattern](https://singhsharp.hashnode.dev/c-design-patterns-fluent-builder-pattern) and the `OrchestrationBuilder` class. Each step has a unique id, a reference to the type of handler, and two functions. The `getRequest` function returns a request instance based on the current data. This is the request that is sent to the task handler. The `updateData` function takes the response returned by the task and updates the data. In contrast to Step Functions, this approach has some level of type safety thanks to TypeScript.
 
 ```TypeScript
 const orchestration = new OrchestrationBuilder<
@@ -322,7 +324,7 @@ export const handler = async (event: any): Promise<any> =>
   new SimpleSequenceHandler().handleAsync(event);
 ```
 
-`OrchestratorHandler` is doing a lot of heaving lifting here behind the scenes. It handles the events to start the orchestration and it steps through the orchestration, pausing when an asynchronous task is called. When a response event is received, it then resumes stepping through. It also handles events to list the state of an execution.
+`OrchestratorHandler` is doing a lot of heaving lifting here behind the scenes. It handles the events to start the orchestration and it steps through the orchestration, pausing when an asynchronous task is called. When a response event is received, it then resumes stepping through.
 
 The final piece in the puzzle is the orchestrator construct as follows.
 
@@ -347,4 +349,4 @@ Again, we use the `NodejsFunction` construct and the convention to wire it up to
 
 ## Summary
 
-TODO
+We have seen that we can create a framework for creating serverless orchestrations without Step Functions. By using the CDK, we can take advantage of its compositional abilities and how it can combine the code and the infrastructure. Admittedly, the result lacks several features, such as error-handling, that you would need for production. However, this shows what is possible and the full code can be found in the [GitHub repo](https://github.com/andybalham/blog-source-code/tree/master/low-cost-step-functions), along with a set of working examples and unit tests.
