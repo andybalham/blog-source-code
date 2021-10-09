@@ -24,6 +24,9 @@ export default class SimpleSequence extends Orchestrator {
       ),
     });
 
-    this.addTwoNumbers = new AddTwoNumbers(this, AddTwoNumbersHandler.name);
+    this.addTwoNumbers = new AddTwoNumbers(
+      this,
+      `${AddTwoNumbersHandler.name}Task`
+    );
   }
 }

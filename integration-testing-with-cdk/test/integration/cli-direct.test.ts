@@ -45,8 +45,6 @@ describe('CLI-based tests', () => {
       fs.unlinkSync(configurationFileName);
     }
 
-    // Wait
-
     await new Promise((resolve) => setTimeout(resolve, 3 * 1000));
 
     // Assert
@@ -97,7 +95,7 @@ describe('CLI-based tests', () => {
       fs.unlinkSync(configurationFileName);
     }
 
-    // Poll
+    // Await
 
     const timedOut = getTimedOut(12);
     const expectedEventCount = (events: FileEvent[] | undefined): boolean => events?.length === 2;

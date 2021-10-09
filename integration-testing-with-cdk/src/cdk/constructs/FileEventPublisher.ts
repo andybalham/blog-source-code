@@ -15,10 +15,13 @@ export interface FileEventPublisherProps {
 }
 
 export default class FileEventPublisher extends cdk.Construct {
+  //
   readonly fileEventTopic: sns.Topic;
 
   constructor(scope: cdk.Construct, id: string, props: FileEventPublisherProps) {
     super(scope, id);
+
+    // The topic to which we publish file events
 
     this.fileEventTopic = new sns.Topic(this, `${id}FileEventTopic`, {
       displayName: `File event topic for ${props.fileBucket.bucketName}`,

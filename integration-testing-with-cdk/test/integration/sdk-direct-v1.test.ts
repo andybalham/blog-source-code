@@ -42,7 +42,7 @@ describe('Tests using the SDK', () => {
 
     await uploadObjectToBucketAsync(testBucketName, configurationFileS3Key, configurationFile);
 
-    // Poll
+    // Await
 
     const timedOut = getTimedOut(12);
     const expectedEventCount = (events: FileEvent[] | undefined): boolean => events?.length === 2;
@@ -52,6 +52,7 @@ describe('Tests using the SDK', () => {
     while (!timedOut() && !expectedEventCount(fileEvents)) {
       // eslint-disable-next-line no-await-in-loop
       await waitAsync(2);
+      // TODO 05Oct21: Reinstate the following
       fileEvents = []; // await getFileEvents(configurationFileName);
     }
 
