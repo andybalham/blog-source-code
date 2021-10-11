@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-use-before-define */
@@ -50,10 +51,8 @@ describe('Tests using the SDK', () => {
     let fileEvents: FileEvent[] | undefined;
 
     while (!timedOut() && !expectedEventCount(fileEvents)) {
-      // eslint-disable-next-line no-await-in-loop
       await waitAsync(2);
-      // TODO 05Oct21: Reinstate the following
-      fileEvents = []; // await getFileEvents(configurationFileName);
+      fileEvents = await getFileEvents(testResultsTableName, configurationFile.header.name);
     }
 
     // Assert
@@ -113,4 +112,26 @@ function newConfigurationFile(): File<Configuration> {
   };
 
   return configFile;
+}
+
+async function getFileEvents(
+  testResultsTableName: string,
+  configurationFileName: string
+): Promise<FileEvent[] | undefined> {
+  const db = new AWS.DynamoDB.DocumentClient({ region: getRegion() });
+
+  const queryParams /*: QueryInput */ = {
+    // QueryInput results in a 'Condition parameter type does not match schema type'
+    TableName: testResultsTableName,
+    KeyConditionExpression: `s3Key = :s3Key`,
+    ExpressionAttributeValues: {
+      ':s3Key': configurationFileName,
+    },
+  };
+
+  const queryResult = await db.query(queryParams).promise();
+
+  const fileEvents = queryResult.Items?.map((item) => item.message as FileEvent);
+
+  return fileEvents;
 }

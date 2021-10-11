@@ -15,8 +15,8 @@ import { FileSectionType } from '../../src/contracts/FileSectionType';
 
 dotenv.config();
 
-const testBucketName = 'fileeventpublisherteststack-testbucket560b80bc-3dkypcn2e13w';
-const testOutputsTableName = 'FileEventPublisherTestStack-TestResultsTable04198A62-1SBMVGKT0FO04';
+const testBucketName = 'fileeventpublisherteststack-testbucket560b80bc-cn2e13w3dkyp';
+const testOutputsTableName = 'FileEventPublisherTestStack-TestResultsTable04198A62-KT0FO041SBMVG';
 
 describe('CLI-based tests', () => {
   //

@@ -8,8 +8,7 @@ import { FileEventPublisher } from '../../constructs';
 import { newNodejsFunction } from '../../common';
 
 export default class FileEventPublisherTestStack extends cdk.Stack {
-  static readonly ResourceKey = 'FileEventPublisherTestStack';
-
+  //
   constructor(scope: cdk.Construct, id: string) {
     super(scope, id);
 
