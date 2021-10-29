@@ -1,0 +1,19 @@
+{
+  "mochaExplorer.files": "test/**/*.ts",
+  "mochaExplorer.require": "ts-node/register",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "cSpell.language": "en-GB",
+  "cSpell.words": [
+    "esbuild",
+    "exts",
+    "hotswap",
+    "istanbuljs",
+    "Millis",
+    "nanoid",
+    "resourcegroupstaggingapi",
+    "stepfunctions",
+    "TRes"
+  ]
+}
