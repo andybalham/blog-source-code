@@ -8,7 +8,11 @@ import { FileEventPublisher } from '../../constructs';
 import { newNodejsFunction } from '../../common';
 
 export default class FileEventPublisherTestStack extends cdk.Stack {
+  //
+  // The key for all testing tags
   static readonly ResourceKey = 'FileEventPublisherTestStack';
+
+  // The tags for our test resources
 
   static readonly TestBucketTag = new cdk.Tag(
     FileEventPublisherTestStack.ResourceKey,
@@ -23,15 +27,12 @@ export default class FileEventPublisherTestStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string) {
     super(scope, id);
 
+    // Create the test resources and the system under test
+    
     const testBucket = new s3.Bucket(this, 'TestBucket', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
-
-    cdk.Tags.of(testBucket).add(
-      FileEventPublisherTestStack.TestBucketTag.key,
-      FileEventPublisherTestStack.TestBucketTag.value
-    );
 
     const sut = new FileEventPublisher(this, 'SUT', {
       fileBucket: testBucket,
@@ -42,11 +43,6 @@ export default class FileEventPublisherTestStack extends cdk.Stack {
       sortKey: { name: 'messageId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
     });
-
-    cdk.Tags.of(testResultsTable).add(
-      FileEventPublisherTestStack.TestResultsTableTag.key,
-      FileEventPublisherTestStack.TestResultsTableTag.value
-    );
 
     const fileEventTestSubscriberFunction = newNodejsFunction(
       this,
@@ -61,14 +57,16 @@ export default class FileEventPublisherTestStack extends cdk.Stack {
     );
     testResultsTable.grantWriteData(fileEventTestSubscriberFunction);
 
-    new cdk.CfnOutput(this, `TestBucketName`, {
-      value: testBucket.bucketName,
-    });
+    // Tag the resources we want to interact with
 
-    new cdk.CfnOutput(this, `TestResultsTableName`, {
-      value: testResultsTable.tableName,
-    });
+    cdk.Tags.of(testBucket).add(
+      FileEventPublisherTestStack.TestBucketTag.key,
+      FileEventPublisherTestStack.TestBucketTag.value
+    );
 
-    cdk.Tags.of(this).add('stack', id);
+    cdk.Tags.of(testResultsTable).add(
+      FileEventPublisherTestStack.TestResultsTableTag.key,
+      FileEventPublisherTestStack.TestResultsTableTag.value
+    );
   }
 }

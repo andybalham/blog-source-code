@@ -25,15 +25,20 @@ describe('Tests using the SDK', () => {
   let testResultsTableName: string;
 
   before(async () => {
-    const testResources = await getResourcesByTagKeyAsync(FileEventPublisherTestStack.ResourceKey);
-    testBucketName = getBucketNameByTag(testResources, FileEventPublisherTestStack.TestBucketTag);
+    const testResources = await getResourcesByTagKeyAsync(
+      FileEventPublisherTestStack.ResourceKey);
+
+    testBucketName = getBucketNameByTag(
+      testResources, 
+      FileEventPublisherTestStack.TestBucketTag);
+    
     testResultsTableName = getTableNameByTag(
       testResources,
       FileEventPublisherTestStack.TestResultsTableTag
     );
   });
 
-  it('New file - With polling', async () => {
+  it('New file', async () => {
     // Arrange
 
     const configurationFile = newConfigurationFile();
@@ -43,19 +48,11 @@ describe('Tests using the SDK', () => {
 
     await uploadObjectToBucketAsync(testBucketName, configurationFileS3Key, configurationFile);
 
-    // Await
-
-    const timedOut = getTimedOut(12);
-    const expectedEventCount = (events: FileEvent[] | undefined): boolean => events?.length === 2;
-
-    let fileEvents: FileEvent[] | undefined;
-
-    while (!timedOut() && !expectedEventCount(fileEvents)) {
-      await waitAsync(2);
-      fileEvents = await getFileEvents(testResultsTableName, configurationFile.header.name);
-    }
+    await new Promise((resolve) => setTimeout(resolve, 3 * 1000));
 
     // Assert
+
+    const fileEvents = await getFileEvents(testResultsTableName, configurationFile.header.name);
 
     expect(fileEvents?.length).to.equal(2);
 
@@ -78,26 +75,6 @@ describe('Tests using the SDK', () => {
     );
   }).timeout(60 * 1000);
 });
-
-const listAllKeysAsync = async (
-  bucket: string,
-  prefix?: string,
-  token?: string
-): Promise<ObjectList> => {
-  const s3 = new AWS.S3({ region: getRegion() });
-  const opts = {
-    Bucket: bucket,
-    ContinuationToken: token,
-    ...(prefix && { Prefix: prefix }),
-  };
-  const data = await s3.listObjectsV2(opts).promise();
-  let allKeys = data.Contents || [];
-  if (data.IsTruncated) {
-    allKeys = allKeys.concat(await listAllKeysAsync(bucket, prefix, data.NextContinuationToken));
-  }
-
-  return allKeys;
-};
 
 function newConfigurationFile(): File<Configuration> {
   //

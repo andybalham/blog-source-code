@@ -1,0 +1,12 @@
+{
+  "header": {
+    "contentType": "Formula",
+    "id": "3.5x Salary and 50% overtime",
+    "description": "Very generous on both salary and overtime"
+  },
+  "body": {
+    "basicSalaryUsed": 3.5,
+    "overtimeUsed": 50
+  }
+}
+

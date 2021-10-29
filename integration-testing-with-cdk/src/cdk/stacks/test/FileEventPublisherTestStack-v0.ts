@@ -2,7 +2,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import * as cdk from '@aws-cdk/core';
 import * as s3 from '@aws-cdk/aws-s3';
-import * as subscriptions from '@aws-cdk/aws-sns-subscriptions';
+import * as subs from '@aws-cdk/aws-sns-subscriptions';
 import * as dynamodb from '@aws-cdk/aws-dynamodb';
 import { FileEventPublisher } from '../../constructs';
 import { newNodejsFunction } from '../../common';
@@ -36,10 +36,12 @@ export default class FileEventPublisherTestStack extends cdk.Stack {
       }
     );
     sut.fileEventTopic.addSubscription(
-      new subscriptions.LambdaSubscription(fileEventTestSubscriberFunction)
+      new subs.LambdaSubscription(fileEventTestSubscriberFunction)
     );
     testResultsTable.grantWriteData(fileEventTestSubscriberFunction);
 
+    // Output the names of the test bucket and the results table
+    
     new cdk.CfnOutput(this, `TestBucketName`, {
       value: testBucket.bucketName,
     });
