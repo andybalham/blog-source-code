@@ -12,8 +12,10 @@
     "istanbuljs",
     "Millis",
     "nanoid",
+    "outfile",
     "resourcegroupstaggingapi",
     "stepfunctions",
-    "TRes"
+    "TRes",
+    "vars"
   ]
 }

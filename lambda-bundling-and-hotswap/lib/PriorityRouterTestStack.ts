@@ -2,7 +2,7 @@
 import * as cdk from '@aws-cdk/core';
 import * as sns from '@aws-cdk/aws-sns';
 import { IntegrationTestStack } from '@andybalham/sls-testing-toolkit';
-import PriorityRouter from '../src/event-router/PriorityRouter';
+import PriorityRouter from '../src/event-router/PriorityRouter-v4';
 
 export default class PriorityRouterTestStack extends IntegrationTestStack {
   //

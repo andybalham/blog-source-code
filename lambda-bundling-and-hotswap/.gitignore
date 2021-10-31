@@ -105,4 +105,4 @@ dist
 
 cdk.out/
 
-lambda-bundle/
+esbuild-output/

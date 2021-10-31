@@ -1,7 +1,7 @@
 {
-  "name": "@andybalham/sls-testing-toolkit-test",
+  "name": "lambda-bundling-and-hotswap",
   "version": "1.0.0",
-  "description": "Serverless Testing Toolkit Test",
+  "description": "Source code for blog post on lambda bundling and hotswap",
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
@@ -10,7 +10,7 @@
     "build": "npm run lint && tsc",
     "test": "mocha --require ts-node/register test/**/*.ts",
     "test-coverage": "nyc npm run test",
-    "bundle-lambda": "./node_modules/.bin/esbuild src/event-router/PriorityRouter.Function.ts --bundle --platform=node --target=node14 --external:aws-sdk --outfile=lambda-bundle/priorityRouterFunction.js",
+    "bundle-lambda": "./node_modules/.bin/esbuild src/event-router/priorityRouterFunction-v1b.ts --bundle --platform=node --target=node14 --external:aws-sdk --outfile=esbuild-output/priorityRouterFunction.js",
     "cdk-synth": "tsc && cdk synth",
     "cdk-deploy": "tsc && cdk deploy",
     "cdk-hotswap": "tsc && cdk deploy --hotswap",
@@ -18,16 +18,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/andybalham/sls-testing-toolkit-test.git"
+    "url": "git+https://github.com/andybalham/lambda-bundling-and-hotswap.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/andybalham/sls-testing-toolkit-test/issues"
+    "url": "https://github.com/andybalham/lambda-bundling-and-hotswap/issues"
   },
-  "homepage": "https://github.com/andybalham/sls-testing-toolkit-test#readme",
+  "homepage": "https://github.com/andybalham/lambda-bundling-and-hotswap#readme",
   "devDependencies": {
-    "@andybalham/sls-testing-toolkit": "^1.0.7",
+    "@andybalham/sls-testing-toolkit": "^1.0.10",
     "@aws-cdk/aws-dynamodb": "^1.129.0",
     "@aws-cdk/aws-events-targets": "^1.129.0",
     "@aws-cdk/aws-lambda": "^1.129.0",
