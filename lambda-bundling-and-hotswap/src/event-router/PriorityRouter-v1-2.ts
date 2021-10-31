@@ -9,7 +9,7 @@ import {
   HIGH_PRIORITY_QUEUE_URL,
   HIGH_PRIORITY_THRESHOLD_DAYS,
   NORMAL_PRIORITY_QUEUE_URL,
-} from './priorityRouterFunction-v1a';
+} from './priorityRouterFunction-v2';
 
 export interface PriorityRouterProps {
   highPriorityThresholdDays: number;
@@ -30,8 +30,8 @@ export default class PriorityRouter extends cdk.Construct {
 
     const priorityRouterFunction = new lambda.Function(this, 'PriorityRouterFunction', {
       runtime: lambda.Runtime.NODEJS_14_X,
-      code: lambda.Code.fromAsset('esbuild-output'),
-      handler: 'priorityRouterFunction.handler',
+      code: lambda.Code.fromAsset('dist/src/event-router'),
+      handler: 'priorityRouterFunction-v2.handler',
       environment: {
         [HIGH_PRIORITY_QUEUE_URL]: this.highPriorityQueue.queueUrl,
         [NORMAL_PRIORITY_QUEUE_URL]: this.normalPriorityQueue.queueUrl,

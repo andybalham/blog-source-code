@@ -16,8 +16,8 @@ const sqs = new SQS();
 
 export const handler = async (event: SNSEvent): Promise<void> => {
   console.log(JSON.stringify({ event }, null, 2));
-  
-  for await (const record of event.Records) {    
+
+  for await (const record of event.Records) {
     const deadlineString = record.Sns.MessageAttributes.Deadline?.Value as string;
 
     const isHighPriority = getIsHighPriority(deadlineString);
@@ -50,11 +50,11 @@ function getIsHighPriority(deadlineString: string): boolean {
     return false;
   }
 
-  const now = DateTime.now();
+  const durationLeftDays = deadlineDate.diff(DateTime.now(), 'days').days;
 
-  const durationLeft = deadlineDate.diff(now, 'days');
+  console.log(JSON.stringify({ durationLeftDays }, null, 2));
 
   const highPriorityThresholdDays = parseInt(process.env[HIGH_PRIORITY_THRESHOLD_DAYS] ?? '0', 10);
 
-  return durationLeft.days <= highPriorityThresholdDays;
+  return durationLeftDays <= highPriorityThresholdDays;
 }

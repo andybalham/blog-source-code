@@ -1,10 +1,11 @@
 {
   "cSpell.words": [
-    "Chainable",
-    "Nextable",
     "byom",
+    "Chainable",
     "esbuild",
+    "hotswap",
     "nanoid",
+    "Nextable",
     "stepfunctions"
   ]
 }

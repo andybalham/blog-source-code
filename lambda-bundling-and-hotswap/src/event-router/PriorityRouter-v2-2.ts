@@ -5,12 +5,11 @@ import * as sns from '@aws-cdk/aws-sns';
 import * as sqs from '@aws-cdk/aws-sqs';
 import * as snsSubs from '@aws-cdk/aws-sns-subscriptions';
 import * as lambda from '@aws-cdk/aws-lambda';
-import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
 import {
   HIGH_PRIORITY_QUEUE_URL,
   HIGH_PRIORITY_THRESHOLD_DAYS,
   NORMAL_PRIORITY_QUEUE_URL,
-} from './priorityRouterFunction-v1';
+} from './priorityRouterFunction-v2';
 
 export interface PriorityRouterProps {
   highPriorityThresholdDays: number;
@@ -29,9 +28,10 @@ export default class PriorityRouter extends cdk.Construct {
     this.highPriorityQueue = new sqs.Queue(this, 'HighPriorityQueue');
     this.normalPriorityQueue = new sqs.Queue(this, 'NormalPriorityQueue');
 
-    const priorityRouterFunction = new lambdaNodejs.NodejsFunction(this, 'PriorityRouterFunction', {
+    const priorityRouterFunction = new lambda.Function(this, 'PriorityRouterFunction', {
       runtime: lambda.Runtime.NODEJS_14_X,
-      handler: 'handler',
+      code: lambda.Code.fromAsset('esbuild-output'),
+      handler: 'priorityRouterFunction.handler',
       environment: {
         [HIGH_PRIORITY_QUEUE_URL]: this.highPriorityQueue.queueUrl,
         [NORMAL_PRIORITY_QUEUE_URL]: this.normalPriorityQueue.queueUrl,

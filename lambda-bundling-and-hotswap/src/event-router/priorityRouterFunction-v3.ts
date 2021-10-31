@@ -6,6 +6,7 @@
 import { SNSEvent } from 'aws-lambda/trigger/sns';
 import { SendMessageRequest } from 'aws-sdk/clients/sqs';
 import { SQS } from 'aws-sdk';
+import { DateTime } from 'luxon';
 
 export const HIGH_PRIORITY_THRESHOLD_DAYS = 'HIGH_PRIORITY_THRESHOLD_DAYS';
 export const HIGH_PRIORITY_QUEUE_URL = 'HIGH_PRIORITY_QUEUE_URL';
@@ -15,8 +16,8 @@ const sqs = new SQS();
 
 export const handler = async (event: SNSEvent): Promise<void> => {
   console.log(JSON.stringify({ event }, null, 2));
-  
-  for await (const record of event.Records) {    
+
+  for await (const record of event.Records) {
     const deadlineString = record.Sns.MessageAttributes.Deadline?.Value as string;
 
     const isHighPriority = getIsHighPriority(deadlineString);
@@ -38,7 +39,20 @@ export const handler = async (event: SNSEvent): Promise<void> => {
   }
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getIsHighPriority(deadlineString: string): boolean {
-  return false;
+  if (!deadlineString) {
+    return false;
+  }
+
+  const deadlineDate = DateTime.fromISO(deadlineString);
+
+  if (!deadlineDate.isValid) {
+    return false;
+  }
+
+  const durationLeftDays = DateTime.now().diff(deadlineDate, 'days').days;
+
+  const highPriorityThresholdDays = parseInt(process.env[HIGH_PRIORITY_THRESHOLD_DAYS] ?? '0', 10);
+
+  return durationLeftDays <= highPriorityThresholdDays;
 }
