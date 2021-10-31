@@ -5,32 +5,35 @@ import {
   // TestObservation,
   IntegrationTestClient,
   SNSTestClient,
+  TestObservation,
 } from '@andybalham/sls-testing-toolkit';
-import { Event } from './Event';
-import SimpleEventRouterTestStack from './PriorityRouterTestStack';
+import { SQSEvent, SQSRecord } from 'aws-lambda';
+import PriorityRouterTestStack from '../lib/PriorityRouterTestStack';
 
 describe('SimpleEventRouter Test Suite', () => {
   //
   const testClient = new IntegrationTestClient({
-    testStackId: SimpleEventRouterTestStack.StackId,
+    testStackId: PriorityRouterTestStack.StackId,
+    deleteLogs: true,
   });
 
   let testInputTopic: SNSTestClient;
 
   before(async () => {
     await testClient.initialiseClientAsync();
-    testInputTopic = testClient.getSNSTestClient(SimpleEventRouterTestStack.TestInputTopicId);
+    testInputTopic = testClient.getSNSTestClient(PriorityRouterTestStack.TestInputTopicId);
   });
 
   beforeEach(async () => {
     await testClient.initialiseTestAsync();
   });
 
-  it(`Routes positive sums`, async () => {
+  it.only(`Routes no deadline as normal`, async () => {
     // Arrange
 
-    const testEvent: Event = {
-      values: [1, 2, 3],
+    const testEvent = {
+      stringValue: 'stringValue',
+      numberValue: 616,
     };
 
     // Act
@@ -39,7 +42,7 @@ describe('SimpleEventRouter Test Suite', () => {
 
     // Await
 
-    const { /* observations, */ timedOut } = await testClient.pollTestAsync({
+    const { observations, timedOut } = await testClient.pollTestAsync({
       until: async (o) => o.length > 0,
       intervalSeconds: 2,
       timeoutSeconds: 12,
@@ -49,23 +52,24 @@ describe('SimpleEventRouter Test Suite', () => {
 
     expect(timedOut, 'timedOut').to.be.false;
 
-    // const positiveObservations = TestObservation.filterById(
-    //   observations,
-    //   SimpleEventRouterTestStack.PositiveOutputTopicSubscriberId
-    // );
+    const highPriorityObservations = TestObservation.filterById(
+      observations,
+      PriorityRouterTestStack.HighPriorityConsumerId
+    );
 
-    // const negativeObservations = TestObservation.filterById(
-    //   observations,
-    //   SimpleEventRouterTestStack.NegativeOutputTopicSubscriberId
-    // );
+    const normalPriorityObservations = TestObservation.filterById(
+      observations,
+      PriorityRouterTestStack.NormalPriorityConsumerId
+    );
 
-    // expect(positiveObservations.length).to.be.greaterThan(0);
-    // expect(negativeObservations.length).to.equal(0);
+    expect(normalPriorityObservations.length).to.be.greaterThan(0);
+    expect(highPriorityObservations.length).to.equal(0);
 
-    // const routedEvent = JSON.parse(
-    //   (positiveObservations[0].data as SNSEvent).Records[0].Sns.Message
-    // );
-    // expect(routedEvent).to.deep.equal(testEvent);
+    const events = TestObservation.getEventRecords<SQSEvent, SQSRecord>(normalPriorityObservations);
+
+    const firstMessageBody = JSON.parse(events[0].body);
+
+    expect(firstMessageBody).to.deep.equal(testEvent);
   });
 
   [
@@ -77,7 +81,7 @@ describe('SimpleEventRouter Test Suite', () => {
     it(`Routes as expected: ${JSON.stringify(theory)}`, async () => {
       // Arrange
 
-      const testEvent: Event = {
+      const testEvent = {
         values: theory.values,
       };
 
