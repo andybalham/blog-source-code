@@ -1,10 +1,10 @@
 # Title: Easy Node.js Lambda bundling with CDK
 
-In this post, we go through a worked example showing the various ways that Node.js functions can be bundled using CDK. From doing it the hard way, to using code by convention.
+In this post, we go through a worked example showing the various ways that Node.js Lambda functions can be bundled using CDK. From doing it the hard way, to using code by convention.
 
 Full code for this post can be found on the accompanying [GitHub repo](https://github.com/andybalham/blog-source-code/tree/master/lambda-bundling-and-hotswap).
 
-# TL;DR
+## TL;DR
 
 * Use the [`NodejsFunction`](https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-lambda-nodejs.NodejsFunction.html) construct to make your life easy
 
@@ -14,7 +14,7 @@ The function we are going to bundle is part of a CDK construct that routes SNS e
 
 Below is a diagram showing the construct and the components that make it up:
 
-TODO: Diagram
+![blog-priority-router.jpg](https://cdn.hashnode.com/res/hashnode/image/upload/v1635801596138/EI5RhYmDW.jpeg)
 
 ## The routing function
 
