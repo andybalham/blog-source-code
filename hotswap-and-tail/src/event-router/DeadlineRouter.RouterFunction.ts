@@ -49,7 +49,8 @@ function getIsHighPriority(deadlineString: string): boolean {
     return false;
   }
 
-  const durationLeftDays = DateTime.now().diff(deadlineDate, 'days').days;
+  const durationLeftDays = deadlineDate.diff(DateTime.now(), 'days').days;
+  // const durationLeftDays = DateTime.now().diff(deadlineDate, 'days').days;
   console.log(JSON.stringify({ durationLeftDays }, null, 2));
 
   const highPriorityThresholdDays = 
