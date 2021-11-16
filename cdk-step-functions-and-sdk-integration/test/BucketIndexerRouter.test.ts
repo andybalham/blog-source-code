@@ -1,3 +1,5 @@
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-plusplus */
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import { expect } from 'chai';
 import {
@@ -37,7 +39,9 @@ describe('BucketIndexer Test Suite', () => {
   it.only(`Indexes as expected`, async () => {
     // Arrange
 
-    await testInputBucket.uploadObjectAsync('MyKey', {});
+    for (let index = 0; index < 7; index++) {
+      await testInputBucket.uploadObjectAsync(`MyKey${index}`, {});
+    }
 
     // Act
 
@@ -45,8 +49,9 @@ describe('BucketIndexer Test Suite', () => {
 
     // Assert
 
-    // await testIndexTable.getItemAsync({ bucketName: '???' });
+    // const bucketItems =
+    //   await testIndexTable.getItemAsync({ bucketName: testInputBucket.bucketName });
 
-    expect(true).to.be.true;
+    expect(true).to.not.be.undefined;
   }).timeout(30 * 1000);
 });

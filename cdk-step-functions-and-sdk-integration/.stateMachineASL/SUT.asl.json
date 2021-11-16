@@ -1,0 +1,14 @@
+{
+  "StartAt": "ListObjects",
+  "States": {
+    "ListObjects": {
+      "End": true,
+      "Type": "Task",
+      "Resource": "arn:CDK_TOKEN:states:::aws-sdk:s3:listObjectsV2",
+      "Parameters": {
+        "Bucket": "CDK_TOKEN",
+        "MaxKeys": 3
+      }
+    }
+  }
+}

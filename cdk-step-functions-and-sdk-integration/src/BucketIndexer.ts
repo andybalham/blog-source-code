@@ -3,6 +3,8 @@ import * as cdk from '@aws-cdk/core';
 import * as s3 from '@aws-cdk/aws-s3';
 import * as dynamodb from '@aws-cdk/aws-dynamodb';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
+import * as sfnTasks from '@aws-cdk/aws-stepfunctions-tasks';
+import StateMachineWithGraph from '@andybalham/state-machine-with-graph';
 
 export interface BucketIndexerProps {
   sourceBucket: s3.Bucket;
@@ -16,15 +18,49 @@ export default class BucketIndexer extends cdk.Construct {
     sortKey: { name: 'key', type: dynamodb.AttributeType.STRING },
   };
 
-  readonly stateMachine;
+  readonly stateMachine: StateMachineWithGraph;
 
   constructor(scope: cdk.Construct, id: string, props: BucketIndexerProps) {
     super(scope, id);
 
-    const passState = new sfn.Pass(this, 'Pass');
+    // const readFileContent = new tasks.CallAwsService(this, 'ReadFileContent', {
+    //   service: 's3',
+    //   action: 'getObject',
+    //   parameters: {
+    //     Bucket: sfn.JsonPath.stringAt('$.destBucket'),
+    //     'Key.$': "States.Format('process/{}',$.key)",
+    //   },
+    //   iamResources: [destinationBucket.arnForObjects('*')],
+    //   resultSelector: {
+    //     'filecontent.$': 'States.StringToJson($.Body)',
+    //   },
+    //   resultPath: '$.getObject',
+    // });
+    // const insertRecord = new tasks.DynamoPutItem(this, 'InsertRecord', {
+    //   item: {
+    //     id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.id')),
+    //     name: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.name')),
+    //   },
+    //   table: dynamodbTable,
+    //   resultSelector: {
+    //     statusCode: sfn.JsonPath.stringAt('$.SdkHttpMetadata.HttpStatusCode'),
+    //   },
+    // });
 
-    this.stateMachine = new sfn.StateMachine(this, id, {
-      definition: sfn.Chain.start(passState),
+    this.stateMachine = new StateMachineWithGraph(this, id, {
+      replaceCdkTokens: true,
+      getDefinition: (sfnScope): sfn.IChainable =>
+        sfn.Chain.start(
+          new sfnTasks.CallAwsService(sfnScope, 'ListObjects', {
+            service: 's3',
+            action: 'listObjectsV2',
+            parameters: {
+              Bucket: props.sourceBucket.bucketName,
+              MaxKeys: 3,
+            },
+            iamResources: [props.sourceBucket.arnForObjects('*')],
+          })
+        ),
     });
 
     props.sourceBucket.grantRead(this.stateMachine);
