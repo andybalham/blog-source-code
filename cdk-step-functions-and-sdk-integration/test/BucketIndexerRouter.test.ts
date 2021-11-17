@@ -3,12 +3,12 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import { expect } from 'chai';
 import {
-  DynamoDBTestClient,
   IntegrationTestClient,
   S3TestClient,
   StepFunctionsTestClient,
 } from '@andybalham/sls-testing-toolkit';
 import BucketIndexerTestStack from '../lib/BucketIndexerTestStack';
+import DynamoDBTestClientExt from './DynamoDBTestClientExt';
 
 describe('BucketIndexer Test Suite', () => {
   //
@@ -18,13 +18,14 @@ describe('BucketIndexer Test Suite', () => {
   });
 
   let testInputBucket: S3TestClient;
-  let testIndexTable: DynamoDBTestClient;
+  let testIndexTable: DynamoDBTestClientExt;
   let sutStateMachine: StepFunctionsTestClient;
 
   before(async () => {
     await testClient.initialiseClientAsync();
     testInputBucket = testClient.getS3TestClient(BucketIndexerTestStack.TestSourceBucketId);
-    testIndexTable = testClient.getDynamoDBTestClient(BucketIndexerTestStack.TestIndexTableId);
+    const t = testClient.getDynamoDBTestClient(BucketIndexerTestStack.TestIndexTableId);
+    testIndexTable = new DynamoDBTestClientExt(t.region, t.tableName);
     sutStateMachine = testClient.getStepFunctionsTestClient(
       BucketIndexerTestStack.SUTStateMachineId
     );
@@ -39,7 +40,9 @@ describe('BucketIndexer Test Suite', () => {
   it.only(`Indexes as expected`, async () => {
     // Arrange
 
-    for (let index = 0; index < 7; index++) {
+    const expectedItemCount = 7;
+
+    for (let index = 0; index < expectedItemCount; index++) {
       await testInputBucket.uploadObjectAsync(`MyKey${index}`, {});
     }
 
@@ -47,11 +50,28 @@ describe('BucketIndexer Test Suite', () => {
 
     await sutStateMachine.startExecutionAsync({});
 
+    // Await
+    async function getBucketItems(): Promise<any[]> {
+      return testIndexTable.getItemsByPartitionKeyAsync<any>(
+        'bucketName',
+        testInputBucket.bucketName
+      );
+    }
+
+    const { timedOut } = await testClient.pollTestAsync({
+      until: async () => {
+        const bucketItems = await getBucketItems();
+        return bucketItems.length === expectedItemCount;
+      },
+    });
+
     // Assert
 
-    // const bucketItems =
-    //   await testIndexTable.getItemAsync({ bucketName: testInputBucket.bucketName });
+    expect(timedOut, 'timedOut').to.be.false;
 
-    expect(true).to.not.be.undefined;
+    const bucketItems = await getBucketItems();
+    expect(bucketItems).to.not.be.undefined;
+    expect(bucketItems.length).to.equal(expectedItemCount);
+    //
   }).timeout(30 * 1000);
 });

@@ -47,20 +47,21 @@ export default class BucketIndexer extends cdk.Construct {
     //   },
     // });
 
+    function initialListObjects(sfnScope: cdk.Construct): sfn.IChainable {
+      return new sfnTasks.CallAwsService(sfnScope, 'InitialListObjects', {
+        service: 's3',
+        action: 'listObjectsV2',
+        parameters: {
+          Bucket: props.sourceBucket.bucketName,
+          MaxKeys: 3,
+        },
+        iamResources: [props.sourceBucket.arnForObjects('*')],
+      });
+    }
+
     this.stateMachine = new StateMachineWithGraph(this, id, {
       replaceCdkTokens: true,
-      getDefinition: (sfnScope): sfn.IChainable =>
-        sfn.Chain.start(
-          new sfnTasks.CallAwsService(sfnScope, 'ListObjects', {
-            service: 's3',
-            action: 'listObjectsV2',
-            parameters: {
-              Bucket: props.sourceBucket.bucketName,
-              MaxKeys: 3,
-            },
-            iamResources: [props.sourceBucket.arnForObjects('*')],
-          })
-        ),
+      getDefinition: (sfnScope): sfn.IChainable => sfn.Chain.start(initialListObjects(sfnScope)),
     });
 
     props.sourceBucket.grantRead(this.stateMachine);
