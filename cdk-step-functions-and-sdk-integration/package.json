@@ -10,7 +10,7 @@
     "build": "npm run lint && tsc",
     "test": "mocha --require ts-node/register test/**/*.ts",
     "test-coverage": "nyc npm run test",
-    "cdk-synth": "tsc && cdk synth",
+    "cdk-synth": "tsc && cdk synth > .cdk-synth.yml",
     "cdk-deploy": "tsc && cdk deploy",
     "cdk-hotswap": "tsc && cdk deploy --hotswap",
     "cdk-destroy": "tsc && cdk destroy --all"

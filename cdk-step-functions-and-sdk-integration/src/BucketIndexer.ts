@@ -59,9 +59,31 @@ export default class BucketIndexer extends cdk.Construct {
       });
     }
 
+    function indexObject(sfnScope: cdk.Construct): sfn.IChainable {
+      return new sfnTasks.CallAwsService(sfnScope, 'HeadObject', {
+        service: 's3',
+        action: 'headObject',
+        parameters: {
+          'Bucket.$': '$.BucketName',
+          'Key.$': '$.Content.Key',
+        },
+        iamResources: [props.sourceBucket.arnForObjects('*')],
+        resultPath: '$.Head',
+      });
+    }
+
     this.stateMachine = new StateMachineWithGraph(this, id, {
       replaceCdkTokens: true,
-      getDefinition: (sfnScope): sfn.IChainable => sfn.Chain.start(initialListObjects(sfnScope)),
+      getDefinition: (sfnScope): sfn.IChainable =>
+        sfn.Chain.start(initialListObjects(sfnScope)).next(
+          new sfn.Map(sfnScope, 'ForEachObject', {
+            itemsPath: '$.Contents',
+            parameters: {
+              'Content.$': '$$.Map.Item.Value',
+              'BucketName.$': '$.Name',
+            },
+          }).iterator(indexObject(sfnScope))
+        ),
     });
 
     props.sourceBucket.grantRead(this.stateMachine);

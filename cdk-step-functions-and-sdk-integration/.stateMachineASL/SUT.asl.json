@@ -1,14 +1,38 @@
 {
-  "StartAt": "ListObjects",
+  "StartAt": "InitialListObjects",
   "States": {
-    "ListObjects": {
-      "End": true,
+    "InitialListObjects": {
+      "Next": "ForEachObject",
       "Type": "Task",
       "Resource": "arn:CDK_TOKEN:states:::aws-sdk:s3:listObjectsV2",
       "Parameters": {
         "Bucket": "CDK_TOKEN",
         "MaxKeys": 3
       }
+    },
+    "ForEachObject": {
+      "Type": "Map",
+      "End": true,
+      "Parameters": {
+        "Content.$": "$$.Map.Item.Value",
+        "BucketName.$": "$.Name"
+      },
+      "Iterator": {
+        "StartAt": "HeadObject",
+        "States": {
+          "HeadObject": {
+            "End": true,
+            "Type": "Task",
+            "ResultPath": "$.Head",
+            "Resource": "arn:CDK_TOKEN:states:::aws-sdk:s3:headObject",
+            "Parameters": {
+              "Bucket.$": "$.BucketName",
+              "Key.$": "$.Content.Key"
+            }
+          }
+        }
+      },
+      "ItemsPath": "$.Contents"
     }
   }
 }
