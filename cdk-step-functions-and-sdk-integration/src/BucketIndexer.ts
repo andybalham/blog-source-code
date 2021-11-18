@@ -5,6 +5,7 @@ import * as dynamodb from '@aws-cdk/aws-dynamodb';
 import * as sfn from '@aws-cdk/aws-stepfunctions';
 import * as sfnTasks from '@aws-cdk/aws-stepfunctions-tasks';
 import StateMachineWithGraph from '@andybalham/state-machine-with-graph';
+import { JsonPath } from '@aws-cdk/aws-stepfunctions';
 
 export interface BucketIndexerProps {
   sourceBucket: s3.Bucket;
@@ -59,7 +60,7 @@ export default class BucketIndexer extends cdk.Construct {
       });
     }
 
-    function indexObject(sfnScope: cdk.Construct): sfn.IChainable {
+    function headObject(sfnScope: cdk.Construct): sfn.IChainable {
       return new sfnTasks.CallAwsService(sfnScope, 'HeadObject', {
         service: 's3',
         action: 'headObject',
@@ -70,6 +71,28 @@ export default class BucketIndexer extends cdk.Construct {
         iamResources: [props.sourceBucket.arnForObjects('*')],
         resultPath: '$.Head',
       });
+    }
+
+    function putObjectIndex(sfnScope: cdk.Construct): sfn.IChainable {
+      return new sfnTasks.DynamoPutItem(sfnScope, 'PutObjectIndex', {
+        table: props.indexTable,
+        item: {
+          bucketName: sfnTasks.DynamoAttributeValue.fromString(JsonPath.stringAt('$.BucketName')),
+          key: sfnTasks.DynamoAttributeValue.fromString(JsonPath.stringAt('$.Content.Key')),
+          metadata: sfnTasks.DynamoAttributeValue.fromMap({
+            lastModified: sfnTasks.DynamoAttributeValue.fromString(
+              JsonPath.stringAt('$.Content.LastModified')
+            ),
+            contentType: sfnTasks.DynamoAttributeValue.fromString(
+              JsonPath.stringAt('$.Head.ContentType')
+            ),
+          }),
+        },
+      });
+    }
+
+    function indexObject(sfnScope: cdk.Construct): sfn.IChainable {
+      return sfn.Chain.start(headObject(sfnScope)).next(putObjectIndex(sfnScope));
     }
 
     this.stateMachine = new StateMachineWithGraph(this, id, {

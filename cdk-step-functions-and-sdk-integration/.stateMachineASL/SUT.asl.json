@@ -21,13 +21,39 @@
         "StartAt": "HeadObject",
         "States": {
           "HeadObject": {
-            "End": true,
+            "Next": "PutObjectIndex",
             "Type": "Task",
             "ResultPath": "$.Head",
             "Resource": "arn:CDK_TOKEN:states:::aws-sdk:s3:headObject",
             "Parameters": {
               "Bucket.$": "$.BucketName",
               "Key.$": "$.Content.Key"
+            }
+          },
+          "PutObjectIndex": {
+            "End": true,
+            "Type": "Task",
+            "Resource": "arn:CDK_TOKEN:states:::dynamodb:putItem",
+            "Parameters": {
+              "Item": {
+                "bucketName": {
+                  "S.$": "$.BucketName"
+                },
+                "key": {
+                  "S.$": "$.Content.Key"
+                },
+                "metadata": {
+                  "M": {
+                    "lastModified": {
+                      "S.$": "$.Content.LastModified"
+                    },
+                    "contentType": {
+                      "S.$": "$.Head.ContentType"
+                    }
+                  }
+                }
+              },
+              "TableName": "CDK_TOKEN"
             }
           }
         }
