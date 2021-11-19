@@ -24,89 +24,94 @@ export default class BucketIndexer extends cdk.Construct {
   constructor(scope: cdk.Construct, id: string, props: BucketIndexerProps) {
     super(scope, id);
 
-    // const readFileContent = new tasks.CallAwsService(this, 'ReadFileContent', {
-    //   service: 's3',
-    //   action: 'getObject',
-    //   parameters: {
-    //     Bucket: sfn.JsonPath.stringAt('$.destBucket'),
-    //     'Key.$': "States.Format('process/{}',$.key)",
-    //   },
-    //   iamResources: [destinationBucket.arnForObjects('*')],
-    //   resultSelector: {
-    //     'filecontent.$': 'States.StringToJson($.Body)',
-    //   },
-    //   resultPath: '$.getObject',
-    // });
-    // const insertRecord = new tasks.DynamoPutItem(this, 'InsertRecord', {
-    //   item: {
-    //     id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.id')),
-    //     name: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$.name')),
-    //   },
-    //   table: dynamodbTable,
-    //   resultSelector: {
-    //     statusCode: sfn.JsonPath.stringAt('$.SdkHttpMetadata.HttpStatusCode'),
-    //   },
-    // });
-
-    function initialListObjects(sfnScope: cdk.Construct): sfn.IChainable {
-      return new sfnTasks.CallAwsService(sfnScope, 'InitialListObjects', {
-        service: 's3',
-        action: 'listObjectsV2',
-        parameters: {
-          Bucket: props.sourceBucket.bucketName,
-          MaxKeys: 3,
-        },
-        iamResources: [props.sourceBucket.arnForObjects('*')],
-      });
-    }
-
-    function headObject(sfnScope: cdk.Construct): sfn.IChainable {
-      return new sfnTasks.CallAwsService(sfnScope, 'HeadObject', {
-        service: 's3',
-        action: 'headObject',
-        parameters: {
-          'Bucket.$': '$.BucketName',
-          'Key.$': '$.Content.Key',
-        },
-        iamResources: [props.sourceBucket.arnForObjects('*')],
-        resultPath: '$.Head',
-      });
-    }
-
-    function putObjectIndex(sfnScope: cdk.Construct): sfn.IChainable {
-      return new sfnTasks.DynamoPutItem(sfnScope, 'PutObjectIndex', {
-        table: props.indexTable,
-        item: {
-          bucketName: sfnTasks.DynamoAttributeValue.fromString(JsonPath.stringAt('$.BucketName')),
-          key: sfnTasks.DynamoAttributeValue.fromString(JsonPath.stringAt('$.Content.Key')),
-          metadata: sfnTasks.DynamoAttributeValue.fromMap({
-            lastModified: sfnTasks.DynamoAttributeValue.fromString(
-              JsonPath.stringAt('$.Content.LastModified')
-            ),
-            contentType: sfnTasks.DynamoAttributeValue.fromString(
-              JsonPath.stringAt('$.Head.ContentType')
-            ),
-          }),
-        },
-      });
-    }
-
-    function indexObject(sfnScope: cdk.Construct): sfn.IChainable {
-      return sfn.Chain.start(headObject(sfnScope)).next(putObjectIndex(sfnScope));
-    }
-
     this.stateMachine = new StateMachineWithGraph(this, id, {
       replaceCdkTokens: true,
-      getDefinition: (sfnScope): sfn.IChainable =>
-        sfn.Chain.start(initialListObjects(sfnScope)).next(
-          new sfn.Map(sfnScope, 'ForEachObject', {
-            itemsPath: '$.Contents',
+      getDefinition: (sfnScope): sfn.IChainable => {
+        //
+        const listObjectsInitial = new sfnTasks.CallAwsService(sfnScope, 'ListObjectsInitial', {
+          service: 's3',
+          action: 'listObjectsV2',
+          parameters: {
+            Bucket: props.sourceBucket.bucketName,
+            MaxKeys: 3,
+          },
+          iamResources: [props.sourceBucket.arnForObjects('*')],
+        });
+
+        const headObject = new sfnTasks.CallAwsService(sfnScope, 'HeadObject', {
+          service: 's3',
+          action: 'headObject',
+          parameters: {
+            'Bucket.$': '$.BucketName',
+            'Key.$': '$.Content.Key',
+          },
+          iamResources: [props.sourceBucket.arnForObjects('*')],
+          resultPath: '$.Head',
+        });
+
+        const putObjectIndex = new sfnTasks.DynamoPutItem(sfnScope, 'PutObjectIndex', {
+          table: props.indexTable,
+          resultPath: JsonPath.DISCARD,
+          item: {
+            bucketName: sfnTasks.DynamoAttributeValue.fromString(JsonPath.stringAt('$.BucketName')),
+            key: sfnTasks.DynamoAttributeValue.fromString(JsonPath.stringAt('$.Content.Key')),
+            metadata: sfnTasks.DynamoAttributeValue.fromMap({
+              lastModified: sfnTasks.DynamoAttributeValue.fromString(
+                JsonPath.stringAt('$.Content.LastModified')
+              ),
+              contentType: sfnTasks.DynamoAttributeValue.fromString(
+                JsonPath.stringAt('$.Head.ContentType')
+              ),
+            }),
+          },
+        });
+
+        const forEachObject = new sfn.Map(sfnScope, 'ForEachObject', {
+          itemsPath: '$.Contents',
+          parameters: {
+            'Content.$': '$$.Map.Item.Value',
+            'BucketName.$': '$.Name',
+          },
+          maxConcurrency: 6,
+          resultPath: JsonPath.DISCARD,
+        });
+
+        const waitForThreeSeconds = new sfn.Wait(sfnScope, 'WaitForTwoSeconds', {
+          time: sfn.WaitTime.duration(cdk.Duration.seconds(2)),
+        });
+
+        const listObjectsContinuation = new sfnTasks.CallAwsService(
+          sfnScope,
+          'ListObjectsContinuation',
+          {
+            service: 's3',
+            action: 'listObjectsV2',
             parameters: {
-              'Content.$': '$$.Map.Item.Value',
-              'BucketName.$': '$.Name',
+              Bucket: props.sourceBucket.bucketName,
+              MaxKeys: 3,
+              'ContinuationToken.$': '$.NextContinuationToken',
             },
-          }).iterator(indexObject(sfnScope))
-        ),
+            iamResources: [props.sourceBucket.arnForObjects('*')],
+          }
+        );
+
+        const end = new sfn.Pass(sfnScope, 'End');
+
+        const definition = sfn.Chain.start(listObjectsInitial).next(
+          forEachObject
+            .iterator(sfn.Chain.start(headObject).next(putObjectIndex))
+            .next(
+              new sfn.Choice(sfnScope, 'IsContinuation')
+                .when(
+                  sfn.Condition.isPresent('$.NextContinuationToken'),
+                  waitForThreeSeconds.next(listObjectsContinuation.next(forEachObject))
+                )
+                .otherwise(end)
+            )
+        );
+
+        return definition;
+      },
     });
 
     props.sourceBucket.grantRead(this.stateMachine);

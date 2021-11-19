@@ -2,6 +2,10 @@ import { DynamoDBTestClient } from '@andybalham/sls-testing-toolkit';
 import { Key } from 'aws-sdk/clients/dynamodb';
 
 export default class DynamoDBTestClientExt extends DynamoDBTestClient {
+  constructor(client: DynamoDBTestClient) {
+    super(client.region, client.tableName);
+  }
+
   async getItemsByPartitionKeyAsync<T>(keyName: string, keyValue: string): Promise<T[]> {
     if (this.tableName === undefined) throw new Error('this.tableName === undefined');
 

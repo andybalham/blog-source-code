@@ -24,8 +24,9 @@ describe('BucketIndexer Test Suite', () => {
   before(async () => {
     await testClient.initialiseClientAsync();
     testInputBucket = testClient.getS3TestClient(BucketIndexerTestStack.TestSourceBucketId);
-    const t = testClient.getDynamoDBTestClient(BucketIndexerTestStack.TestIndexTableId);
-    testIndexTable = new DynamoDBTestClientExt(t.region, t.tableName);
+    testIndexTable = new DynamoDBTestClientExt(
+      testClient.getDynamoDBTestClient(BucketIndexerTestStack.TestIndexTableId)
+    );
     sutStateMachine = testClient.getStepFunctionsTestClient(
       BucketIndexerTestStack.SUTStateMachineId
     );
@@ -42,8 +43,10 @@ describe('BucketIndexer Test Suite', () => {
 
     const expectedItemCount = 7;
 
+    const getObjectKey = (index: number): string => `MyKey${index}`;
+
     for (let index = 0; index < expectedItemCount; index++) {
-      await testInputBucket.uploadObjectAsync(`MyKey${index}`, {});
+      await testInputBucket.uploadObjectAsync(getObjectKey(index), {});
     }
 
     // Act
@@ -51,16 +54,13 @@ describe('BucketIndexer Test Suite', () => {
     await sutStateMachine.startExecutionAsync({});
 
     // Await
-    async function getBucketItems(): Promise<any[]> {
-      return testIndexTable.getItemsByPartitionKeyAsync<any>(
-        'bucketName',
-        testInputBucket.bucketName
-      );
-    }
 
     const { timedOut } = await testClient.pollTestAsync({
       until: async () => {
-        const bucketItems = await getBucketItems();
+        const bucketItems = await testIndexTable.getItemsByPartitionKeyAsync<any>(
+          'bucketName',
+          testInputBucket.bucketName
+        );
         return bucketItems.length === expectedItemCount;
       },
     });
@@ -69,9 +69,12 @@ describe('BucketIndexer Test Suite', () => {
 
     expect(timedOut, 'timedOut').to.be.false;
 
-    const bucketItems = await getBucketItems();
-    expect(bucketItems).to.not.be.undefined;
-    expect(bucketItems.length).to.equal(expectedItemCount);
-    //
+    for (let index = 0; index < expectedItemCount; index++) {
+      const item = await testIndexTable.getItemAsync({
+        bucketName: testInputBucket.bucketName,
+        key: getObjectKey(index),
+      });
+      expect(item).to.not.be.undefined;
+    }
   }).timeout(30 * 1000);
 });
