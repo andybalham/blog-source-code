@@ -9,7 +9,7 @@ import { IntegrationTestStack } from '@andybalham/sls-testing-toolkit';
 import path from 'path';
 import fs from 'fs';
 import StateMachineWithGraph from '@andybalham/state-machine-with-graph';
-import BucketIndexer from '../src/BucketIndexer';
+import BucketIndexer from '../src/BucketIndexer-v1-1';
 
 export default class BucketIndexerTestStack extends IntegrationTestStack {
   //
@@ -47,7 +47,7 @@ export default class BucketIndexerTestStack extends IntegrationTestStack {
     this.addTestResourceTag(testIndexTable, BucketIndexerTestStack.TestIndexTableId);
     this.addTestResourceTag(sut.stateMachine, BucketIndexerTestStack.SUTStateMachineId);
 
-    BucketIndexerTestStack.writeGraphJson(sut.stateMachine);
+    // BucketIndexerTestStack.writeGraphJson(sut.stateMachine);
   }
 
   static writeGraphJson(stateMachine: StateMachineWithGraph): void {

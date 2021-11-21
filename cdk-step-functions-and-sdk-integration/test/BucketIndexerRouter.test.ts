@@ -38,43 +38,53 @@ describe('BucketIndexer Test Suite', () => {
     await testIndexTable.clearAllItemsAsync();
   });
 
-  it.only(`Indexes as expected`, async () => {
-    // Arrange
+  [
+    {
+      expectedItemCount: 0,
+    },
+    {
+      expectedItemCount: 1,
+    },
+    {
+      expectedItemCount: 7,
+    },
+  ].forEach((theory) => {
+    it.only(`Indexes objects as expected: ${JSON.stringify(theory)}`, async () => {
+      // Arrange
 
-    const expectedItemCount = 7;
+      const getObjectKey = (index: number): string => `${JSON.stringify(theory)}-MyKey${index}`;
 
-    const getObjectKey = (index: number): string => `MyKey${index}`;
+      for (let index = 0; index < theory.expectedItemCount; index++) {
+        await testInputBucket.uploadObjectAsync(getObjectKey(index), {});
+      }
 
-    for (let index = 0; index < expectedItemCount; index++) {
-      await testInputBucket.uploadObjectAsync(getObjectKey(index), {});
-    }
+      // Act
 
-    // Act
+      await sutStateMachine.startExecutionAsync({});
 
-    await sutStateMachine.startExecutionAsync({});
+      // Await
 
-    // Await
-
-    const { timedOut } = await testClient.pollTestAsync({
-      until: async () => {
-        const bucketItems = await testIndexTable.getItemsByPartitionKeyAsync<any>(
-          'bucketName',
-          testInputBucket.bucketName
-        );
-        return bucketItems.length === expectedItemCount;
-      },
-    });
-
-    // Assert
-
-    expect(timedOut, 'timedOut').to.be.false;
-
-    for (let index = 0; index < expectedItemCount; index++) {
-      const item = await testIndexTable.getItemAsync({
-        bucketName: testInputBucket.bucketName,
-        key: getObjectKey(index),
+      const { timedOut } = await testClient.pollTestAsync({
+        until: async () => {
+          const bucketItems = await testIndexTable.getItemsByPartitionKeyAsync<any>(
+            'bucketName',
+            testInputBucket.bucketName
+          );
+          return bucketItems.length === theory.expectedItemCount;
+        },
       });
-      expect(item).to.not.be.undefined;
-    }
-  }).timeout(30 * 1000);
+
+      // Assert
+
+      expect(timedOut, 'timedOut').to.be.false;
+
+      for (let index = 0; index < theory.expectedItemCount; index++) {
+        const item = await testIndexTable.getItemAsync({
+          bucketName: testInputBucket.bucketName,
+          key: getObjectKey(index),
+        });
+        expect(item).to.not.be.undefined;
+      }
+    }).timeout(30 * 1000);
+  });
 });

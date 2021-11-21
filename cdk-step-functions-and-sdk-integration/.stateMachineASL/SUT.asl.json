@@ -1,19 +1,17 @@
 {
-  "StartAt": "ListObjectsInitial",
+  "StartAt": "ListObjects",
   "States": {
-    "ListObjectsInitial": {
+    "ListObjects": {
       "Next": "ForEachObject",
       "Type": "Task",
       "Resource": "arn:CDK_TOKEN:states:::aws-sdk:s3:listObjectsV2",
       "Parameters": {
-        "Bucket": "CDK_TOKEN",
-        "MaxKeys": 3
+        "Bucket": "CDK_TOKEN"
       }
     },
     "ForEachObject": {
       "Type": "Map",
-      "ResultPath": null,
-      "Next": "IsContinuation",
+      "End": true,
       "Parameters": {
         "Content.$": "$$.Map.Item.Value",
         "BucketName.$": "$.Name"
@@ -34,7 +32,6 @@
           "PutObjectIndex": {
             "End": true,
             "Type": "Task",
-            "ResultPath": null,
             "Resource": "arn:CDK_TOKEN:states:::dynamodb:putItem",
             "Parameters": {
               "Item": {
@@ -60,37 +57,8 @@
           }
         }
       },
-      "ItemsPath": "$.Contents"
-    },
-    "ListObjectsContinuation": {
-      "Next": "ForEachObject",
-      "Type": "Task",
-      "Resource": "arn:CDK_TOKEN:states:::aws-sdk:s3:listObjectsV2",
-      "Parameters": {
-        "Bucket": "CDK_TOKEN",
-        "MaxKeys": 3,
-        "ContinuationToken.$": "$.NextContinuationToken"
-      }
-    },
-    "WaitForTwoSeconds": {
-      "Type": "Wait",
-      "Seconds": 2,
-      "Next": "ListObjectsContinuation"
-    },
-    "IsContinuation": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.NextContinuationToken",
-          "IsPresent": true,
-          "Next": "WaitForTwoSeconds"
-        }
-      ],
-      "Default": "End"
-    },
-    "End": {
-      "Type": "Pass",
-      "End": true
+      "ItemsPath": "$.Contents",
+      "MaxConcurrency": 6
     }
   }
 }

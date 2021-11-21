@@ -24,7 +24,7 @@ export default class BucketIndexer extends cdk.Construct {
   constructor(scope: cdk.Construct, id: string, props: BucketIndexerProps) {
     super(scope, id);
 
-    this.stateMachine = new StateMachineWithGraph(this, id, {
+    this.stateMachine = new StateMachineWithGraph(this, 'BucketIndexerStateMachine', {
       replaceCdkTokens: true,
       getDefinition: (sfnScope): sfn.IChainable => {
         //
