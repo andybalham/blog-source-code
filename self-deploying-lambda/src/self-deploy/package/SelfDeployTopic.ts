@@ -2,39 +2,43 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import * as cdk from '@aws-cdk/core';
 import * as cdkSns from '@aws-cdk/aws-sns';
-import { SNS } from 'aws-sdk';
+import AWS from 'aws-sdk';
 import { PublishInput, PublishResponse } from 'aws-sdk/clients/sns';
 import * as lambda from '@aws-cdk/aws-lambda';
-import SelfDeployService, { SelfDeployServiceType } from './SelfDeployService';
+import SelfDeployService from './SelfDeployService';
 
-const sns = new SNS();
-
-export default class SelfDeployTopic extends SelfDeployService {
+export default class SelfDeployTopic extends SelfDeployService<cdkSns.ITopic> {
   //
-  topic: cdkSns.Topic;
+  private topic: cdkSns.Topic;
 
-  constructor(public id: string) {
-    super();
+  readonly client: AWS.SNS;
+
+  constructor(id: string) {
+    super(id);
+    this.client = new AWS.SNS();
   }
 
-  async publishAsync(input: PublishInput): Promise<void> {
+  async publishAsync(input: PublishInput): Promise<PublishResponse> {
+    const topicArn = this.getArn();
+
+    const augmentedInput: PublishInput = {
+      ...input,
+      TopicArn: topicArn,
+    };
+
+    return this.client.publish(augmentedInput).promise();
+  }
+
+  getArn(): string {
     const topicArn = process.env[this.getEnvVarName()];
     if (topicArn === undefined) throw new Error('topicArn === undefined');
-    await this.publishAsyncInternal(topicArn, input);
-  }
-
-  private getEnvVarName(): string {
-    return `service_${this.id}_topic_arn`.toUpperCase();
+    return topicArn;
   }
 
   addConfiguration(cdkFunction: lambda.Function): void {
     if (this.topic === undefined) throw new Error('this.topic === undefined');
     this.topic.grantPublish(cdkFunction);
     cdkFunction.addEnvironment(this.getEnvVarName(), this.topic.topicArn);
-  }
-
-  getType(): SelfDeployServiceType {
-    return SelfDeployServiceType.Topic;
   }
 
   newConstruct(scope: cdk.Construct): cdkSns.ITopic {
@@ -46,15 +50,7 @@ export default class SelfDeployTopic extends SelfDeployService {
     return {};
   }
 
-  private async publishAsyncInternal(
-    topicArn: string,
-    input: PublishInput
-  ): Promise<PublishResponse> {
-    const augmentedInput: PublishInput = {
-      ...input,
-      TopicArn: topicArn,
-    };
-
-    return sns.publish(augmentedInput).promise();
+  private getEnvVarName(): string {
+    return `service_${this.id}_topic_arn`.toUpperCase();
   }
 }
