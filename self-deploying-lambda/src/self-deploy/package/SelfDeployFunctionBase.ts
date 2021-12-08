@@ -5,11 +5,11 @@
 import * as cdk from '@aws-cdk/core';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
-import SelfDeployService from './SelfDeployService';
+import SelfDeployServiceBase from './SelfDeployServiceBase';
 
 export default abstract class SelfDeployFunctionBase {
   //
-  public readonly serviceList = new Array<SelfDeployService>();
+  public readonly serviceList = new Array<SelfDeployServiceBase>();
 
   constructor(public appFileName: string, public id: string) {}
 

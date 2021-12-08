@@ -1,14 +1,15 @@
 /* eslint-disable class-methods-use-this */
 /* eslint-disable import/no-extraneous-dependencies */
-import * as dynamodb from '@aws-cdk/aws-dynamodb';
-import * as lambda from '@aws-cdk/aws-lambda';
+import * as cdkDynamodb from '@aws-cdk/aws-dynamodb';
+import * as cdkLambda from '@aws-cdk/aws-lambda';
 import { Construct } from '@aws-cdk/core';
 import AWS from 'aws-sdk';
+import { PutItemInput, PutItemOutput } from 'aws-sdk/clients/dynamodb';
 import SelfDeployService from './SelfDeployService';
 
-export default abstract class SelfDeployTable extends SelfDeployService<dynamodb.ITable> {
+export default abstract class SelfDeployTable extends SelfDeployService<cdkDynamodb.ITable> {
   //
-  private table: dynamodb.ITable;
+  private table: cdkDynamodb.ITable;
 
   readonly client: AWS.DynamoDB.DocumentClient;
 
@@ -17,15 +18,15 @@ export default abstract class SelfDeployTable extends SelfDeployService<dynamodb
     this.client = new AWS.DynamoDB.DocumentClient();
   }
 
-  addConfiguration(lambdaFunction: lambda.Function): void {
+  addConfiguration(lambdaFunction: cdkLambda.Function): void {
     if (this.table === undefined) throw new Error('this.table === undefined');
     // TODO 05Dec21: How do we grant different sorts of access?
     this.table.grantFullAccess(lambdaFunction);
     lambdaFunction.addEnvironment(this.getEnvVarName(), this.table.tableName);
   }
 
-  newConstruct(scope: Construct): dynamodb.ITable {
-    this.table = new dynamodb.Table(scope, this.id, this.getTableProps());
+  newConstruct(scope: Construct): cdkDynamodb.ITable {
+    this.table = new cdkDynamodb.Table(scope, this.id, this.getTableProps());
     return this.table;
   }
 
@@ -35,7 +36,16 @@ export default abstract class SelfDeployTable extends SelfDeployService<dynamodb
     return name;
   }
 
-  abstract getTableProps(): dynamodb.TableProps;
+  async putAsync(params: Omit<PutItemInput, 'TableName'>): Promise<PutItemOutput> {
+    return this.client
+      .put({
+        TableName: this.getName(),
+        ...params,
+      })
+      .promise();
+  }
+
+  abstract getTableProps(): cdkDynamodb.TableProps;
 
   private getEnvVarName(): string {
     return `service_${this.id}_table_name`.toUpperCase();

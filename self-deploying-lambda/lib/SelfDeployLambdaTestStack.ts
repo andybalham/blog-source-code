@@ -6,9 +6,11 @@ import * as cdk from '@aws-cdk/core';
 import { IntegrationTestStack } from '@andybalham/sls-testing-toolkit';
 import {
   eventPublishingFunction,
+  itemPutterFunction,
   loggingFunction,
+  testTable,
   testTopic,
-} from '../src/self-deploy/application';
+} from '../src/self-deploy/selfDeployApplication';
 
 export default class SelfDeployLambdaTestStack extends IntegrationTestStack {
   //
@@ -30,8 +32,12 @@ export default class SelfDeployLambdaTestStack extends IntegrationTestStack {
     });
 
     const loggingFunctionConstruct = loggingFunction.newConstruct(this);
+
     const testTopicConstruct = testTopic.newConstruct(this);
     const eventPublishingFunctionConstruct = eventPublishingFunction.newConstruct(this);
+
+    testTable.newConstruct(this);
+    itemPutterFunction.newConstruct(this);
 
     this.addTestResourceTag(loggingFunctionConstruct, SelfDeployLambdaTestStack.LoggingFunctionId);
     this.addTestResourceTag(

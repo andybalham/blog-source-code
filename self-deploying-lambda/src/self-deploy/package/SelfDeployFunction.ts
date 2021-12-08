@@ -1,5 +1,5 @@
-import SelfDeployService from './SelfDeployService';
 import SelfDeployFunctionBase from './SelfDeployFunctionBase';
+import SelfDeployServiceBase from './SelfDeployServiceBase';
 
 export default abstract class SelfDeployFunction<T> extends SelfDeployFunctionBase {
   //
@@ -7,7 +7,7 @@ export default abstract class SelfDeployFunction<T> extends SelfDeployFunctionBa
     super(appFileName, id);
 
     Object.values(services).forEach((service) => {
-      this.serviceList.push(service as SelfDeployService);
+      this.serviceList.push(service as SelfDeployServiceBase);
     });
   }
 }
