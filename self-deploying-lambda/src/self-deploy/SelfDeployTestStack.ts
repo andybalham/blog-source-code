@@ -10,9 +10,9 @@ import {
   loggingFunction,
   testTable,
   testTopic,
-} from '../src/self-deploy/selfDeployApplication';
+} from './selfDeployApplication';
 
-export default class SelfDeployLambdaTestStack extends IntegrationTestStack {
+export default class SelfDeployTestStack extends IntegrationTestStack {
   //
   static readonly StackId = 'SelfDeployLambdaTestStack';
 
@@ -27,8 +27,8 @@ export default class SelfDeployLambdaTestStack extends IntegrationTestStack {
   constructor(scope: cdk.Construct, id: string) {
     //
     super(scope, id, {
-      testStackId: SelfDeployLambdaTestStack.StackId,
-      testFunctionIds: [SelfDeployLambdaTestStack.TestTopicObserverId],
+      testStackId: SelfDeployTestStack.StackId,
+      testFunctionIds: [SelfDeployTestStack.TestTopicObserverId],
     });
 
     const loggingFunctionConstruct = loggingFunction.newConstruct(this);
@@ -41,11 +41,11 @@ export default class SelfDeployLambdaTestStack extends IntegrationTestStack {
     });
     itemPutterFunction.newConstruct(this);
 
-    this.addTestResourceTag(loggingFunctionConstruct, SelfDeployLambdaTestStack.LoggingFunctionId);
+    this.addTestResourceTag(loggingFunctionConstruct, SelfDeployTestStack.LoggingFunctionId);
     this.addTestResourceTag(
       eventPublishingFunctionConstruct,
-      SelfDeployLambdaTestStack.EventPublishingFunctionId
+      SelfDeployTestStack.EventPublishingFunctionId
     );
-    this.addSNSTopicSubscriber(testTopicConstruct, SelfDeployLambdaTestStack.TestTopicObserverId);
+    this.addSNSTopicSubscriber(testTopicConstruct, SelfDeployTestStack.TestTopicObserverId);
   }
 }
