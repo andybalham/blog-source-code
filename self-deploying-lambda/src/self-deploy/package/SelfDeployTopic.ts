@@ -7,7 +7,7 @@ import { PublishInput, PublishResponse } from 'aws-sdk/clients/sns';
 import * as lambda from '@aws-cdk/aws-lambda';
 import SelfDeployService from './SelfDeployService';
 
-export default class SelfDeployTopic extends SelfDeployService<cdkSns.ITopic> {
+export default class SelfDeployTopic extends SelfDeployService<cdkSns.ITopic, cdkSns.TopicProps> {
   //
   private topic: cdkSns.Topic;
 
@@ -35,14 +35,17 @@ export default class SelfDeployTopic extends SelfDeployService<cdkSns.ITopic> {
     return topicArn;
   }
 
-  addConfiguration(cdkFunction: lambda.Function): void {
+  configureFunction(cdkFunction: lambda.Function): void {
     if (this.topic === undefined) throw new Error('this.topic === undefined');
     this.topic.grantPublish(cdkFunction);
     cdkFunction.addEnvironment(this.getEnvVarName(), this.topic.topicArn);
   }
 
-  newConstruct(scope: cdk.Construct): cdkSns.ITopic {
-    this.topic = new cdkSns.Topic(scope, this.id, this.getTopicProps());
+  newConstruct(scope: cdk.Construct, props?: cdkSns.TopicProps): cdkSns.ITopic {
+    this.topic = new cdkSns.Topic(scope, this.id, {
+      ...this.getTopicProps(),
+      ...props,
+    });
     return this.topic;
   }
 

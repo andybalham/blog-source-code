@@ -3,7 +3,8 @@ import * as cdk from '@aws-cdk/core';
 import SelfDeployServiceBase from './SelfDeployServiceBase';
 
 export default abstract class SelfDeployService<
-  T extends cdk.IResource
+  TRes extends cdk.IResource,
+  TProps
 > extends SelfDeployServiceBase {
-  abstract newConstruct(scope: cdk.Construct): T;
+  abstract newConstruct(scope: cdk.Construct, props: TProps): TRes;
 }

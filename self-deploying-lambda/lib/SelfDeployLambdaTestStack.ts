@@ -36,7 +36,9 @@ export default class SelfDeployLambdaTestStack extends IntegrationTestStack {
     const testTopicConstruct = testTopic.newConstruct(this);
     const eventPublishingFunctionConstruct = eventPublishingFunction.newConstruct(this);
 
-    testTable.newConstruct(this);
+    testTable.newConstruct(this, {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
     itemPutterFunction.newConstruct(this);
 
     this.addTestResourceTag(loggingFunctionConstruct, SelfDeployLambdaTestStack.LoggingFunctionId);

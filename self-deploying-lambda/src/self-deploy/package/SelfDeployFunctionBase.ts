@@ -20,7 +20,7 @@ export default abstract class SelfDeployFunctionBase {
       handler: `handle${this.id}`,
     });
 
-    this.serviceList.forEach((s) => s.addConfiguration(cdkFunction));
+    this.serviceList.forEach((s) => s.configureFunction(cdkFunction));
 
     return cdkFunction;
   }
