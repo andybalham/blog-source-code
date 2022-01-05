@@ -1,3 +1,4 @@
+/* eslint-disable indent */
 /* eslint-disable class-methods-use-this */
 /* eslint-disable import/no-extraneous-dependencies */
 import * as cdk from '@aws-cdk/core';
@@ -7,14 +8,15 @@ import { PublishInput, PublishResponse } from 'aws-sdk/clients/sns';
 import * as lambda from '@aws-cdk/aws-lambda';
 import SelfDeployService from './SelfDeployService';
 
-export default class SelfDeployTopic extends SelfDeployService<cdkSns.ITopic, cdkSns.TopicProps> {
+export default class SelfDeployTopic
+  implements SelfDeployService<cdkSns.ITopic, cdkSns.TopicProps>
+{
   //
   private topic: cdkSns.Topic;
 
   readonly client: AWS.SNS;
 
-  constructor(id: string) {
-    super(id);
+  constructor(public id: string) {
     this.client = new AWS.SNS();
   }
 

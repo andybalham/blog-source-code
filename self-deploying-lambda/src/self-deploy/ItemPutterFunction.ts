@@ -3,15 +3,15 @@
 import { DateTime } from 'luxon';
 import { nanoid } from 'nanoid';
 import SelfDeployFunction from './package/SelfDeployFunction';
-import SelfDeployTable from './package/SelfDeployTable';
+import { SelfDeployTableWrite } from './package/SelfDeployTable';
 
 interface ItemPutterServices {
-  testTable: SelfDeployTable;
+  testTableWriter: SelfDeployTableWrite;
 }
 
 export default class ItemPutterFunction extends SelfDeployFunction<ItemPutterServices> {
   async handleEventAsync(event: any): Promise<any> {
-    this.services.testTable.putAsync({
+    this.services.testTableWriter.putAsync({
       Item: {
         PK: nanoid(),
         SK: DateTime.now().toSeconds(),

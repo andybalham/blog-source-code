@@ -1,0 +1,8 @@
+{
+  "eventType": "NewApplication",
+  "payload": {
+    "loanAmount": 666000,
+    "postcode": "PR1 9LB",
+    "applicationId": "21a82079-e1a8-4035-9762-a94db488208b"
+  }
+}

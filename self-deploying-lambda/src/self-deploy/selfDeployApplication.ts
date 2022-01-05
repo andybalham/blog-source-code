@@ -21,12 +21,13 @@ export const eventPublishingFunction = new EventPublishingFunction(
 
 export const testTable = new TestTable('TestTable');
 export const itemPutterFunction = new ItemPutterFunction(thisFile, 'ItemPutterFunction', {
-  testTable,
+  testTableWriter: testTable.getWriter(),
 });
 
 // Function entry points
 
-export const handleLoggingFunction = (event: any): any => loggingFunction.handleEventAsync(event);
+export const handleLoggingFunction = async (event: any): Promise<any> =>
+  loggingFunction.handleEventAsync(event);
 export const handleEventPublishingFunction = async (event: any): Promise<any> =>
   eventPublishingFunction.handleEventAsync(event);
 export const handleItemPutterFunction = async (event: any): Promise<any> =>
