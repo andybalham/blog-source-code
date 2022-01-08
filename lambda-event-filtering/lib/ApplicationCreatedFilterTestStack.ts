@@ -15,11 +15,7 @@ export default class ApplicationCreatedFilterTestStack extends IntegrationTestSt
 
   static readonly HighValueConsumerId = 'HighValueConsumerFunction';
 
-  static readonly PostcodeFilterConsumerId = 'PostcodeFilterConsumerFunction';
-
-  static readonly HighValueAmountThresholdAmount = 666000;
-
-  static readonly PostcodeFilter = ['MK', 'PR'];
+  static readonly PostcodeConsumerId = 'PostcodeFilterConsumerFunction';
 
   constructor(scope: cdk.Construct, id: string) {
     //
@@ -27,7 +23,7 @@ export default class ApplicationCreatedFilterTestStack extends IntegrationTestSt
       testStackId: ApplicationCreatedFilterTestStack.StackId,
       testFunctionIds: [
         ApplicationCreatedFilterTestStack.HighValueConsumerId,
-        ApplicationCreatedFilterTestStack.PostcodeFilterConsumerId,
+        ApplicationCreatedFilterTestStack.PostcodeConsumerId,
       ],
     });
 
@@ -42,22 +38,10 @@ export default class ApplicationCreatedFilterTestStack extends IntegrationTestSt
 
     new ApplicationCreatedFilter(this, 'SUT', {
       applicationEventTopic,
-      highValueThresholdFunction:
+      highValueFunction:
         this.testFunctions[ApplicationCreatedFilterTestStack.HighValueConsumerId],
-      highValueThresholdAmount: ApplicationCreatedFilterTestStack.HighValueAmountThresholdAmount,
-      postcodeFilterFunction:
-        this.testFunctions[ApplicationCreatedFilterTestStack.PostcodeFilterConsumerId],
-      postcodeFilter: ApplicationCreatedFilterTestStack.PostcodeFilter,
+      postcodeFunction:
+        this.testFunctions[ApplicationCreatedFilterTestStack.PostcodeConsumerId],
     });
-
-    // new cdk.CfnOutput(this, 'RouterFunctionId', {
-    //   value: sut.routerFunction.node.id,
-    //   description: 'The id of the router function',
-    // });
-
-    // new cdk.CfnOutput(this, 'RouterFunctionName', {
-    //   value: sut.routerFunction.functionName,
-    //   description: 'The name of the router function',
-    // });
   }
 }
