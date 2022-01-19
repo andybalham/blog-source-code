@@ -2,24 +2,24 @@
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable import/prefer-default-export */
-// import AWS from 'aws-sdk';
+import axios from 'axios';
 
 export const CREDIT_REFERENCE_URL_ENV_VAR = 'CREDIT_REFERENCE_URL';
-
-// const ssm = new AWS.SSM();
 
 export const handler = async (event: any): Promise<any> => {
   console.log(JSON.stringify({ event }, null, 2));
 
-  // const creditReferenceUrlParameterName =
-  //   process.env[CREDIT_REFERENCE_URL_ENV_VAR] ?? '<undefined>';
+  const creditReferenceUrl = process.env[CREDIT_REFERENCE_URL_ENV_VAR];
 
-  // const parameter = await ssm
-  //   .getParameter({
-  //     Name: creditReferenceUrlParameterName,
-  //     WithDecryption: true,
-  //   })
-  //   .promise();
+  if (creditReferenceUrl === undefined) throw new Error('creditReferenceUrl === undefined');
 
-  // console.log(JSON.stringify({ parameterValue: parameter.Parameter?.Value }, null, 2));
+  try {
+    const res = await axios.post(`${creditReferenceUrl}request`, {
+      name: 'Atta',
+      job: 'Freelance Developer',
+    });
+    console.log(res.data);
+  } catch (err) {
+    console.error(err);
+  }
 };
