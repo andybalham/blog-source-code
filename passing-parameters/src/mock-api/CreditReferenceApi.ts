@@ -19,21 +19,23 @@ export default class CreditReferenceApi extends cdk.Construct {
       description: 'Credit Reference API',
     });
 
-    const mockApiFunction = new lambdaNodejs.NodejsFunction(this, 'CreditReferenceFn');
+    const apiFunction = new lambdaNodejs.NodejsFunction(this, 'CreditReferenceFn');
 
     httpApi.addRoutes({
       path: '/request',
       methods: [HttpMethod.POST],
-      integration: new HttpLambdaIntegration('CreditReferenceApiIntegration', mockApiFunction),
+      integration: new HttpLambdaIntegration('CreditReferenceApiIntegration', apiFunction),
     });
 
-    new ssm.StringParameter(this, 'CreditReferenceApiUrlParameter', {
+    const urlParameter = new ssm.StringParameter(this, 'CreditReferenceApiUrlParameter', {
       parameterName: props.urlParameterName,
       stringValue: httpApi.url ?? '<undefined>',
       description: 'The base URL for the credit reference API',
       type: ssm.ParameterType.STRING,
       tier: ssm.ParameterTier.STANDARD,
     });
+
+    urlParameter.grantRead(apiFunction);
 
     new cdk.CfnOutput(this, 'CreditReferenceApiUrlOutput', {
       value: httpApi.url ?? '<undefined>',

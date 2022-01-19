@@ -13,6 +13,9 @@
     "mock-api-cdk-synth": "tsc && cdk synth MockApiStack > .cdk-synth.yml",
     "mock-api-cdk-deploy": "tsc && cdk deploy MockApiStack",
     "mock-api-cdk-hotswap": "tsc && cdk deploy MockApiStack --hotswap",
+    "test-cdk-synth": "tsc && cdk synth LoanProcessorTestStack > .cdk-synth.yml",
+    "test-cdk-deploy": "tsc && cdk deploy LoanProcessorTestStack",
+    "test-cdk-hotswap": "tsc && cdk deploy LoanProcessorTestStack --hotswap",
     "cdk-destroy": "tsc && cdk destroy --all"
   },
   "repository": {
