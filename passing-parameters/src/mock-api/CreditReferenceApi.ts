@@ -27,15 +27,13 @@ export default class CreditReferenceApi extends cdk.Construct {
       integration: new HttpLambdaIntegration('CreditReferenceApiIntegration', apiFunction),
     });
 
-    const urlParameter = new ssm.StringParameter(this, 'CreditReferenceApiUrlParameter', {
+    new ssm.StringParameter(this, 'CreditReferenceApiUrlParameter', {
       parameterName: props.urlParameterName,
       stringValue: httpApi.url ?? '<undefined>',
       description: 'The base URL for the credit reference API',
       type: ssm.ParameterType.STRING,
       tier: ssm.ParameterTier.STANDARD,
     });
-
-    urlParameter.grantRead(apiFunction);
 
     new cdk.CfnOutput(this, 'CreditReferenceApiUrlOutput', {
       value: httpApi.url ?? '<undefined>',
