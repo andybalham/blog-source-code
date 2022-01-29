@@ -4,6 +4,7 @@ import * as lambda from '@aws-cdk/aws-lambda';
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
 import * as ssm from '@aws-cdk/aws-ssm';
 import {
+  CREDIT_REFERENCE_URL_ENV_VAR,
   // CREDIT_REFERENCE_URL_ENV_VAR,
   CREDIT_REFERENCE_URL_PARAMETER_NAME_ENV_VAR,
 } from './LoanProcessor.CreditReferenceProxyFunction';
@@ -18,12 +19,10 @@ export default class LoanProcessor extends cdk.Construct {
   constructor(scope: cdk.Construct, id: string, props: LoanProcessorProps) {
     super(scope, id);
 
-    const creditReferenceApiUrlParameter = ssm.StringParameter.fromStringParameterAttributes(
+    const creditReferenceApiUrlParameter = ssm.StringParameter.fromStringParameterName(
       this,
       'CreditReferenceApiUrlParameter',
-      {
-        parameterName: props.creditReferenceUrlParameterName,
-      }
+      props.creditReferenceUrlParameterName
     );
 
     this.creditReferenceProxyFunction = new lambdaNodejs.NodejsFunction(
@@ -31,7 +30,7 @@ export default class LoanProcessor extends cdk.Construct {
       'CreditReferenceProxyFunction',
       {
         environment: {
-          // [CREDIT_REFERENCE_URL_ENV_VAR]: creditReferenceApiUrlParameter.stringValue,
+          [CREDIT_REFERENCE_URL_ENV_VAR]: creditReferenceApiUrlParameter.stringValue,
           [CREDIT_REFERENCE_URL_PARAMETER_NAME_ENV_VAR]: props.creditReferenceUrlParameterName,
         },
       }

@@ -27,5 +27,10 @@ export default class LoanProcessorTestStack extends IntegrationTestStack {
       loanProcessor.creditReferenceProxyFunction,
       LoanProcessorTestStack.CreditReferenceProxyFunctionId
     );
+
+    new cdk.CfnOutput(this, 'CreditReferenceProxyFunctionName', {
+      value: loanProcessor.creditReferenceProxyFunction.functionName ?? '<undefined>',
+      description: 'The name of the credit reference function',
+    });
   }
 }

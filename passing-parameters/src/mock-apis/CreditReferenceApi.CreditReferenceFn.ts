@@ -2,19 +2,19 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable import/prefer-default-export */
 import { APIGatewayEvent } from 'aws-lambda';
+import { CreditReferenceRating, CreditReferenceResponse } from '../contracts/credit-reference';
 
 export const handler = async (event: APIGatewayEvent): Promise<any> => {
   console.log(JSON.stringify({ event }, null, 2));
-
   console.log(JSON.stringify({ body: event.body }, null, 2));
 
-  // TODO 16Jan22: What do we want to do with this function?
+  const response: CreditReferenceResponse = {
+    reference: 'CR1234',
+    rating: CreditReferenceRating.Ugly,
+  };
 
   return {
-    body: JSON.stringify([
-      { todoId: 1, text: 'walk the dog 🐕' },
-      { todoId: 2, text: 'cook dinner 🥗' },
-    ]),
+    body: JSON.stringify(response),
     statusCode: 200,
   };
 };

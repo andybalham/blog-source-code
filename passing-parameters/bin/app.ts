@@ -5,9 +5,9 @@ import LoanProcessorTestStack from '../lib/LoanProcessorTestStack';
 import MockApiStack from '../lib/MockApiStack';
 
 const app = new cdk.App();
-cdk.Tags.of(app).add('app', 'ApplicationCreatedFilterTestApp');
+cdk.Tags.of(app).add('app', 'PassingParametersTestApp');
 
-const creditReferenceUrlParameterName = '/credit-reference-api/base-url';
+const creditReferenceUrlParameterName = '/mock-apis/credit-reference-api/base-url';
 
 new MockApiStack(app, 'MockApiStack', { creditReferenceUrlParameterName });
 new LoanProcessorTestStack(app, 'LoanProcessorTestStack', { creditReferenceUrlParameterName });
