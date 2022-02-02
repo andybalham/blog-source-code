@@ -1,15 +1,15 @@
-What do you do, when you have one stack that depends on a deployment details from another? Here we look at how we can use the [AWS Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) and [CDK](https://aws.amazon.com/cdk/) to share data between stacks.
+What do you do, when you have one stack that depends on a deployment details from another? Here we look at how we can use the [AWS Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) and [CDK](https://aws.amazon.com/cdk/) provide a solution to this problem.
 
 ## TL;DR
 
 - One stack creates a parameter in the Parameter Store
-- Another stack accesses the parameter either at deployment or runtime
+- Another stack accesses the parameter, either at deployment or runtime
 
 ## The problem
 
-In preparation for an upcoming blog post, I wanted to create a set of mock API end points in one stack and then have a set of Lambda functions to call them in a separate stack.
+In preparation for an upcoming blog post, I wanted to create a set of mock API endpoints in one stack and then have a set of Lambda functions to call them from a separate stack.
 
-To do this, each Lambda function would need to know the base URL of the corresponding API end point, which could change on each deployment of the API stack.
+To do this, each Lambda function would need to know the base URL of the corresponding API endpoint, which could change on each deployment of the API stack.
 
 I also wanted to avoid having to deploy the Lambda function stack each time I deployed the mock API stack.
 
@@ -21,11 +21,11 @@ AWS describes the [Parameter Store](https://docs.aws.amazon.com/systems-manager/
 
 Values within the Parameter Store are accessed via keys, which are just string values.
 
-Given this, it struck myself that if both stacks have shared knowledge of a statically-defined key string, then they should be able to use this key to share dynamically-generated values.
+Given this, it struck me that if both stacks have shared knowledge of a statically-defined key string, then they should be able to use this key to share dynamically-generated values. One stack storing the value and the other retrieving it.
 
 ## The Mock API stack
 
-The first thing for me to do was create a stack that contained a mock API. In this case, it was to be a mock Credit Reference service. As the parameter name is to be shared across stacks, we set up the stack so that it can be passed in as a property of the stack.
+The first thing for me to do was create a stack that contained a mock API. In this case, it was to be a mock Credit Reference service. As the parameter name is to be shared across stacks, we set up the stack so that it can be passed in via a properties object.
 
 ```TypeScript
 export interface MockApiStackProps {
@@ -39,7 +39,7 @@ export default class MockApiStack extends cdk.Stack {
 }
 ```
 
-The next step was to do was define `HttpApi` and a parameter that contains the deployment time value of the corresponding `url` property.
+The next step was to do was define the `HttpApi` and a parameter that contains the deployment time value of the corresponding `url` property.
 
 ```TypeScript
 const httpApi = new HttpApi(this, 'CreditReferenceHttpApi', {
@@ -73,7 +73,7 @@ When the stack was deployed the stack to AWS, I went into the AWS Console and co
 
 ## The Lambda stack
 
-The next step was to create the stack that would contain the Lambda functions that will call the mock APIs. As with the mock API stack, this would take a properties object that allowed the passing of the name of the parameter for the mock API URL.
+The next step was to create the stack that would contain the Lambda functions that call the mock APIs. As with the mock API stack, this took a properties object to allow the name of the parameter to be passed in.
 
 ```TypeScript
 export interface LoanProcessorTestStackProps {
@@ -111,7 +111,7 @@ this.creditReferenceProxyFunction = new lambdaNodejs.NodejsFunction(
 );
 ```
 
-The code for the Lambda function was straightforward using the [Axios](https://www.npmjs.com/package/axios) package to make the call.
+The code for the Lambda function was straightforward, using the [Axios](https://www.npmjs.com/package/axios) npm package to make the call.
 
 ```TypeScript
 export const handler = async (event: any): Promise<any> => {
@@ -119,7 +119,8 @@ export const handler = async (event: any): Promise<any> => {
 
   console.log(JSON.stringify({ creditReferenceUrl }, null, 2));
 
-  if (creditReferenceUrl === undefined) throw new Error('creditReferenceUrl === undefined');
+  if (creditReferenceUrl === undefined) 
+    throw new Error('creditReferenceUrl === undefined');
 
   const request: CreditReferenceRequest = {
     firstName: 'Trevor',
@@ -153,7 +154,7 @@ Once deployed, I checked the Lambda function environment variables and confirmed
 
 A quick test through the AWS Console confirmed that the function was working as expected:
 
-```
+```text
 2022-01-29T09:08:24.808Z	10179872-38a0-4687-a8b4-382b814696cf	INFO	{
   "creditReferenceUrl": "https://o8z7mzryt0.execute-api.eu-west-2.amazonaws.com/"
 }
@@ -205,7 +206,7 @@ const creditReferenceUrl = creditReferenceUrlParameter.Parameter?.Value;
 
 To test the changes, I first redeployed the Lambda stack. I then destroyed the mock API stack and redeployed it, before testing the Lambda function again. The result was that the URL was successfully retrieved at runtime.
 
-```
+```text
 2022-01-29T16:28:15.864Z	febe6e31-5cfd-43bb-8fcf-4febd062c247	INFO	{
   "creditReferenceUrl": "https://ec7smjoixe.execute-api.eu-west-2.amazonaws.com/"
 }
@@ -228,7 +229,7 @@ The second thing is that there is both an overhead and a limit to accessing the 
 
 One solution to this would be to cache the value outside the handler function and refresh it if the call to the endpoint receives a `404` response. This exercise is left for the reader 😉
 
-Another option here to consider is the [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/). For a comparison of the two services, see this article on [AWS Parameter Store vs. AWS Secrets Manager](https://www.1strategy.com/blog/2019/02/28/aws-parameter-store-vs-aws-secrets-manager/).
+Another option here to consider is the [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/). For a comparison of the two services, see this article on [AWS Parameter Store vs. AWS Secrets Manager](https://www.1strategy.com/blog/2019/02/28/aws-parameter-store-vs-aws-secrets-manager/). If you are using the excellent [middy](https://middy.js.org/) middleware, then you can use the [SSM middleware](https://middy.js.org/packages/ssm/) package.
 
 ## Summary
 
