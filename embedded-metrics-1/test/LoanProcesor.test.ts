@@ -31,7 +31,7 @@ describe('LoanProcessor Test Suite', () => {
     await testClient.initialiseTestAsync();
   });
 
-  it.skip('invoke function once', async () => {
+  it('invoke function once', async () => {
     const response = await creditReferenceProxyFunction.invokeAsync<
       CreditReferenceRequest,
       CreditReferenceResponse

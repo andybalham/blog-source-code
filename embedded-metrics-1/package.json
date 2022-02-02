@@ -16,7 +16,8 @@
     "test-cdk-synth": "tsc && cdk synth LoanProcessorTestStack > .cdk-synth.yml",
     "test-cdk-deploy": "tsc && cdk deploy LoanProcessorTestStack",
     "test-cdk-hotswap": "tsc && cdk deploy LoanProcessorTestStack --hotswap",
-    "cdk-destroy": "tsc && cdk destroy --all"
+    "cdk-deploy-all": "tsc && cdk deploy MockApiStack && cdk deploy LoanProcessorTestStack",
+    "cdk-destroy-all": "tsc && cdk destroy --all"
   },
   "repository": {
     "type": "git",
