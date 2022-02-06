@@ -2,15 +2,58 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable import/prefer-default-export */
 import { APIGatewayEvent } from 'aws-lambda';
-import { CreditReferenceRating, CreditReferenceResponse } from '../contracts/credit-reference';
+import { nanoid } from 'nanoid';
+import {
+  CreditReferenceRating,
+  CreditReferenceRequest,
+  CreditReferenceResponse,
+} from '../contracts/credit-reference';
+
+async function sleepAsync(seconds: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+}
+
+export const ERROR_PERCENTAGE_ENV_VAR = 'ERROR_PERCENTAGE';
+export const MAX_DELAY_MILLIS_ENV_VAR = 'MAX_DELAY_MILLIS';
+
+const errorPercentage = parseInt(process.env[ERROR_PERCENTAGE_ENV_VAR] ?? '0', 10);
+const maxDelayMillis = parseInt(process.env[MAX_DELAY_MILLIS_ENV_VAR] ?? '0', 10);
 
 export const handler = async (event: APIGatewayEvent): Promise<any> => {
   console.log(JSON.stringify({ event }, null, 2));
   console.log(JSON.stringify({ body: event.body }, null, 2));
 
+  const isError = Math.random() * 100 < errorPercentage;
+
+  if (isError) {
+    return {
+      body: JSON.stringify({ message: "It's all gone Pete Tong" }),
+      statusCode: 500,
+    };
+  }
+
+  const creditReferenceRequest: CreditReferenceRequest = event.body
+    ? JSON.parse(event.body)
+    : undefined;
+
+  const randomDelaySeconds = (Math.random() * maxDelayMillis) / 1000;
+
+  await sleepAsync(randomDelaySeconds);
+
+  const randomRating = Math.floor(Math.random() * 6);
+
   const response: CreditReferenceResponse = {
-    reference: 'CR1234',
-    rating: CreditReferenceRating.Ugly,
+    correlationId: creditReferenceRequest?.correlationId ?? '<undefined>',
+    requestId: creditReferenceRequest?.requestId ?? '<undefined>',
+    reference: `CR-${nanoid(6)}`,
+    rating: [
+      CreditReferenceRating.Good,
+      CreditReferenceRating.Good,
+      CreditReferenceRating.Good,
+      CreditReferenceRating.Bad,
+      CreditReferenceRating.Bad,
+      CreditReferenceRating.Ugly,
+    ][randomRating],
   };
 
   return {

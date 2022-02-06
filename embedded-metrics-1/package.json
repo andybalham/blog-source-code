@@ -1,7 +1,7 @@
 {
-  "name": "inter-stack-parameters",
+  "name": "embedded-metrics-1",
   "version": "1.0.0",
-  "description": "Source code for blog post on inter-stack parameters",
+  "description": "Source code for blog post on embedded metrics.",
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
@@ -21,14 +21,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/andybalham/inter-stack-parameters.git"
+    "url": "git+https://github.com/andybalham/embedded-metrics-1.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/andybalham/inter-stack-parameters/issues"
+    "url": "https://github.com/andybalham/embedded-metrics-1/issues"
   },
-  "homepage": "https://github.com/andybalham/inter-stack-parameters#readme",
+  "homepage": "https://github.com/andybalham/embedded-metrics-1#readme",
   "devDependencies": {
     "@andybalham/sls-testing-toolkit": "^1.0.12",
     "@aws-cdk/aws-apigateway": "^1.129.0",
@@ -74,6 +74,7 @@
   "dependencies": {
     "@aws-cdk/aws-apigatewayv2": "^1.129.0",
     "@aws-cdk/aws-apigatewayv2-integrations": "^1.129.0",
+    "aws-embedded-metrics": "^2.0.4",
     "axios": "^0.25.0",
     "nanoid": "^3.2.0"
   }

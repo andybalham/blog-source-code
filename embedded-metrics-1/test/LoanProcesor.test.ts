@@ -2,6 +2,7 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-console */
 import { IntegrationTestClient, LambdaTestClient } from '@andybalham/sls-testing-toolkit';
+import { nanoid } from 'nanoid';
 import LoanProcessorTestStack from '../lib/LoanProcessorTestStack';
 import { CreditReferenceRequest, CreditReferenceResponse } from '../src/contracts/credit-reference';
 
@@ -14,11 +15,17 @@ describe('LoanProcessor Test Suite', () => {
 
   let creditReferenceProxyFunction: LambdaTestClient;
 
-  const request: CreditReferenceRequest = {
-    firstName: 'John',
-    lastName: 'Power',
-    postcode: '123',
-  };
+  let correlationId: string;
+
+  function newRequest(): CreditReferenceRequest {
+    return {
+      correlationId,
+      requestId: nanoid(),
+      firstName: 'John',
+      lastName: 'Power',
+      postcode: '123',
+    };
+  }
 
   before(async () => {
     await testClient.initialiseClientAsync();
@@ -29,36 +36,47 @@ describe('LoanProcessor Test Suite', () => {
 
   beforeEach(async () => {
     await testClient.initialiseTestAsync();
+    correlationId = nanoid();
   });
 
   it('invoke function once', async () => {
     const response = await creditReferenceProxyFunction.invokeAsync<
       CreditReferenceRequest,
       CreditReferenceResponse
-    >(request);
+    >(newRequest());
 
     console.log(JSON.stringify({ response }, null, 2));
   }).timeout(10 * 1000);
 
-  it.skip('invoke function 10 times', async () => {
+  it('invoke function 10 times', async () => {
     for (let i = 0; i < 10; i++) {
       const response = await creditReferenceProxyFunction.invokeAsync<
         CreditReferenceRequest,
         CreditReferenceResponse
-      >(request);
+      >(newRequest());
 
       console.log(JSON.stringify({ response }, null, 2));
     }
   }).timeout(30 * 1000);
 
-  it.skip('invoke function 40 times', async () => {
-    for (let i = 0; i < 40; i++) {
-      const response = await creditReferenceProxyFunction.invokeAsync<
-        CreditReferenceRequest,
-        CreditReferenceResponse
-      >(request);
+  [{ minuteCount: 2, maxIntervalSeconds: 2 }].forEach((theory) => {
+    it.only(`Invoke function for ${JSON.stringify(theory)}`, async () => {
+      //
+      const endTime = Date.now() + 1000 * 60 * theory.minuteCount;
 
-      console.log(JSON.stringify({ response }, null, 2));
-    }
-  }).timeout(60 * 1000);;
+      while (Date.now() < endTime) {
+        //
+        const response = await creditReferenceProxyFunction.invokeAsync<
+          CreditReferenceRequest,
+          CreditReferenceResponse
+        >(newRequest());
+
+        console.log(JSON.stringify({ response }));
+
+        const randomWaitSeconds = Math.random() * theory.maxIntervalSeconds + 1;
+
+        await IntegrationTestClient.sleepAsync(randomWaitSeconds);
+      }
+    }).timeout(1000 * 60 * 5);
+  });
 });

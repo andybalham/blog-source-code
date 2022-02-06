@@ -6,6 +6,10 @@ import { HttpApi, HttpMethod } from '@aws-cdk/aws-apigatewayv2';
 import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations';
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
 import * as ssm from '@aws-cdk/aws-ssm';
+import {
+  ERROR_PERCENTAGE_ENV_VAR,
+  MAX_DELAY_MILLIS_ENV_VAR,
+} from './CreditReferenceApi.CreditReferenceFn';
 
 export interface CreditReferenceApiProps {
   urlParameterName: string;
@@ -27,7 +31,12 @@ export default class CreditReferenceApi extends cdk.Construct {
       tier: ssm.ParameterTier.STANDARD,
     });
 
-    const apiFunction = new lambdaNodejs.NodejsFunction(this, 'CreditReferenceFn');
+    const apiFunction = new lambdaNodejs.NodejsFunction(this, 'CreditReferenceFn', {
+      environment: {
+        [MAX_DELAY_MILLIS_ENV_VAR]: '0',
+        [ERROR_PERCENTAGE_ENV_VAR]: '20',
+      },
+    });
 
     httpApi.addRoutes({
       path: '/request',
