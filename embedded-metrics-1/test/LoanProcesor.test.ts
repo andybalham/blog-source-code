@@ -59,7 +59,7 @@ describe('LoanProcessor Test Suite', () => {
     }
   }).timeout(30 * 1000);
 
-  [{ minuteCount: 2, maxIntervalSeconds: 2 }].forEach((theory) => {
+  [{ minuteCount: 10, minIntervalSeconds: 6, maxIntervalSeconds: 12 }].forEach((theory) => {
     it.only(`Invoke function for ${JSON.stringify(theory)}`, async () => {
       //
       const endTime = Date.now() + 1000 * 60 * theory.minuteCount;
@@ -73,10 +73,12 @@ describe('LoanProcessor Test Suite', () => {
 
         console.log(JSON.stringify({ response }));
 
-        const randomWaitSeconds = Math.random() * theory.maxIntervalSeconds + 1;
+        const randomWaitSeconds =
+          Math.ceil(Math.random() * (theory.maxIntervalSeconds - theory.minIntervalSeconds)) +
+          theory.minIntervalSeconds;
 
         await IntegrationTestClient.sleepAsync(randomWaitSeconds);
       }
-    }).timeout(1000 * 60 * 5);
+    }).timeout(1000 * 60 * (theory.minuteCount + 1));
   });
 });

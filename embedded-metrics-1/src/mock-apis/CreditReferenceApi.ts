@@ -33,7 +33,7 @@ export default class CreditReferenceApi extends cdk.Construct {
 
     const apiFunction = new lambdaNodejs.NodejsFunction(this, 'CreditReferenceFn', {
       environment: {
-        [MAX_DELAY_MILLIS_ENV_VAR]: '0',
+        [MAX_DELAY_MILLIS_ENV_VAR]: '1000',
         [ERROR_PERCENTAGE_ENV_VAR]: '20',
       },
     });

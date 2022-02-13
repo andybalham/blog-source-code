@@ -42,9 +42,24 @@ const callEndpointAsync = metricScope(
   (metrics) =>
     async (request: CreditReferenceRequest): Promise<AxiosResponse<CreditReferenceResponse>> => {
       //
+      function addMetrics(responseTime: number, responseStatus?: number, isError?: boolean): void {
+        metrics.putDimensions({ Service: 'CreditReferenceGateway' });
+
+        metrics.putMetric('ResponseTime', responseTime, Unit.Milliseconds);
+        if (isError) metrics.putMetric('ErrorCount', 1, Unit.Count);
+
+        metrics.setProperty('ResponseStatus', responseStatus);
+        metrics.setProperty('CorrelationId', request.correlationId);
+        metrics.setProperty('RequestId', request.requestId);
+      }
+
       if (endpointUrl === undefined) throw new Error('endpointUrl === undefined');
 
       const startTime = Date.now();
+
+      function getResponseTime(): number {
+        return Date.now() - startTime;
+      }
 
       try {
         const response = await axios.post<
@@ -53,42 +68,50 @@ const callEndpointAsync = metricScope(
           CreditReferenceRequest
         >(`${endpointUrl}request`, request);
 
-        const responseTime = Date.now() - startTime;
+        const responseTime = getResponseTime();
 
-        metrics.putDimensions({ Service: 'CreditReferenceGateway' });
-        metrics.putMetric('ResponseTime', responseTime, Unit.Milliseconds);
-        metrics.setProperty('ResponseStatus', response.status);
-        metrics.setProperty('CorrelationId', request.correlationId);
-        metrics.setProperty('RequestId', request.requestId);
+        addMetrics(responseTime, response.status);
 
         return response;
         //
       } catch (error: any) {
-        const responseTime = Date.now() - startTime;
-
-        metrics.putDimensions({ Service: 'CreditReferenceGateway' });
-        metrics.putMetric('ResponseTime', responseTime, Unit.Milliseconds);
-        metrics.putMetric('ErrorCount', 1, Unit.Count);
-        if (error.response?.status) metrics.setProperty('ResponseStatus', error.response.status);
-        metrics.setProperty('CorrelationId', request.correlationId);
-        metrics.setProperty('RequestId', request.requestId);
-
+        const responseTime = getResponseTime();
+        addMetrics(responseTime, error.response?.status, true);
         throw error;
       }
     }
 );
 
-// const callEndpointAsync = async (
+// const callEndpointAsync2 = async (
 //   request: CreditReferenceRequest
 // ): Promise<AxiosResponse<CreditReferenceResponse>> => {
 //   //
 //   if (endpointUrl === undefined) throw new Error('endpointUrl === undefined');
 
-//   return axios.post<
-//     CreditReferenceResponse,
-//     AxiosResponse<CreditReferenceResponse>,
-//     CreditReferenceRequest
-//   >(`${endpointUrl}request`, request);
+//   const startTime = Date.now();
+
+//   function getResponseTime(): number {
+//     return Date.now() - startTime;
+//   }
+
+//   try {
+//     const response = await axios.post<
+//       CreditReferenceResponse,
+//       AxiosResponse<CreditReferenceResponse>,
+//       CreditReferenceRequest
+//     >(`${endpointUrl}request`, request);
+
+//     const responseTime = getResponseTime();
+
+//     console.log(JSON.stringify({ status: response.status, responseTime }, null, 2));
+
+//     return response;
+//     //
+//   } catch (error: any) {
+//     const responseTime = getResponseTime();
+//     console.log(JSON.stringify({ status: error.response?.status, responseTime }, null, 2));
+//     throw error;
+//   }
 // };
 
 export const handler = async (event: any): Promise<any> => {
