@@ -70,6 +70,12 @@ const callEndpointAsync = metricScope(
 
         const responseTime = getResponseTime();
 
+        metrics.putDimensions({ Service: 'CreditReferenceGateway' });
+        metrics.putMetric('ResponseTime', responseTime, Unit.Milliseconds);
+        metrics.setProperty('ResponseStatus', response.Status);
+        metrics.setProperty('CorrelationId', request.correlationId);
+        metrics.setProperty('RequestId', request.requestId);
+
         addMetrics(responseTime, response.status);
 
         return response;
@@ -82,37 +88,37 @@ const callEndpointAsync = metricScope(
     }
 );
 
-// const callEndpointAsync2 = async (
-//   request: CreditReferenceRequest
-// ): Promise<AxiosResponse<CreditReferenceResponse>> => {
-//   //
-//   if (endpointUrl === undefined) throw new Error('endpointUrl === undefined');
+const callEndpointAsync2 = async (
+  request: CreditReferenceRequest
+): Promise<AxiosResponse<CreditReferenceResponse>> => {
+  //
+  if (endpointUrl === undefined) throw new Error('endpointUrl === undefined');
 
-//   const startTime = Date.now();
+  const startTime = Date.now();
 
-//   function getResponseTime(): number {
-//     return Date.now() - startTime;
-//   }
+  function getResponseTime(): number {
+    return Date.now() - startTime;
+  }
 
-//   try {
-//     const response = await axios.post<
-//       CreditReferenceResponse,
-//       AxiosResponse<CreditReferenceResponse>,
-//       CreditReferenceRequest
-//     >(`${endpointUrl}request`, request);
+  try {
+    const response = await axios.post<
+      CreditReferenceResponse,
+      AxiosResponse<CreditReferenceResponse>,
+      CreditReferenceRequest
+    >(`${endpointUrl}request`, request);
 
-//     const responseTime = getResponseTime();
+    const responseTime = getResponseTime();
 
-//     console.log(JSON.stringify({ status: response.status, responseTime }, null, 2));
+    console.log(JSON.stringify({ status: response.status, responseTime }, null, 2));
 
-//     return response;
-//     //
-//   } catch (error: any) {
-//     const responseTime = getResponseTime();
-//     console.log(JSON.stringify({ status: error.response?.status, responseTime }, null, 2));
-//     throw error;
-//   }
-// };
+    return response;
+    //
+  } catch (error: any) {
+    const responseTime = getResponseTime();
+    console.log(JSON.stringify({ status: error.response?.status, responseTime }, null, 2));
+    throw error;
+  }
+};
 
 export const handler = async (event: any): Promise<any> => {
   //
