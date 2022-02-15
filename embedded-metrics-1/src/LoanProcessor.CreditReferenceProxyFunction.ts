@@ -70,7 +70,10 @@ const callEndpointAsync = metricScope(
 
         const responseTime = getResponseTime();
 
-        metrics.putDimensions({ Service: 'CreditReferenceGateway' });
+        metrics.putDimensions({
+          Service: 'CreditReferenceGateway',
+          ResponseStatus: response.status.toString(),
+        });
         metrics.putMetric('ResponseTime', responseTime, Unit.Milliseconds);
         metrics.setProperty('ResponseStatus', response.status);
         metrics.setProperty('CorrelationId', request.correlationId);
@@ -96,28 +99,17 @@ export const callEndpointAsync2 = async (
 
   const startTime = Date.now();
 
-  function getResponseTime(): number {
-    return Date.now() - startTime;
-  }
+  const response = await axios.post<
+    CreditReferenceResponse,
+    AxiosResponse<CreditReferenceResponse>,
+    CreditReferenceRequest
+  >(`${endpointUrl}request`, request);
 
-  try {
-    const response = await axios.post<
-      CreditReferenceResponse,
-      AxiosResponse<CreditReferenceResponse>,
-      CreditReferenceRequest
-    >(`${endpointUrl}request`, request);
+  const responseTime = Date.now() - startTime;
 
-    const responseTime = getResponseTime();
+  console.log(JSON.stringify({ status: response.status, responseTime }, null, 2));
 
-    console.log(JSON.stringify({ status: response.status, responseTime }, null, 2));
-
-    return response;
-    //
-  } catch (error: any) {
-    const responseTime = getResponseTime();
-    console.log(JSON.stringify({ status: error.response?.status, responseTime }, null, 2));
-    throw error;
-  }
+  return response;
 };
 
 export const handler = async (event: any): Promise<any> => {

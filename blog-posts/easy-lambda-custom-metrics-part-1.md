@@ -59,7 +59,7 @@ TODO: Diagram of our proxy function calling the mock API.
 
 The Lambda function behind the mock API has a set of environment variables that allow us to configure the response time and the error rate. This will enable us to get some more interesting metrics when we test.
 
-The first question we need to answer is what information do we want. In this case, we want to be able to graph the average duration of the HTTP calls and the total number of HTTP errors. To do this we need two metrics, the response time and whether an error occurred.
+The first question we need to answer is what information do we want. In this case, we want to be able to graph the average duration of the HTTP calls. To do this we need just one metric, the response time.
 
 ## Instrumenting our example
 
@@ -70,32 +70,19 @@ const callEndpointAsync = async (
   request: CreditReferenceRequest
 ): Promise<AxiosResponse<CreditReferenceResponse>> => {
 
-  if (endpointUrl === undefined) throw new Error('endpointUrl === undefined');
-
   const startTime = Date.now();
 
-  function getResponseTime(): number {
-    return Date.now() - startTime;
-  }
+  const response = await axios.post<
+    CreditReferenceResponse,
+    AxiosResponse<CreditReferenceResponse>,
+    CreditReferenceRequest
+  >(`${endpointUrl}request`, request);
 
-  try {
-    const response = await axios.post<
-      CreditReferenceResponse,
-      AxiosResponse<CreditReferenceResponse>,
-      CreditReferenceRequest
-    >(`${endpointUrl}request`, request);
+  const responseTime = Date.now() - startTime;
 
-    const responseTime = getResponseTime();
+  console.log(JSON.stringify({ status: response.status, responseTime }, null, 2));
 
-    console.log(JSON.stringify({ status: response.status, responseTime }, null, 2));
-
-    return response;
-
-  } catch (error: any) {
-    const responseTime = getResponseTime();
-    console.log(JSON.stringify({ status: error.response?.status, responseTime }, null, 2));
-    throw error;
-  }
+  return response;
 };
 ```
 
@@ -124,7 +111,7 @@ const callEndpointAsync = metricScope(
 );
 ```
 
-We now have a `metrics` instance to use to publish our custom metrics. For the happy path we do this as shown below:
+We now have a `metrics` instance to use to publish our custom metric. We do this as shown below, calling the `putDimensions`, `putMetric`, and `setProperty` methods:
 
 ```typescript
 const response = await axios.post<
@@ -133,40 +120,56 @@ const response = await axios.post<
   CreditReferenceRequest
 >(`${endpointUrl}request`, request);
 
-const responseTime = getResponseTime();
+const responseTime = Date.now() - startTime;
 
-// Record our metrics
+// Record our metric
 metrics.putDimensions({ Service: 'CreditReferenceGateway' });
 metrics.putMetric('ResponseTime', responseTime, Unit.Milliseconds);
 metrics.setProperty('ResponseStatus', response.Status);
-metrics.setProperty('CorrelationId', request.correlationId);
-metrics.setProperty('RequestId', request.requestId);
 ```
 
-TODO: Should we just use dimensions and metrics, and leave properties to another post?
-
-You can see here that metrics are made up of three types of values, that is dimensions, metrics, and properties. Knowledge of what these types are are a key to getting the results you want and avoiding accidental costs.
+You can see here that metrics are made up of three types of values, that is dimensions, metrics, and properties. Knowledge of what these types are are a key to getting the results you want and avoiding unintended costs.
 
 ## Dimensions, Metrics, and Properties
 
-TODO
+A metric is a measurable quantity, that is it has to be expressed by a numerical value. For example, a duration, a count, a percentage, or a rate. 
+
+Dimensions are what the metric is recorded for. In our example, we are recording the response time for a credit reference gateway. So we have used a dimension we have named `Service` with a value `CreditReferenceGateway`. We can specify multiple dimensions, but this has a cost.
+
+Each combination of dimension values creates a separate metric, and each metric has a cost. For example, imagine if we did the following:
+
+```typescript
+metrics.putDimensions({
+  Service: 'CreditReferenceGateway',
+  ResponseStatus: response.status.toString(),
+});
+metrics.putMetric('ResponseTime', responseTime, Unit.Milliseconds);
+```
+
+We would then be capturing the response time for each possible response status for our gateway. Since there are quite a few [HTTP status codes](https://en.wikipedia.org/wiki/List_of_HTTP_status_codes), this could result in a lot of metrics for just this one service. As well as the cost of these metrics, it may also not be what you wanted. Why would we want to know the difference between the `404` response time and the one for `401`?
+
+For an excellent explanation of the cost of metrics please read [CloudWatch Metrics Pricing Explained in Plain English](https://www.vantage.sh/blog/cloudwatch-metrics-pricing-explained-in-plain-english). Note that the free tier only has allowance for 10 custom metrics.
+
+Properties are named values that are associated with the metric recorded. The reason we would want to do this is so that we can query them later using CloudWatch insights. In our example, we might want to query the average time for a `200` response.
+
+TODO: Table analogy
 
 ## Generating, viewing, and deleting metrics
 
-TODO
+To generate some metrics for us to play with, a simple unit test was created to call the instrumented Lambda function. This test runs for several minutes to provide metrics over a viewable range. This duration also allow changes to the mock API configuration on the fly, to give some variation to the data.
 
-Explain the test harness.
+Here is an example of a ten minute run, with the mock API configured to respond more slowly over time.
 
-Do a series of runs with different mock configurations.
+TODO: Response time duration graph
 
-Show graph of duration and error counts.
+TODO: Show query for a property.
 
-Show query for a property.
-
-## Deleting metrics
+Once created, a metric cannot be explicitly deleted. 
 
 - [Amazon CloudWatch FAQs](https://aws.amazon.com/cloudwatch/faqs/) Q: Can I delete any metrics?
   > CloudWatch does not support metric deletion. Metrics expire based on the retention schedules described above.
+
+[AWS CloudWatch unused custom metrics retention and pricing](https://stackoverflow.com/questions/48115239/aws-cloudwatch-unused-custom-metrics-retention-and-pricing-2018)
 
 ## Summary
 
@@ -181,6 +184,8 @@ TODO
 - [Amazon CloudWatch FAQs](https://aws.amazon.com/cloudwatch/faqs/)
 
 ## Notes
+
+Standard vs High-resolution metrics?
 
 Q. Should we set a namespace?
 
