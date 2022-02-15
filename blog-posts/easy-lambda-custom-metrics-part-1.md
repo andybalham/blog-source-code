@@ -143,6 +143,8 @@ metrics.setProperty('CorrelationId', request.correlationId);
 metrics.setProperty('RequestId', request.requestId);
 ```
 
+TODO: Should we just use dimensions and metrics, and leave properties to another post?
+
 You can see here that metrics are made up of three types of values, that is dimensions, metrics, and properties. Knowledge of what these types are are a key to getting the results you want and avoiding accidental costs.
 
 ## Dimensions, Metrics, and Properties

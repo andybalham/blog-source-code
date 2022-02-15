@@ -72,7 +72,7 @@ const callEndpointAsync = metricScope(
 
         metrics.putDimensions({ Service: 'CreditReferenceGateway' });
         metrics.putMetric('ResponseTime', responseTime, Unit.Milliseconds);
-        metrics.setProperty('ResponseStatus', response.Status);
+        metrics.setProperty('ResponseStatus', response.status);
         metrics.setProperty('CorrelationId', request.correlationId);
         metrics.setProperty('RequestId', request.requestId);
 
@@ -88,7 +88,7 @@ const callEndpointAsync = metricScope(
     }
 );
 
-const callEndpointAsync2 = async (
+export const callEndpointAsync2 = async (
   request: CreditReferenceRequest
 ): Promise<AxiosResponse<CreditReferenceResponse>> => {
   //
