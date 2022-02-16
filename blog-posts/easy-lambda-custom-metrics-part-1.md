@@ -185,6 +185,13 @@ TODO
 
 ## Notes
 
+What would be in subsequent posts?
+* Properties?
+* Querying CloudWatch insights?
+* Multiple dimensions? SaaS example?
+* Pricing?
+* Namespaces?
+
 Standard vs High-resolution metrics?
 
 Q. Should we set a namespace?
@@ -200,3 +207,4 @@ AWS_EMF_NAMESPACE=Namespace
 
 Thought? Could you use alarms to build a circuit-breaker?
 https://medium.com/@ch.gerkens/circuit-breaker-solution-for-aws-lambda-functions-5264cb59031f
+
