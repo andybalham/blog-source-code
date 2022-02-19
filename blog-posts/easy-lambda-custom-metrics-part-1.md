@@ -1,10 +1,10 @@
-# Instrumenting Lambda functions using custom metrics
+# The easy way to add custom metrics to your Lambda functions
 
-The `aws-embedded-metrics` npm package makes it straightforward
+`aws-embedded-metrics` npm package FTW
 
 ## Overview
 
-TODO
+Custom metrics are a powerful way of instrumenting your applications. This allows you to observe the health and performance in near real time. This post explores custom metrics and how you can use the `aws-embedded-metrics` npm package to easily add them to your Lambda functions.
 
 ## TL;DR
 
@@ -22,7 +22,6 @@ For Lambda functions, AWS is already collecting the following metrics and more a
 
 - Invocations
 - Duration
-- Timeouts
 - Errors
 
 As mentioned in the documentation, these metrics can searched, graphed, and alerted on.
@@ -31,7 +30,7 @@ For example, here are a couple of graphs showing total invocations and average d
 
 TODO: Generate the graphs
 
-These metrics can be very useful to set alarms on. For example, it is important to know if your application is suffering from timeouts, excessive errors, or throttling. All these can be alerted on with the built-in metrics.
+These metrics can be very useful to set alarms on. For example, it is important to know if your application is suffering from excessive errors or throttling. These can be alerted on with the built-in metrics.
 
 ## Introducing custom metrics
 
@@ -51,19 +50,19 @@ The AWS documentation on the [embedded metric format](https://docs.aws.amazon.co
 
 Essentially, by logging in a specific format CloudWatch automatically extracts the custom metrics for you. The `awslabs/aws-embedded-metrics-node` package makes this straightforward to do.
 
-## Our example - TODO: Better name for this section?
+## An overview of our example
 
 Our example consists of a mock API endpoint and a Lambda function that calls it. The mock API endpoint is made up of an API Gateway, backed by a Lambda function, and a Lambda function that calls the endpoint using the `axios` npm package.
 
-TODO: Diagram of our proxy function calling the mock API.
+![blog-custom-metrics.jpg](https://cdn.hashnode.com/res/hashnode/image/upload/v1645044298151/BbkoFBj5V.jpeg)
 
-The Lambda function behind the mock API has a set of environment variables that allow us to configure the response time and the error rate. This will enable us to get some more interesting metrics when we test.
+The Lambda function behind the mock API has a set of environment variables that allow us to configure the response time and the error rate. This will enable us to get some interesting metrics when we test.
 
-The first question we need to answer is what information do we want. In this case, we want to be able to graph the average duration of the HTTP calls. To do this we need just one metric, the response time.
+When it comes to metrics, the first question we need to answer is what information do we want. In this case, we want to be able to graph the average duration of the HTTP calls to the mock API endpoint. To do this we need just one metric, the response time.
 
 ## Instrumenting our example
 
-Below is the code starting point for our example. It simply uses the `axios` `post` method to get a response, and then logs the response status and response time.
+Below is the code starting point for our example. It simply uses the `axios` `post` method to get a response, and then logs the response time.
 
 ```TypeScript
 const callEndpointAsync = async (
@@ -80,7 +79,7 @@ const callEndpointAsync = async (
 
   const responseTime = Date.now() - startTime;
 
-  console.log(JSON.stringify({ status: response.status, responseTime }, null, 2));
+  console.log(JSON.stringify({ responseTime }, null, 2));
 
   return response;
 };
@@ -89,7 +88,7 @@ const callEndpointAsync = async (
 The `aws-embedded-metrics` library allows a number of different [usages](https://github.com/awslabs/aws-embedded-metrics-node#usage). In this case, we are going to wrap our function in a `metricScope` so that the metrics will get flushed automatically for us. The documentation has the following snippet.
 
 ```typescript
-const { metricScope } = require('aws-embedded-metrics');
+const { metricScope } = require("aws-embedded-metrics");
 
 const myFunc = metricScope((metrics) => async () => {
   // ...
@@ -104,10 +103,10 @@ So our example becomes:
 const callEndpointAsync = metricScope(
   (metrics) =>
     async (
-      request: CreditReferenceRequest,
+      request: CreditReferenceRequest
     ): Promise<AxiosResponse<CreditReferenceResponse>> => {
       // ...as before...
-    },
+    }
 );
 ```
 
@@ -123,16 +122,15 @@ const response = await axios.post<
 const responseTime = Date.now() - startTime;
 
 // Record our metric
-metrics.putDimensions({ Service: 'CreditReferenceGateway' });
-metrics.putMetric('ResponseTime', responseTime, Unit.Milliseconds);
-metrics.setProperty('ResponseStatus', response.Status);
+metrics.putDimensions({ Service: "CreditReferenceGateway" });
+metrics.putMetric("ResponseTime", responseTime, Unit.Milliseconds);
 ```
 
-You can see here that metrics are made up of three types of values, that is dimensions, metrics, and properties. Knowledge of what these types are are a key to getting the results you want and avoiding unintended costs.
+You can see here that, at their most basic usage, metrics are made up of two types of values, that is dimensions and metrics. Knowledge of what these types are are a key to getting the results you want and avoiding unintended costs.
 
-## Dimensions, Metrics, and Properties
+## Dimensions and metrics
 
-A metric is a measurable quantity, that is it has to be expressed by a numerical value. For example, a duration, a count, a percentage, or a rate. 
+A metric is a measurable quantity, that is it has to be expressed by a numerical value. For example, a duration, a count, a percentage, or a rate.
 
 Dimensions are what the metric is recorded for. In our example, we are recording the response time for a credit reference gateway. So we have used a dimension we have named `Service` with a value `CreditReferenceGateway`. We can specify multiple dimensions, but this has a cost.
 
@@ -140,36 +138,28 @@ Each combination of dimension values creates a separate metric, and each metric 
 
 ```typescript
 metrics.putDimensions({
-  Service: 'CreditReferenceGateway',
-  ResponseStatus: response.status.toString(),
+  Service: "CreditReferenceGateway",
+  RequestId: request.requestId,
 });
-metrics.putMetric('ResponseTime', responseTime, Unit.Milliseconds);
+metrics.putMetric("ResponseTime", responseTime, Unit.Milliseconds);
 ```
 
-We would then be capturing the response time for each possible response status for our gateway. Since there are quite a few [HTTP status codes](https://en.wikipedia.org/wiki/List_of_HTTP_status_codes), this could result in a lot of metrics for just this one service. As well as the cost of these metrics, it may also not be what you wanted. Why would we want to know the difference between the `404` response time and the one for `401`?
-
-For an excellent explanation of the cost of metrics please read [CloudWatch Metrics Pricing Explained in Plain English](https://www.vantage.sh/blog/cloudwatch-metrics-pricing-explained-in-plain-english). Note that the free tier only has allowance for 10 custom metrics.
-
-Properties are named values that are associated with the metric recorded. The reason we would want to do this is so that we can query them later using CloudWatch insights. In our example, we might want to query the average time for a `200` response.
-
-TODO: Table analogy
+We would then be creating a custom metric for each request. This would be both be meaningless and potentially expensive. This is because AWS charges by the number of custom metrics used. If you publish a custom metric, then you are charged an hour's usage. The first 10 custom metrics are free, but the next 10,000 are not. For an excellent explanation of the cost of metrics please read [CloudWatch Metrics Pricing Explained in Plain English](https://www.vantage.sh/blog/cloudwatch-metrics-pricing-explained-in-plain-english).
 
 ## Generating, viewing, and deleting metrics
 
 To generate some metrics for us to play with, a simple unit test was created to call the instrumented Lambda function. This test runs for several minutes to provide metrics over a viewable range. This duration also allow changes to the mock API configuration on the fly, to give some variation to the data.
 
-Here is an example of a ten minute run, with the mock API configured to respond more slowly over time.
+Here is an example of a minute run, with the mock API configured to respond more slowly over time.
 
 TODO: Response time duration graph
 
-TODO: Show query for a property.
+You may wonder how to delete a metric. Well, once created, a metric cannot be explicitly deleted. As explained by the [Amazon CloudWatch FAQs](https://aws.amazon.com/cloudwatch/faqs/):
 
-Once created, a metric cannot be explicitly deleted. 
+> Q: Can I delete any metrics?
+> CloudWatch does not support metric deletion.
 
-- [Amazon CloudWatch FAQs](https://aws.amazon.com/cloudwatch/faqs/) Q: Can I delete any metrics?
-  > CloudWatch does not support metric deletion. Metrics expire based on the retention schedules described above.
-
-[AWS CloudWatch unused custom metrics retention and pricing](https://stackoverflow.com/questions/48115239/aws-cloudwatch-unused-custom-metrics-retention-and-pricing-2018)
+Metrics are retained for 15 months, so I wondered about whether I would be charged for them for 15 months. However, the following StackOverflow question answered my query: [AWS CloudWatch unused custom metrics retention and pricing](https://stackoverflow.com/questions/48115239/aws-cloudwatch-unused-custom-metrics-retention-and-pricing-2018)
 
 ## Summary
 
@@ -177,34 +167,6 @@ TODO
 
 ## Resources
 
-TODO
-
 - [Amazon CloudWatch pricing](https://aws.amazon.com/cloudwatch/pricing/)
 - [Publishing custom metrics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/publishingMetrics.html)
 - [Amazon CloudWatch FAQs](https://aws.amazon.com/cloudwatch/faqs/)
-
-## Notes
-
-What would be in subsequent posts?
-* Properties?
-* Querying CloudWatch insights?
-* Multiple dimensions? SaaS example?
-* Pricing?
-* Namespaces?
-
-Standard vs High-resolution metrics?
-
-Q. Should we set a namespace?
-
-```TypeScript
-// in process
-const { Configuration } = require("aws-embedded-metrics");
-Configuration.namespace = "Namespace";
-
-// environment
-AWS_EMF_NAMESPACE=Namespace
-```
-
-Thought? Could you use alarms to build a circuit-breaker?
-https://medium.com/@ch.gerkens/circuit-breaker-solution-for-aws-lambda-functions-5264cb59031f
-

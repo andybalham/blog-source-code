@@ -17,7 +17,12 @@ export const ERROR_PERCENTAGE_ENV_VAR = 'ERROR_PERCENTAGE';
 export const MAX_DELAY_MILLIS_ENV_VAR = 'MAX_DELAY_MILLIS';
 
 const errorPercentage = parseInt(process.env[ERROR_PERCENTAGE_ENV_VAR] ?? '0', 10);
-const maxDelayMillis = parseInt(process.env[MAX_DELAY_MILLIS_ENV_VAR] ?? '0', 10);
+// const maxDelayMillis = parseInt(process.env[MAX_DELAY_MILLIS_ENV_VAR] ?? '0', 10);
+
+const delayIncrementMillis = 10;
+const minDelayMillis = 10;
+const maxDelayMillis = 2000;
+let delayMillis = 0;
 
 export const handler = async (event: APIGatewayEvent): Promise<any> => {
   console.log(JSON.stringify({ event }, null, 2));
@@ -36,9 +41,13 @@ export const handler = async (event: APIGatewayEvent): Promise<any> => {
     ? JSON.parse(event.body)
     : undefined;
 
-  const randomDelaySeconds = (Math.random() * maxDelayMillis) / 1000;
+  delayMillis += delayIncrementMillis;
+  if (delayMillis > maxDelayMillis) delayMillis = minDelayMillis;
 
-  await sleepAsync(randomDelaySeconds);
+  // const delaySeconds = (Math.random() * maxDelayMillis) / 1000;
+  const delaySeconds = delayMillis / 1000;
+
+  await sleepAsync(delaySeconds);
 
   const randomRating = Math.floor(Math.random() * 6);
 
