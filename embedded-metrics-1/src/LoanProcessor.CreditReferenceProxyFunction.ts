@@ -42,6 +42,29 @@ const callEndpointAsync = metricScope(
   (metrics) =>
     async (request: CreditReferenceRequest): Promise<AxiosResponse<CreditReferenceResponse>> => {
       //
+      if (endpointUrl === undefined) throw new Error('endpointUrl === undefined');
+
+      const startTime = Date.now();
+      const response = await axios.post<
+        CreditReferenceResponse,
+        AxiosResponse<CreditReferenceResponse>,
+        CreditReferenceRequest
+      >(`${endpointUrl}request`, request);
+
+      const responseTime = Date.now() - startTime;
+
+      metrics.putDimensions({ Service: 'CreditReferenceGateway' });
+      metrics.putMetric('ResponseTime', responseTime, Unit.Milliseconds);
+
+      return response;
+    }
+);
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const callEndpointAsync_WithErrorCountAndProperties = metricScope(
+  (metrics) =>
+    async (request: CreditReferenceRequest): Promise<AxiosResponse<CreditReferenceResponse>> => {
+      //
       function addMetrics(responseTime: number, responseStatus?: number, isError?: boolean): void {
         metrics.putDimensions({ Service: 'CreditReferenceGateway' });
 
@@ -91,7 +114,8 @@ const callEndpointAsync = metricScope(
     }
 );
 
-export const callEndpointAsync2 = async (
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const callEndpointAsync_WithLog = async (
   request: CreditReferenceRequest
 ): Promise<AxiosResponse<CreditReferenceResponse>> => {
   //
