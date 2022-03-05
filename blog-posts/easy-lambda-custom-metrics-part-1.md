@@ -1,4 +1,4 @@
-# The easy way to add custom metrics to your Lambda functions
+# Adding Lambda custom metrics the easy way
 
 `aws-embedded-metrics` npm package FTW
 
@@ -26,9 +26,9 @@ For Lambda functions, AWS is already collecting the following metrics and more a
 
 As mentioned in the documentation, these metrics can searched, graphed, and alerted on.
 
-For example, here are a couple of graphs showing total invocations and average duration:
+For example, here is a graph showing average duration:
 
-TODO: Generate the graphs
+![Graph of Lambda duration metric](https://cdn.hashnode.com/res/hashnode/image/upload/v1645267076977/oFqA8zNKb.png)
 
 These metrics can be very useful to set alarms on. For example, it is important to know if your application is suffering from excessive errors or throttling. These can be alerted on with the built-in metrics.
 
@@ -54,7 +54,7 @@ Essentially, by logging in a specific format CloudWatch automatically extracts t
 
 Our example consists of a mock API endpoint and a Lambda function that calls it. The mock API endpoint is made up of an API Gateway, backed by a Lambda function, and a Lambda function that calls the endpoint using the `axios` npm package.
 
-![blog-custom-metrics.jpg](https://cdn.hashnode.com/res/hashnode/image/upload/v1645044298151/BbkoFBj5V.jpeg)
+![Overview of the example stacks](https://cdn.hashnode.com/res/hashnode/image/upload/v1645268090947/imiMcPa6e.png)
 
 The Lambda function behind the mock API has a set of environment variables that allow us to configure the response time and the error rate. This will enable us to get some interesting metrics when we test.
 
@@ -128,7 +128,7 @@ metrics.putMetric("ResponseTime", responseTime, Unit.Milliseconds);
 
 You can see here that, at their most basic usage, metrics are made up of two types of values, that is dimensions and metrics. Knowledge of what these types are are a key to getting the results you want and avoiding unintended costs.
 
-## Dimensions and metrics
+## Dimensions, metrics, and properties
 
 A metric is a measurable quantity, that is it has to be expressed by a numerical value. For example, a duration, a count, a percentage, or a rate.
 
@@ -146,24 +146,21 @@ metrics.putMetric("ResponseTime", responseTime, Unit.Milliseconds);
 
 We would then be creating a custom metric for each request. This would be both be meaningless and potentially expensive. This is because AWS charges by the number of custom metrics used. If you publish a custom metric, then you are charged an hour's usage. The first 10 custom metrics are free, but the next 10,000 are not. For an excellent explanation of the cost of metrics please read [CloudWatch Metrics Pricing Explained in Plain English](https://www.vantage.sh/blog/cloudwatch-metrics-pricing-explained-in-plain-english).
 
-## Generating, viewing, and deleting metrics
+A property is a piece of information that is associated with the metric instance. This value is not submitted to CloudWatch Metrics but is searchable by CloudWatch Logs Insights. This is useful for contextual and potentially high-cardinality data that is not appropriate for CloudWatch Metrics dimensions. One example is the `requestId` seen above.
 
-To generate some metrics for us to play with, a simple unit test was created to call the instrumented Lambda function. This test runs for several minutes to provide metrics over a viewable range. This duration also allow changes to the mock API configuration on the fly, to give some variation to the data.
+## Generating and viewing metrics
+
+To generate some metrics for us to view, a simple unit test was created to call the instrumented Lambda function. This test runs for several minutes to provide metrics over a viewable range.
 
 Here is an example of a minute run, with the mock API configured to respond more slowly over time.
 
-TODO: Response time duration graph
-
-You may wonder how to delete a metric. Well, once created, a metric cannot be explicitly deleted. As explained by the [Amazon CloudWatch FAQs](https://aws.amazon.com/cloudwatch/faqs/):
-
-> Q: Can I delete any metrics?
-> CloudWatch does not support metric deletion.
-
-Metrics are retained for 15 months, so I wondered about whether I would be charged for them for 15 months. However, the following StackOverflow question answered my query: [AWS CloudWatch unused custom metrics retention and pricing](https://stackoverflow.com/questions/48115239/aws-cloudwatch-unused-custom-metrics-retention-and-pricing-2018)
+![Graph of Lambda custom metric](https://cdn.hashnode.com/res/hashnode/image/upload/v1645267382612/xe7MPtLYl.png)
 
 ## Summary
 
-TODO
+In this post, we looked at how we can use the `aws-embedded-metrics` npm package to add a custom metric to a Lambda function. We also looked at the concepts of dimensions, metrics, and properties and why they are important to getting the results you want and avoiding unintended costs.
+
+There is a lot more to custom metrics and I intend to cover some of that in the next post. However, given the basics above, you should be able to start adding custom metrics to your Lambda functions and improving your observability.
 
 ## Resources
 
