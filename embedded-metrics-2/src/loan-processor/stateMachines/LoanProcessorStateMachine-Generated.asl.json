@@ -1,0 +1,101 @@
+{
+  "StartAt": "IdentityCheckGateway",
+  "States": {
+    "IdentityCheckGateway": {
+      "Next": "CreditReferenceGateway",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "MaxAttempts": 1
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "HandleIdentityCheckFailure"
+        }
+      ],
+      "Type": "Task",
+      "ResultPath": "$.identityCheck",
+      "Resource": "CDK_TOKEN",
+      "Parameters": {
+        "correlationId.$": "$$.Execution.Input.correlationId",
+        "firstName.$": "$$.Execution.Input.firstName",
+        "lastName.$": "$$.Execution.Input.lastName",
+        "postcode.$": "$$.Execution.Input.postcode"
+      }
+    },
+    "CreditReferenceGateway": {
+      "Next": "PersistResults",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "MaxAttempts": 1
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "HandleCreditReferenceFailure"
+        }
+      ],
+      "Type": "Task",
+      "ResultPath": "$.creditReference",
+      "Resource": "CDK_TOKEN",
+      "Parameters": {
+        "correlationId.$": "$$.Execution.Input.correlationId",
+        "firstName.$": "$$.Execution.Input.firstName",
+        "lastName.$": "$$.Execution.Input.lastName",
+        "postcode.$": "$$.Execution.Input.postcode"
+      }
+    },
+    "PersistResults": {
+      "End": true,
+      "Type": "Task",
+      "Resource": "CDK_TOKEN",
+      "Parameters": {
+        "executionInput.$": "$$.Execution.Input",
+        "identityCheck.$": "$.identityCheck",
+        "creditReference.$": "$.creditReference"
+      }
+    },
+    "HandleCreditReferenceFailure": {
+      "Next": "CreditReferenceFail",
+      "Type": "Task",
+      "Resource": "CDK_TOKEN",
+      "Parameters": {
+        "stateMachineName.$": "$$.StateMachine.Name",
+        "correlationId.$": "$$.Execution.Input.correlationId",
+        "cause.$": "States.StringToJson($.Cause)",
+        "failedStateName": "CreditReferenceGateway"
+      }
+    },
+    "CreditReferenceFail": {
+      "Type": "Fail",
+      "Cause": "Credit reference gateway failure"
+    },
+    "HandleIdentityCheckFailure": {
+      "Next": "IdentityCheckFail",
+      "Type": "Task",
+      "Resource": "CDK_TOKEN",
+      "Parameters": {
+        "stateMachineName.$": "$$.StateMachine.Name",
+        "correlationId.$": "$$.Execution.Input.correlationId",
+        "cause.$": "States.StringToJson($.Cause)",
+        "failedStateName": "IdentityCheckGateway"
+      }
+    },
+    "IdentityCheckFail": {
+      "Type": "Fail",
+      "Cause": "Identity check gateway failure"
+    }
+  }
+}
