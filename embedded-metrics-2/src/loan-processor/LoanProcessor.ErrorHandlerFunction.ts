@@ -2,7 +2,8 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable import/prefer-default-export */
 
-interface ErrorDetails {
+interface StateMachineErrorDetails {
+  processName: string;
   stateMachineName: string;
   failedStateName: string;
   correlationId: string;
@@ -12,13 +13,17 @@ interface ErrorDetails {
     trace: string;
   };
 }
-export const handler = async (event: ErrorDetails): Promise<void> => {
+export const handler = async (event: StateMachineErrorDetails): Promise<void> => {
   //
   console.log(
     JSON.stringify(
       {
-        StateMachine: event.stateMachineName,
+        // Dimensions
+        ProcessName: event.processName,
+        // Metrics
         ErrorCount: 1,
+        // Properties
+        StateMachine: event.stateMachineName,
         CorrelationId: event.correlationId,
         FailedState: event.failedStateName,
         Cause: event.cause,

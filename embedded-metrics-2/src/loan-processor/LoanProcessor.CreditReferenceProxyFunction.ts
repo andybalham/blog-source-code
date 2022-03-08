@@ -2,7 +2,7 @@
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable import/prefer-default-export */
-import { metricScope } from 'aws-embedded-metrics';
+import { metricScope, Unit } from 'aws-embedded-metrics';
 import AWS from 'aws-sdk';
 import axios, { AxiosResponse } from 'axios';
 import { nanoid } from 'nanoid';
@@ -32,7 +32,7 @@ async function refreshEndpointUrlAsync(urlParameterName?: string): Promise<boole
   const isRefreshed = endpointUrlParameter.Parameter?.Value !== endpointUrl;
 
   endpointUrl = endpointUrlParameter.Parameter?.Value;
-  console.log(JSON.stringify({ creditReferenceUrl: endpointUrl }, null, 2));
+  // console.log(JSON.stringify({ creditReferenceUrl: endpointUrl }, null, 2));
 
   return isRefreshed;
 }
@@ -41,41 +41,83 @@ const callEndpointAsync = metricScope(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   (metrics) =>
     async (
-      serviceName: string,
+      gatewayName: string,
       request: CreditReferenceRequest
     ): Promise<AxiosResponse<CreditReferenceResponse>> => {
       //
       if (endpointUrl === undefined) throw new Error('endpointUrl === undefined');
 
       const startTime = Date.now();
-      const response = await axios.post<
-        CreditReferenceResponse,
-        AxiosResponse<CreditReferenceResponse>,
-        CreditReferenceRequest
-      >(`${endpointUrl}request`, request);
 
-      const responseTime = Date.now() - startTime;
+      const url = `${endpointUrl}request`;
 
-      console.log(
-        JSON.stringify(
-          {
-            Service: serviceName,
-            CorrelationId: request.correlationId,
-            RequestId: request.requestId,
-            ResponseTime: responseTime,
-            ResponseStatusCode: response.status,
-          },
-          null,
-          2
-        )
-      );
+      metrics
+        .putDimensions({ GatewayName: gatewayName })
+        .setProperty('CorrelationId', request.correlationId)
+        .setProperty('RequestId', request.requestId);
 
-      // metrics.putDimensions({ Service: serviceName });
-      // metrics.putMetric('ResponseTime', responseTime, Unit.Milliseconds);
-      // metrics.setProperty('CorrelationId', request.correlationId);
-      // metrics.setProperty('RequestId', request.requestId);
+      try {
+        const response = await axios.post<
+          CreditReferenceResponse,
+          AxiosResponse<CreditReferenceResponse>,
+          CreditReferenceRequest
+        >(url, request);
 
-      return response;
+        const responseTime = Date.now() - startTime;
+
+        metrics
+          .putMetric('ResponseTime', responseTime, Unit.Milliseconds)
+          .setProperty('StatusCode', response.status);
+
+        // console.log(
+        //   JSON.stringify(
+        //     {
+        //       // Dimensions
+        //       Service: gatewayName,
+        //       // Metrics
+        //       ResponseTime: responseTime,
+        //       // Properties
+        //       Url: url,
+        //       CorrelationId: request.correlationId,
+        //       RequestId: request.requestId,
+        //       ResponseStatusCode: response.status,
+        //     },
+        //     null,
+        //     2
+        //   )
+        // );
+
+        return response;
+        //
+      } catch (error: any) {
+        if (error.response?.status) {
+          const responseTime = Date.now() - startTime;
+
+          metrics
+            .putMetric('ResponseTime', responseTime, Unit.Milliseconds)
+            .setProperty('StatusCode', error.response?.status);
+
+          // console.log(
+          //   JSON.stringify(
+          //     {
+          //       // Dimensions
+          //       Service: gatewayName,
+          //       // Metrics
+          //       ResponseTime: responseTime,
+          //       // Properties
+          //       Url: url,
+          //       CorrelationId: request.correlationId,
+          //       RequestId: request.requestId,
+          //       ResponseStatusCode: error.response?.status,
+          //     },
+          //     null,
+          //     2
+          //   )
+          // );
+        }
+
+        throw error;
+      }
     }
 );
 
@@ -93,18 +135,22 @@ export const handler = async (event: any): Promise<any> => {
     postcode: event.postcode,
   };
 
-  const serviceName = 'CreditReferenceGateway';
+  const gatewayName = 'CreditReferenceGateway';
 
-  let httpResponse = await callEndpointAsync(serviceName, request);
+  let httpResponse = await callEndpointAsync(gatewayName, request);
 
   if (httpResponse.status === 404) {
     //
     const isEndpointUrlRefreshed = await refreshEndpointUrlAsync(endpointUrlParameterName);
 
     if (isEndpointUrlRefreshed) {
-      httpResponse = await callEndpointAsync(serviceName, request);
+      httpResponse = await callEndpointAsync(gatewayName, request);
     }
   }
 
-  return { status: httpResponse.status, data: httpResponse.data };
+  if (httpResponse.status !== 200) {
+    throw new Error(`Unexpected HTTP response: ${httpResponse.status}`);
+  }
+
+  return httpResponse.data;
 };

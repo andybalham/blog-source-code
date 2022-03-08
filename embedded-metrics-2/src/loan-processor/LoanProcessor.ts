@@ -49,6 +49,8 @@ export default class LoanProcessor extends cdk.Construct {
           'ErrorHandlerFunction'
         );
 
+        const processName = 'LoanProcessor';
+
         const definition = new StateMachineBuilder()
           //
           .lambdaInvoke('IdentityCheckGateway', {
@@ -97,10 +99,11 @@ export default class LoanProcessor extends cdk.Construct {
           .lambdaInvoke('HandleIdentityCheckFailure', {
             lambdaFunction: errorHandlerFunction,
             parameters: {
+              processName,
+              failedStateName: 'IdentityCheckGateway',
               'stateMachineName.$': '$$.StateMachine.Name',
               'correlationId.$': '$$.Execution.Input.correlationId',
               'cause.$': 'States.StringToJson($.Cause)',
-              failedStateName: 'IdentityCheckGateway',
             },
           })
           .fail('IdentityCheckFail', { cause: 'Identity check gateway failure' })
@@ -108,10 +111,11 @@ export default class LoanProcessor extends cdk.Construct {
           .lambdaInvoke('HandleCreditReferenceFailure', {
             lambdaFunction: errorHandlerFunction,
             parameters: {
+              processName,
+              failedStateName: 'CreditReferenceGateway',
               'stateMachineName.$': '$$.StateMachine.Name',
               'correlationId.$': '$$.Execution.Input.correlationId',
               'cause.$': 'States.StringToJson($.Cause)',
-              failedStateName: 'CreditReferenceGateway',
             },
           })
           .fail('CreditReferenceFail', { cause: 'Credit reference gateway failure' })

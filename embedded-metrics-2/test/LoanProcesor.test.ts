@@ -25,7 +25,7 @@ describe('LoanProcessor Test Suite', () => {
     await testClient.initialiseTestAsync();
   });
 
-  it('invoke state machine once', async () => {
+  it.skip('invoke state machine once', async () => {
     const response = await loanProcessorStateMachine.startExecutionAsync({
       correlationId: nanoid(),
       firstName: 'Trevor',
@@ -35,18 +35,20 @@ describe('LoanProcessor Test Suite', () => {
 
     console.log(JSON.stringify({ response }, null, 2));
   }).timeout(10 * 1000);
-  /*
-  it('invoke state machine 10 times', async () => {
+
+  it.only('invoke state machine 10 times', async () => {
     for (let i = 0; i < 10; i++) {
-      const response = await loanProcessorStateMachine.invokeAsync<
-        CreditReferenceRequest,
-        CreditReferenceResponse
-      >(newRequest());
+      const response = await loanProcessorStateMachine.startExecutionAsync({
+        correlationId: nanoid(),
+        firstName: 'Trevor',
+        lastName: 'Potato',
+        postcode: 'MK3 9SE',
+      });
 
       console.log(JSON.stringify({ response }, null, 2));
     }
   }).timeout(30 * 1000);
-
+  /*
   [{ minuteCount: 12, minIntervalSeconds: 1, maxIntervalSeconds: 6 }].forEach((theory) => {
     it.only(`Invoke state machine for ${JSON.stringify(theory)}`, async () => {
       //
