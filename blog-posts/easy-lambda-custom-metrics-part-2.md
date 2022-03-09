@@ -1,3 +1,35 @@
+# Application observability with custom metric alerts
+
+Do we want to set up the alarm via the console or via CDK?
+
+It will be more interesting to see how we can create the alarm via CDK.
+
+## Overview
+TODO
+Talk about the last post, but say what do we do with the information.
+
+The answer is alerts!
+
+## TL;DR
+TODO
+
+## Headings
+
+* The application
+* The metrics
+* The alarms
+* The CDK
+* The testing
+
+## Notes
+
+Need to understand this:
+* https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html
+
+* https://docs.aws.amazon.com/cdk/api/v1/docs/@aws-cdk_aws-cloudwatch.Metric.html#class-metric
+* https://docs.aws.amazon.com/cdk/api/v1/docs/@aws-cdk_aws-cloudwatch.Metric.html#createwbralarmscope-id-props
+* https://docs.aws.amazon.com/cdk/api/v1/docs/aws-cloudwatch-readme.html#alarms
+* https://docs.aws.amazon.com/cdk/v1/guide/how_to_set_cw_alarm.html
 
 What will the follow-up be called?
 
