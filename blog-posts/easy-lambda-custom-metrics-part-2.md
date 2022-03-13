@@ -1,21 +1,23 @@
-# Application observability with custom metric alerts
+# Creating custom metric alarms with CDK
 
 ## Overview
 
-In the first post in this series (https://aws.hashnode.com/lambda-custom-metrics-aws), we looked at how we can use the [`aws-embedded-metrics`](https://github.com/awslabs/aws-embedded-metrics-node) npm package to easily generate custom metrics from our Lambda functions. In this post, we will look at how we use these custom metrics to add alerting to our applications. We will do this through Infrastructure as Code (IaC) using the [AWS Cloud Development Kit (CDK)](https://aws.amazon.com/cdk/), so that we ensure the appropriate alarms are in place whenever our application is deployed.
+In the [first post](https://aws.hashnode.com/lambda-custom-metrics-aws) in this series, we looked at how we can use the [`aws-embedded-metrics`](https://github.com/awslabs/aws-embedded-metrics-node) npm package to easily generate custom metrics from our Lambda functions. In this post, we will look at how we use these custom metrics to add alerting to our applications. We will do this through Infrastructure as Code (IaC) using the [AWS Cloud Development Kit (CDK)](https://aws.amazon.com/cdk/), so that we ensure the appropriate alarms are in place whenever our application is deployed.
 
-The code for this post is ready to be cloned, deployed, and run from my [GitHub repo](TODO).
+The code for this post is ready to be cloned, deployed, and run from my [GitHub repo](https://github.com/andybalham/blog-source-code/tree/master/embedded-metrics-2).
 
 ## TL;DR
-TODO
+* Use the `Metric` class to reference metrics in CDK code
+* Use `Metric` instances to create alarms 
+* Use `setDimensions` to only log the dimensions you specify
 
 ## The application
 
-Our application is a [step function](TODO) that consists of two Lambda functions that make calls to external APIs, followed by a Lambda function that persists the results. If calls to either of the external APIs fails, then the error is caught and handled by a Lambda function that records a custom metrics indicating that an error occurred.
+Our application is a [step function](https://aws.amazon.com/step-functions/) that consists of two Lambda functions that make calls to external APIs, followed by a Lambda function that persists the results. If calls to either of the external APIs fails, then the error is caught and handled by a Lambda function that records a custom metrics indicating that an error occurred.
 
 ![Loan Processor step function diagram](https://cdn.hashnode.com/res/hashnode/image/upload/v1647163151800/aUH-p_9L9.png)
 
-Our challenge is to use CDK to add a [CloudWatch alarm](TODO) to notify us when an error has occurred. 
+Our challenge is to use CDK to add a [CloudWatch alarm](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html) to notify us when an error has occurred. 
 
 ## Outputting the metric
 
@@ -51,7 +53,7 @@ Clicking on the namespace we can now see our `ErrorCount` metric:
 
 ## Setting up the alarm
 
-In our application, we have encapsulated the step function and related Lambda functions in a [CDK construct](TODO) called `LoanProcessor`. We want to extend this construct so that it can publish to an [SNS topic](TODO) when an error occurs. The first step to do this is to extend the construct `props` with the SNS topic. Doing it this way decouples the `LoanProcessor` construct from how error notifications are handled.
+In our application, we have encapsulated the step function and related Lambda functions in a [CDK construct](https://docs.aws.amazon.com/cdk/v2/guide/constructs.html) called `LoanProcessor`. We want to extend this construct so that it can publish to an [SNS topic](https://docs.aws.amazon.com/sns/latest/dg/sns-create-topic.html) when an error occurs. The first step to do this is to extend the construct `props` with the SNS topic. Doing it this way decouples the `LoanProcessor` construct from how error notifications are handled.
 
 ```TypeScript
 export interface LoanProcessorProps {
