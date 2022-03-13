@@ -42,6 +42,8 @@
     "@aws-cdk/aws-sqs": "^1.129.0",
     "@aws-cdk/aws-stepfunctions": "^1.129.0",
     "@aws-cdk/aws-stepfunctions-tasks": "^1.129.0",
+    "@aws-cdk/aws-cloudwatch": "^1.129.0",
+    "@aws-cdk/aws-cloudwatch-actions": "^1.129.0",
     "@aws-cdk/core": "^1.129.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.1",
     "@types/aws-lambda": "^8.10.81",

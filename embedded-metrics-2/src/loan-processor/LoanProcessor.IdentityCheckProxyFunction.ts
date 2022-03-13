@@ -36,7 +36,6 @@ async function refreshEndpointUrlAsync(urlParameterName?: string): Promise<boole
 }
 
 const callEndpointAsync = metricScope(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   (metrics) =>
     async (
       gatewayName: string,
@@ -50,6 +49,8 @@ const callEndpointAsync = metricScope(
       const url = `${endpointUrl}request`;
 
       metrics
+        // .setNamespace('EmbeddedMetricsExample')
+        // .setDimensions({ GatewayName: gatewayName })
         .putDimensions({ GatewayName: gatewayName })
         .setProperty('CorrelationId', request.correlationId)
         .setProperty('RequestId', request.requestId);

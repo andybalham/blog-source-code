@@ -8,6 +8,9 @@ import * as sfn from '@aws-cdk/aws-stepfunctions';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
 import * as ssm from '@aws-cdk/aws-ssm';
+import * as sns from '@aws-cdk/aws-sns';
+import * as cw from '@aws-cdk/aws-cloudwatch';
+import * as cwActions from '@aws-cdk/aws-cloudwatch-actions';
 import StateMachineWithGraph from '@andybalham/state-machine-with-graph';
 import StateMachineBuilder from '@andybalham/state-machine-builder';
 import { CREDIT_REFERENCE_URL_PARAMETER_NAME_ENV_VAR } from './LoanProcessor.CreditReferenceProxyFunction';
@@ -16,9 +19,11 @@ import { IDENTITY_CHECK_URL_PARAMETER_NAME_ENV_VAR } from './LoanProcessor.Ident
 export interface LoanProcessorProps {
   creditReferenceUrlParameterName: string;
   identityCheckUrlParameterName: string;
+  alarmTopic: sns.ITopic;
 }
 
 export default class LoanProcessor extends cdk.Construct {
+  //
   readonly stateMachine: StateMachineWithGraph;
 
   constructor(scope: cdk.Construct, id: string, props: LoanProcessorProps) {
@@ -49,8 +54,6 @@ export default class LoanProcessor extends cdk.Construct {
           'ErrorHandlerFunction'
         );
 
-        const processName = 'LoanProcessor';
-
         const definition = new StateMachineBuilder()
           //
           .lambdaInvoke('IdentityCheckGateway', {
@@ -63,7 +66,7 @@ export default class LoanProcessor extends cdk.Construct {
             },
             resultPath: '$.identityCheck',
             retry: {
-              maxAttempts: 1,
+              maxAttempts: 0,
             },
             catches: [{ handler: 'HandleIdentityCheckFailure' }],
           })
@@ -78,7 +81,7 @@ export default class LoanProcessor extends cdk.Construct {
             },
             resultPath: '$.creditReference',
             retry: {
-              maxAttempts: 1,
+              maxAttempts: 0,
             },
             catches: [{ handler: 'HandleCreditReferenceFailure' }],
           })
@@ -99,7 +102,6 @@ export default class LoanProcessor extends cdk.Construct {
           .lambdaInvoke('HandleIdentityCheckFailure', {
             lambdaFunction: errorHandlerFunction,
             parameters: {
-              processName,
               failedStateName: 'IdentityCheckGateway',
               'stateMachineName.$': '$$.StateMachine.Name',
               'correlationId.$': '$$.Execution.Input.correlationId',
@@ -111,7 +113,6 @@ export default class LoanProcessor extends cdk.Construct {
           .lambdaInvoke('HandleCreditReferenceFailure', {
             lambdaFunction: errorHandlerFunction,
             parameters: {
-              processName,
               failedStateName: 'CreditReferenceGateway',
               'stateMachineName.$': '$$.StateMachine.Name',
               'correlationId.$': '$$.Execution.Input.correlationId',
@@ -134,6 +135,37 @@ export default class LoanProcessor extends cdk.Construct {
     });
 
     writeGraphJson(this.stateMachine);
+
+    const loanProcessorErrorCount = new cw.Metric({
+      namespace: 'EmbeddedMetricsExample',
+      metricName: 'ErrorCount',
+      dimensionsMap: {
+        ProcessName: 'LoanProcessor',
+        // ServiceType: 'AWS::Lambda::Function',
+        // ServiceName: errorHandlerFunction.functionName,
+        // LogGroup: errorHandlerFunction.functionName, // This works
+        // LogGroup: errorHandlerFunction.logGroup.logGroupName, // I would have expected this to work
+        // LogGroup: errorHandlerFunction.logGroup.logGroupName.slice( // Does this work? No
+        //   errorHandlerFunction.logGroup.logGroupName.lastIndexOf('/')
+        // ),
+      },
+    }).with({
+      statistic: 'sum',
+      period: cdk.Duration.minutes(5),
+    });
+
+    const loanProcessorErrorCountAlarm = loanProcessorErrorCount.createAlarm(
+      this,
+      'LoanProcessorErrorCountAlarm',
+      {
+        evaluationPeriods: 1,
+        comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+        threshold: 0,
+        treatMissingData: cw.TreatMissingData.NOT_BREACHING,
+      }
+    );
+
+    loanProcessorErrorCountAlarm.addAlarmAction(new cwActions.SnsAction(props.alarmTopic));
   }
 
   private static newCreditReferenceFunction(
