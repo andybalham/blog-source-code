@@ -10,7 +10,6 @@ export const handler = metricScope(
       //
       metrics
         .setNamespace('EmbeddedMetricsExample')
-        // .putDimensions({ ProcessName: 'LoanProcessor' })
         .setDimensions({ ProcessName: 'LoanProcessor' })
         .putMetric('ErrorCount', 1, Unit.Count)
         .setProperty('CorrelationId', event.correlationId)

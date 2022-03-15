@@ -25,7 +25,7 @@ describe('LoanProcessor Test Suite', () => {
     await testClient.initialiseTestAsync();
   });
 
-  it.only('invoke state machine once', async () => {
+  it.skip('invoke state machine once', async () => {
     const response = await loanProcessorStateMachine.startExecutionAsync({
       correlationId: nanoid(),
       firstName: 'Trevor',
@@ -48,18 +48,20 @@ describe('LoanProcessor Test Suite', () => {
       console.log(JSON.stringify({ response }, null, 2));
     }
   }).timeout(30 * 1000);
-  /*
-  [{ minuteCount: 12, minIntervalSeconds: 1, maxIntervalSeconds: 6 }].forEach((theory) => {
+
+  [{ minuteCount: 2, minIntervalSeconds: 3, maxIntervalSeconds: 6 }].forEach((theory) => {
     it.only(`Invoke state machine for ${JSON.stringify(theory)}`, async () => {
       //
       const endTime = Date.now() + 1000 * 60 * theory.minuteCount;
 
       while (Date.now() < endTime) {
         //
-        const response = await loanProcessorStateMachine.invokeAsync<
-          CreditReferenceRequest,
-          CreditReferenceResponse
-        >(newRequest());
+        const response = await loanProcessorStateMachine.startExecutionAsync({
+          correlationId: nanoid(),
+          firstName: 'Trevor',
+          lastName: 'Potato',
+          postcode: 'MK3 9SE',
+        });
 
         console.log(JSON.stringify({ response }));
 
@@ -71,5 +73,4 @@ describe('LoanProcessor Test Suite', () => {
       }
     }).timeout(1000 * 60 * (theory.minuteCount + 1));
   });
-*/
 });

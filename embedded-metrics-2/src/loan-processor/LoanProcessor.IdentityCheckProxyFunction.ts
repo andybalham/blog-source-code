@@ -49,9 +49,9 @@ const callEndpointAsync = metricScope(
       const url = `${endpointUrl}request`;
 
       metrics
-        // .setNamespace('EmbeddedMetricsExample')
-        // .setDimensions({ GatewayName: gatewayName })
-        .putDimensions({ GatewayName: gatewayName })
+        .setNamespace('EmbeddedMetricsExample')
+        .setDimensions({ GatewayName: gatewayName })
+        .setProperty('GatewayUrl', url)
         .setProperty('CorrelationId', request.correlationId)
         .setProperty('RequestId', request.requestId);
 
