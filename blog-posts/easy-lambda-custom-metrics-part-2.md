@@ -2,7 +2,7 @@
 
 ## Overview
 
-In the [first post](https://aws.hashnode.com/lambda-custom-metrics-aws) in this series, we looked at how we can use the [`aws-embedded-metrics`](https://github.com/awslabs/aws-embedded-metrics-node) npm package to easily generate custom metrics from our Lambda functions. In this post, we will look at how we use these custom metrics to add alerting to our applications. We will do this through Infrastructure as Code (IaC) using the [AWS Cloud Development Kit (CDK)](https://aws.amazon.com/cdk/), so that we ensure the appropriate alarms are in place whenever our application is deployed.
+In the [first post](https://www.10printiamcool.com/adding-lambda-custom-metrics-the-easy-way) in this series, we looked at how we can use the [`aws-embedded-metrics`](https://github.com/awslabs/aws-embedded-metrics-node) npm package to easily generate custom metrics from our Lambda functions. In this post, we will look at how we use these custom metrics to add alerting to our applications. We will do this through Infrastructure as Code (IaC) using the [AWS Cloud Development Kit (CDK)](https://aws.amazon.com/cdk/), so that we ensure the appropriate alarms are in place whenever our application is deployed.
 
 The code for this post is ready to be cloned, deployed, and run from the accompanying [GitHub repo](https://github.com/andybalham/blog-embedded-metrics-2).
 

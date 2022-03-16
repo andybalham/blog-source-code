@@ -8,7 +8,8 @@ TODO: GitHub repo
 
 ## TL;DR
 
-TODO
+* Custom metrics can have arbitrary additional properties
+* These properties can be queried using CloudWatch Insights
 
 ## The application
 
@@ -54,6 +55,7 @@ export const handler = metricScope(
         .setNamespace('EmbeddedMetricsExample')
         .setDimensions({ ProcessName: 'LoanProcessor' })
         .putMetric('ErrorCount', 1, Unit.Count)
+        // Set our properties
         .setProperty('CorrelationId', event.correlationId)
         .setProperty('StateMachineName', event.stateMachineName)
         .setProperty('FailedStateName', event.failedStateName)
@@ -85,6 +87,7 @@ metrics
   .setNamespace('EmbeddedMetricsExample')
   .setDimensions({ GatewayName: gatewayName })
   .putMetric('ResponseTime', responseTime, Unit.Milliseconds)
+  // Set our properties
   .setProperty('StatusCode', response.status)
   .setProperty('GatewayUrl', url)
   .setProperty('CorrelationId', request.correlationId)
@@ -129,35 +132,49 @@ As mentioned in an earlier post, AWS logs many metrics automatically and for fre
 
 - [Serverless Amazon CloudWatch Logs Insights Examples](https://github.com/julianwood/serverless-cloudwatch-logs-insights-examples)
 
-TODO
+CloudWatch Insights lets you query up to 20 log groups at the same time. Depending on your needs, this may not be very convenient. If this is the case, then there are plenty of plenty of third party log aggregation tools that might be a better fit for you.
+
+Our query is only going to span on log group, so this limit will not affect us. What we need to do is select the log group for the error handling Lambda function and write our query. 
 
 ![CloudWatch Insights query for Loan Processor errors](https://cdn.hashnode.com/res/hashnode/image/upload/v1647375273164/9XYk9-YbP.png)
 
+The query above is filtering the log entries using the `ErrorCount` metric and the property `ProcessName` to identify entries where an error has occurred. It is then selecting several fields, the most important to use being the custom metric property `CorrelationId`.  
+
+For a full guide to the CloudWatch Logs Insights query syntax, please see the [AWS documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax.html).
+
+When we run the query, we get results similar to the following:
+
 ![CloudWatch Insights results for Loan Processor query](https://cdn.hashnode.com/res/hashnode/image/upload/v1647375303479/aK5G8j0-U.png)
+
+Here we can see that we can easily retrieve the correlation ids for those instances that have failed. The next thing for us to do is to take one of those correlation ids and run a query to get more details about the failure.
 
 ![CloudWatch Insights query by correlation id](https://cdn.hashnode.com/res/hashnode/image/upload/v1647375326132/cF11ABN9P.png)
 
+Here we have selected two log groups, one for the identity check API and one for the credit reference API. We then filter the records by the correlation id and select the properties that we logged.
+
+When we run the query, we get results similar to the following:
+
 ![CloudWatch Insights results for correlation id query](https://cdn.hashnode.com/res/hashnode/image/upload/v1647375333091/w2n9PrY9I.png)
 
-TODO
+Here we can see that the credit reference API failed and we can also see the request id that failed. If this was a third-party API, then we could contact the third party and provide them with this id for further investigation. We can also see the URL that was called, which could also be useful in diagnosing the underlying problem. 
+
+Hopefully, you can see that by adding properties to your custom metrics, you can help yourself when faced with working out why something has gone wrong.
 
 ## Do as I say, not as do
 
-TODO: Mention logging PII
+Please note that the example code is very naive in its treatment of [personally identifiable information (PII)](https://www.gdpreu.org/the-regulation/key-concepts/personal-data/). The step function request contains a name and a postal code, these are passed around between states and are logged out at various points. This is a very bad idea.
 
-## Summary
+A much better approach would be to store the request in something like a [DynamoDB](https://aws.amazon.com/dynamodb/) table, with a short [Time to Live (TTL)](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/howitworks-ttl.html) to ensure it is deleted when no longer needed. A reference to this can then be passed around and logged, and the actual information only accessed when needed. 
 
-TODO
+## Can I delete metrics?
 
-## Notes
-
-Standard vs High-resolution metrics?
-
-You may wonder how to delete a metric. Well, once created, a metric cannot be explicitly deleted. As explained by the [Amazon CloudWatch FAQs](https://aws.amazon.com/cloudwatch/faqs/):
+Throughout this series, you may have been wondering if you can delete metrics. Well, once created, a metric cannot be explicitly deleted. As explained by the [Amazon CloudWatch FAQs](https://aws.amazon.com/cloudwatch/faqs/):
 
 > Q: Can I delete any metrics?
 > CloudWatch does not support metric deletion.
 
 Metrics are retained for 15 months, so I wondered about whether I would be charged for them for 15 months. However, the following StackOverflow question answered my query: [AWS CloudWatch unused custom metrics retention and pricing](https://stackoverflow.com/questions/48115239/aws-cloudwatch-unused-custom-metrics-retention-and-pricing-2018)
 
-## Resources
+## Summary
+
+In this post, we saw how we can add extra information to our custom metrics using properties. These properties can then be queried using CloudWatch Insights, allowing us to such things as help us investigate system errors.
