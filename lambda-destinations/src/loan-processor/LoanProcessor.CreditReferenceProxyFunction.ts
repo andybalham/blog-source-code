@@ -56,7 +56,9 @@ export const handler = async (state: LoanProcessorState): Promise<LoanProcessorS
   //
   console.log(JSON.stringify({ event: state }, null, 2));
 
-  if (state.creditReferenceRating) {
+  if (state.creditReference) {
+    console.log(`Skipping: state.creditReference already populated`);
+    console.log(JSON.stringify({ state }, null, 2));
     return state;
   }
 
@@ -86,7 +88,11 @@ export const handler = async (state: LoanProcessorState): Promise<LoanProcessorS
   }
 
   // eslint-disable-next-line no-param-reassign
-  state.creditReferenceRating = httpResponse.data.rating;
+  state.creditReference = {
+    creditReferenceRating: httpResponse.data.rating,
+  };
+
+  console.log(JSON.stringify({ state }, null, 2));
 
   return state;
 };

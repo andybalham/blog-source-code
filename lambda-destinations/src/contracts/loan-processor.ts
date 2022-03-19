@@ -2,7 +2,8 @@ import { CreditReferenceRating } from './credit-reference';
 
 export interface LoanProcessorState {
   input: LoanProcessorInput;
-  creditReferenceRating?: CreditReferenceRating;
+  creditReference?: CreditReference;
+  identityCheck?: IdentityCheck;
   retryCount: number;
 }
 
@@ -11,4 +12,13 @@ export interface LoanProcessorInput {
   firstName: string;
   lastName: string;
   postcode: string;
+}
+
+export interface CreditReference {
+  creditReferenceRating: CreditReferenceRating;
+}
+
+export interface IdentityCheck {
+  electoralRole: boolean;
+  bankAccount: boolean;
 }

@@ -6,6 +6,7 @@ import * as lambdaNodejs from '@aws-cdk/aws-lambda-nodejs';
 import * as lambdaDestinations from '@aws-cdk/aws-lambda-destinations';
 import * as ssm from '@aws-cdk/aws-ssm';
 import { CREDIT_REFERENCE_URL_PARAMETER_NAME_ENV_VAR } from './LoanProcessor.CreditReferenceProxyFunction';
+import { IDENTITY_CHECK_URL_PARAMETER_NAME_ENV_VAR } from './LoanProcessor.IdentityCheckProxyFunction';
 /*
 import * as sns from '@aws-cdk/aws-sns';
 import * as cw from '@aws-cdk/aws-cloudwatch';
@@ -51,8 +52,32 @@ export default class LoanProcessor extends cdk.Construct {
 
     creditReferenceApiUrlParameter.grantRead(creditReferenceProxyFunction);
 
+    // Credit reference proxy
+
+    const identityCheckApiUrlParameter = ssm.StringParameter.fromStringParameterName(
+      scope,
+      'IdentityCheckApiUrlParameter',
+      props.identityCheckUrlParameterName
+    );
+
+    const identityCheckProxyFunction = new lambdaNodejs.NodejsFunction(
+      scope,
+      'IdentityCheckProxyFunction',
+      {
+        environment: {
+          [IDENTITY_CHECK_URL_PARAMETER_NAME_ENV_VAR]: props.identityCheckUrlParameterName,
+        },
+        // auto-extract on success
+        onSuccess: new lambdaDestinations.LambdaDestination(creditReferenceProxyFunction, {
+          responseOnly: true,
+        }),
+      }
+    );
+
+    identityCheckApiUrlParameter.grantRead(identityCheckProxyFunction);
+
     // Set the external properties
 
-    this.inputFunction = creditReferenceProxyFunction;
+    this.inputFunction = identityCheckProxyFunction;
   }
 }

@@ -6,6 +6,7 @@ import AWS from 'aws-sdk';
 import axios, { AxiosResponse } from 'axios';
 import { nanoid } from 'nanoid';
 import { IdentityCheckRequest, IdentityCheckResponse } from '../contracts/identity-check';
+import { LoanProcessorState } from '../contracts/loan-processor';
 
 export const IDENTITY_CHECK_URL_PARAMETER_NAME_ENV_VAR = 'IDENTITY_CHECK_URL_PARAMETER_NAME';
 
@@ -43,7 +44,7 @@ const callEndpointAsync = async (
   const url = `${endpointUrl}request`;
 
   const response = await axios.post<
-  IdentityCheckResponse,
+    IdentityCheckResponse,
     AxiosResponse<IdentityCheckResponse>,
     IdentityCheckRequest
   >(url, request);
@@ -51,18 +52,24 @@ const callEndpointAsync = async (
   return response;
 };
 
-export const handler = async (event: any): Promise<any> => {
+export const handler = async (state: LoanProcessorState): Promise<LoanProcessorState> => {
   //
-  console.log(JSON.stringify({ event }, null, 2));
+  console.log(JSON.stringify({ event: state }, null, 2));
+
+  if (state.identityCheck) {
+    console.log(JSON.stringify({ state }, null, 2));
+    console.log(`Skipping: state.creditReference already populated`);
+    return state;
+  }
 
   await refreshEndpointUrlAsync(endpointUrlParameterName);
 
   const request: IdentityCheckRequest = {
-    correlationId: event.correlationId,
     requestId: nanoid(),
-    firstName: event.firstName,
-    lastName: event.lastName,
-    postcode: event.postcode,
+    correlationId: state.input.correlationId,
+    firstName: state.input.firstName,
+    lastName: state.input.lastName,
+    postcode: state.input.postcode,
   };
 
   let httpResponse = await callEndpointAsync(request);
@@ -80,5 +87,13 @@ export const handler = async (event: any): Promise<any> => {
     throw new Error(`Unexpected HTTP response: ${httpResponse.status}`);
   }
 
-  return httpResponse.data;
+  // eslint-disable-next-line no-param-reassign
+  state.identityCheck = {
+    bankAccount: httpResponse.data.bankAccount,
+    electoralRole: httpResponse.data.electoralRole,
+  };
+
+  console.log(JSON.stringify({ state }, null, 2));
+
+  return state;
 };
