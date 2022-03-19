@@ -27,8 +27,7 @@ describe('LoanProcessor Test Suite', () => {
   });
 
   it.only('invoke state machine once', async () => {
-    // Arrange
-
+    //
     const initialLoanProcessState: LoanProcessorState = {
       input: {
         correlationId: nanoid(),
@@ -39,13 +38,7 @@ describe('LoanProcessor Test Suite', () => {
       retryCount: 0,
     };
 
-    // Act
-
     const response = await loanProcessorInputFunction.asyncInvokeAsync(initialLoanProcessState);
-
-    // Await
-
-    // Assert
 
     console.log(JSON.stringify({ response }, null, 2));
   }).timeout(10 * 1000);
