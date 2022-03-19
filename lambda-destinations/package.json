@@ -32,6 +32,8 @@
   "devDependencies": {
     "@andybalham/sls-testing-toolkit": "^1.0.12",
     "@aws-cdk/aws-apigateway": "^1.129.0",
+    "@aws-cdk/aws-cloudwatch": "^1.129.0",
+    "@aws-cdk/aws-cloudwatch-actions": "^1.129.0",
     "@aws-cdk/aws-dynamodb": "^1.129.0",
     "@aws-cdk/aws-events-targets": "^1.129.0",
     "@aws-cdk/aws-lambda": "^1.129.0",
@@ -42,8 +44,6 @@
     "@aws-cdk/aws-sqs": "^1.129.0",
     "@aws-cdk/aws-stepfunctions": "^1.129.0",
     "@aws-cdk/aws-stepfunctions-tasks": "^1.129.0",
-    "@aws-cdk/aws-cloudwatch": "^1.129.0",
-    "@aws-cdk/aws-cloudwatch-actions": "^1.129.0",
     "@aws-cdk/core": "^1.129.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.1",
     "@types/aws-lambda": "^8.10.81",
@@ -78,6 +78,7 @@
     "@andybalham/state-machine-with-graph": "^1.0.6",
     "@aws-cdk/aws-apigatewayv2": "^1.129.0",
     "@aws-cdk/aws-apigatewayv2-integrations": "^1.129.0",
+    "@aws-cdk/aws-lambda-destinations": "^1.129.0",
     "aws-embedded-metrics": "^2.0.4",
     "axios": "^0.25.0",
     "nanoid": "^3.2.0"

@@ -24,7 +24,7 @@
   "serverlessConsole.services": [
     {
       "type": "cloudformation",
-      "title": "Loan Processor",
+      "title": "Loan Processor Test Stack",
       "timeOffsetInMs": 0,
       "awsProfile": "default",
       "stacks": [

@@ -1,10 +1,10 @@
 # Application
 
-![Lambda-based state machine](https://cdn.hashnode.com/res/hashnode/image/upload/v1647551973438/iSi8MY2F7.png)
-
+![Lambda-based state machine](https://cdn.hashnode.com/res/hashnode/image/upload/v1647676516394/M-z99x89_.png)
 
 # Links
-* [@aws-cdk/aws-lambda-destinations module](https://docs.aws.amazon.com/cdk/api/v1/docs/aws-lambda-destinations-readme.html)
+
+- [@aws-cdk/aws-lambda-destinations module](https://docs.aws.amazon.com/cdk/api/v1/docs/aws-lambda-destinations-readme.html)
 
 # Success
 
@@ -25,22 +25,22 @@ const myFn = new lambda.Function(this, 'Fn', {
 
 ```json
 {
-    "version": "1.0",
-    "timestamp": "2019-11-24T23:08:25.651Z",
-    "requestContext": {
-        "requestId": "c2a6f2ae-7dbb-4d22-8782-d0485c9877e2",
-        "functionArn": "arn:aws:lambda:sa-east-1:123456789123:function:event-destinations:$LATEST",
-        "condition": "Success",
-        "approximateInvokeCount": 1
-    },
-    "requestPayload": {
-        "Success": true
-    },
-    "responseContext": {
-        "statusCode": 200,
-        "executedVersion": "$LATEST"
-    },
-    "responsePayload": "<data returned by the function here>"
+  "version": "1.0",
+  "timestamp": "2019-11-24T23:08:25.651Z",
+  "requestContext": {
+    "requestId": "c2a6f2ae-7dbb-4d22-8782-d0485c9877e2",
+    "functionArn": "arn:aws:lambda:sa-east-1:123456789123:function:event-destinations:$LATEST",
+    "condition": "Success",
+    "approximateInvokeCount": 1
+  },
+  "requestPayload": {
+    "Success": true
+  },
+  "responseContext": {
+    "statusCode": 200,
+    "executedVersion": "$LATEST"
+  },
+  "responsePayload": "<data returned by the function here>"
 }
 ```
 
@@ -82,7 +82,7 @@ const myFn = new lambda.Function(this, 'Fn', {
   "responsePayload": {
     "errorMessage": "Failure from event, Success = false, I am failing!",
     "errorType": "Error",
-    "stackTrace": [ "exports.handler (/var/task/index.js:18:18)" ]
+    "stackTrace": ["exports.handler (/var/task/index.js:18:18)"]
   }
 }
 ```

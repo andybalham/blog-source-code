@@ -6,12 +6,11 @@ import AWS from 'aws-sdk';
 import axios, { AxiosResponse } from 'axios';
 import { nanoid } from 'nanoid';
 import { CreditReferenceRequest, CreditReferenceResponse } from '../contracts/credit-reference';
+import { LoanProcessorState } from '../contracts/loan-processor';
 
 export const CREDIT_REFERENCE_URL_PARAMETER_NAME_ENV_VAR = 'CREDIT_REFERENCE_URL_PARAMETER_NAME';
 
 const ssm = new AWS.SSM();
-
-// TODO: Instrument with https://github.com/awslabs/aws-embedded-metrics-node
 
 const endpointUrlParameterName = process.env[CREDIT_REFERENCE_URL_PARAMETER_NAME_ENV_VAR];
 
@@ -53,18 +52,22 @@ const callEndpointAsync = async (
   return response;
 };
 
-export const handler = async (event: any): Promise<any> => {
+export const handler = async (state: LoanProcessorState): Promise<LoanProcessorState> => {
   //
-  console.log(JSON.stringify({ event }, null, 2));
+  console.log(JSON.stringify({ event: state }, null, 2));
+
+  if (state.creditReferenceRating) {
+    return state;
+  }
 
   await refreshEndpointUrlAsync(endpointUrlParameterName);
 
   const request: CreditReferenceRequest = {
-    correlationId: event.correlationId,
     requestId: nanoid(),
-    firstName: event.firstName,
-    lastName: event.lastName,
-    postcode: event.postcode,
+    correlationId: state.input.correlationId,
+    firstName: state.input.firstName,
+    lastName: state.input.lastName,
+    postcode: state.input.postcode,
   };
 
   let httpResponse = await callEndpointAsync(request);
@@ -82,5 +85,8 @@ export const handler = async (event: any): Promise<any> => {
     throw new Error(`Unexpected HTTP response: ${httpResponse.status}`);
   }
 
-  return httpResponse.data;
+  // eslint-disable-next-line no-param-reassign
+  state.creditReferenceRating = httpResponse.data.rating;
+
+  return state;
 };
