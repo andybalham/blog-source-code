@@ -9,12 +9,11 @@ import * as lambdaEventSources from '@aws-cdk/aws-lambda-event-sources';
 import * as ssm from '@aws-cdk/aws-ssm';
 import { CREDIT_REFERENCE_URL_PARAMETER_NAME_ENV_VAR } from './LoanProcessor.CreditReferenceProxyFunction';
 import { IDENTITY_CHECK_URL_PARAMETER_NAME_ENV_VAR } from './LoanProcessor.IdentityCheckProxyFunction';
-/*
-import * as sns from '@aws-cdk/aws-sns';
-import * as cw from '@aws-cdk/aws-cloudwatch';
-import * as cwActions from '@aws-cdk/aws-cloudwatch-actions';
-import { IDENTITY_CHECK_URL_PARAMETER_NAME_ENV_VAR } from './LoanProcessor.IdentityCheckProxyFunction';
-*/
+import {
+  MAX_RETRY_COUNT_ENV_VAR,
+  RETRY_QUEUE_URL_ENV_VAR,
+} from './LoanProcessor.QueueRetriesFunction';
+import { INPUT_FUNCTION_NAME_ENV_VAR } from './LoanProcessor.RetryFunction';
 
 export interface LoanProcessorProps {
   creditReferenceUrlParameterName: string;
@@ -59,6 +58,7 @@ export default class LoanProcessor extends cdk.Construct {
         environment: {
           [CREDIT_REFERENCE_URL_PARAMETER_NAME_ENV_VAR]: props.creditReferenceUrlParameterName,
         },
+        retryAttempts: 0,
         // auto-extract on success
         onSuccess: new lambdaDestinations.LambdaDestination(props.outputFunction, {
           responseOnly: true,
@@ -84,6 +84,7 @@ export default class LoanProcessor extends cdk.Construct {
         environment: {
           [IDENTITY_CHECK_URL_PARAMETER_NAME_ENV_VAR]: props.identityCheckUrlParameterName,
         },
+        retryAttempts: 0,
         // auto-extract on success
         onSuccess: new lambdaDestinations.LambdaDestination(creditReferenceProxyFunction, {
           responseOnly: true,
@@ -94,24 +95,52 @@ export default class LoanProcessor extends cdk.Construct {
 
     identityCheckApiUrlParameter.grantRead(identityCheckProxyFunction);
 
+    // Set the external properties
+
+    this.inputFunction = identityCheckProxyFunction;
+
     // Queue retries function
 
     const queueRetriesFunction = new lambdaNodejs.NodejsFunction(scope, 'QueueRetriesFunction', {
-      // TODO 19Mar22: Does being on a queue count as being called asynchronously? No, see https://aws.amazon.com/blogs/compute/introducing-aws-lambda-destinations/
-      onSuccess: new lambdaDestinations.SqsDestination(retryQueue),
+      // Does being on a queue count as being called asynchronously?
+      // No, see https://aws.amazon.com/blogs/compute/introducing-aws-lambda-destinations/
+      // onSuccess: new lambdaDestinations.SqsDestination(retryQueue),
+      environment: {
+        [RETRY_QUEUE_URL_ENV_VAR]: retryQueue.queueUrl,
+        [MAX_RETRY_COUNT_ENV_VAR]: '3',
+      },
+      retryAttempts: 0,
     });
 
     onFailureQueue.grantConsumeMessages(queueRetriesFunction);
 
     queueRetriesFunction.addEventSource(
       new lambdaEventSources.SqsEventSource(onFailureQueue, {
+        enabled: true,
+        batchSize: 1,
+      })
+    );
+
+    retryQueue.grantSendMessages(queueRetriesFunction);
+
+    // Retry function
+
+    const retryFunction = new lambdaNodejs.NodejsFunction(scope, 'RetryFunction', {
+      environment: {
+        [INPUT_FUNCTION_NAME_ENV_VAR]: this.inputFunction.functionName,
+      },
+      retryAttempts: 0,
+    });
+
+    retryQueue.grantConsumeMessages(retryFunction);
+
+    retryFunction.addEventSource(
+      new lambdaEventSources.SqsEventSource(retryQueue, {
         enabled: false,
         batchSize: 1,
       })
     );
 
-    // Set the external properties
-
-    this.inputFunction = identityCheckProxyFunction;
+    this.inputFunction.grantInvoke(retryFunction);
   }
 }
