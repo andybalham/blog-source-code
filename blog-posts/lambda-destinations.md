@@ -1,6 +1,114 @@
+[Asynchronous invocation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async.html)
+
+> When you invoke a function asynchronously, you don't wait for a response from the function code. You can configure how Lambda handles errors, and can send invocation records to a downstream resource **to chain together components of your application**.
+
+Talk about how we are going to use destinations to loosely couple functions together.
+
+Talk about how we invoked synchronously by accident and nothing happened.
+
+Talk through the code, using a cut-down version:
+
+```TypeScript
+export const handler = async (state: LoanProcessorState): Promise<LoanProcessorState> => {
+
+  const request: CreditReferenceRequest = {
+    requestId: nanoid(),
+    correlationId: state.input.correlationId,
+    firstName: state.input.firstName,
+    lastName: state.input.lastName,
+    postcode: state.input.postcode,
+  };
+
+  let httpResponse = await callEndpointAsync(request);
+
+  state.creditReference = {
+    creditReferenceRating: httpResponse.data.rating,
+  };
+
+  return state;
+};
+```
+
+Talk about how to assemble them together with CDK.
+
+When testing, do screenshots showing the messages in the queues using the console.
+
+For Construct, first the interface:
+
+```TypeScript
+export default class LoanProcessor extends cdk.Construct {
+  readonly inputFunction: lambda.IFunction;
+  readonly outputQueue: sqs.IQueue;
+  readonly failureQueue: sqs.IQueue;
+
+  constructor(scope: cdk.Construct, id: string) {
+    super(scope, id);
+  }
+}
+```
+
+Then the queues, noting [long polling](TODO):
+
+```TypeScript
+this.outputQueue = new sqs.Queue(this, 'OutputQueue', {
+  receiveMessageWaitTime: cdk.Duration.seconds(20),
+});
+
+this.failureQueue = new sqs.Queue(this, 'FailureQueue', {
+  receiveMessageWaitTime: cdk.Duration.seconds(20),
+});
+```
+
+Then our functions in reverse order.
+
+First the last in the chain:
+
+```TypeScript
+const creditReferenceProxyFunction = new lambdaNodejs.NodejsFunction(
+  scope,
+  'CreditReferenceProxyFunction',
+  {
+    onSuccess: new lambdaDestinations.SqsDestination(this.outputQueue),
+    onFailure: new lambdaDestinations.SqsDestination(this.failureQueue),
+  }
+);
+```
+
+Then last, the first in the chain, noting `responseOnly`:
+
+```TypeScript
+const identityCheckProxyFunction = new lambdaNodejs.NodejsFunction(
+  scope,
+  'IdentityCheckProxyFunction',
+  {
+    onSuccess: new lambdaDestinations.LambdaDestination(creditReferenceProxyFunction, {
+      responseOnly: true, // auto-extract on success
+    }),
+    onFailure: new lambdaDestinations.SqsDestination(this.failureQueue),
+  }
+);
+```
+
+Then finally expose the input function:
+
+```TypeScript
+this.inputFunction = identityCheckProxyFunction;
+```
+
 # Application
 
-![Lambda-based state machine](https://cdn.hashnode.com/res/hashnode/image/upload/v1647676516394/M-z99x89_.png)
+Talk about how we pass the initial state in and then pass from state to state, adding details as we go.
+
+```TypeScript
+export interface LoanProcessorState {
+  input: LoanProcessorInput;
+  creditReference?: CreditReference;
+  identityCheck?: IdentityCheck;
+}
+```
+
+![Destination-based state machine](https://cdn.hashnode.com/res/hashnode/image/upload/v1647807109617/WnD-Qax-N.png)
+
 
 # Links
 

@@ -17,17 +17,31 @@ export default class LoanProcessorTestStack extends IntegrationTestStack {
 
   static readonly LoanProcessorOutputId = 'LoanProcessorOutput';
 
+  static readonly LoanProcessorFailureId = 'LoanProcessorFailure';
+
   constructor(scope: cdk.Construct, id: string, props: LoanProcessorTestStackProps) {
     super(scope, id, {
       testStackId: LoanProcessorTestStack.StackId,
-      testFunctionIds: [LoanProcessorTestStack.LoanProcessorOutputId],
+      testFunctionIds: [
+        // LoanProcessorTestStack.LoanProcessorOutputId,
+        // LoanProcessorTestStack.LoanProcessorFailureId,
+      ],
     });
 
     const loanProcessor = new LoanProcessor(this, 'LoanProcessor', {
       creditReferenceUrlParameterName: props.creditReferenceUrlParameterName,
       identityCheckUrlParameterName: props.identityCheckUrlParameterName,
-      outputFunction: this.testFunctions[LoanProcessorTestStack.LoanProcessorOutputId],
     });
+
+    // this.addSQSQueueConsumer(
+    //   loanProcessor.outputQueue,
+    //   LoanProcessorTestStack.LoanProcessorOutputId
+    // );
+
+    // this.addSQSQueueConsumer(
+    //   loanProcessor.failureQueue,
+    //   LoanProcessorTestStack.LoanProcessorFailureId
+    // );
 
     this.addTestResourceTag(
       loanProcessor.inputFunction,

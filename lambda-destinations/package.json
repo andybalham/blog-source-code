@@ -30,7 +30,7 @@
   },
   "homepage": "https://github.com/andybalham/lambda-destinations#readme",
   "devDependencies": {
-    "@andybalham/sls-testing-toolkit": "^1.0.12",
+    "@andybalham/sls-testing-toolkit": "^1.0.13",
     "@aws-cdk/aws-apigateway": "^1.129.0",
     "@aws-cdk/aws-cloudwatch": "^1.129.0",
     "@aws-cdk/aws-cloudwatch-actions": "^1.129.0",

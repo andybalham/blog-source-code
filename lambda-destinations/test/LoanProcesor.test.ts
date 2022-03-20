@@ -1,11 +1,10 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-console */
+import { IntegrationTestClient, LambdaTestClient } from '@andybalham/sls-testing-toolkit';
 import { nanoid } from 'nanoid';
 import LoanProcessorTestStack from '../lib/LoanProcessorTestStack';
 import { LoanProcessorState } from '../src/contracts/loan-processor';
-import IntegrationTestClient from '../src/sls-testing-toolkit/IntegrationTestClient';
-import LambdaTestClient from '../src/sls-testing-toolkit/LambdaTestClient';
 
 describe('LoanProcessor Test Suite', () => {
   //
