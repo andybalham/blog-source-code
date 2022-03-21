@@ -1,15 +1,14 @@
-# Title - TODO
+# Title - Make debugging easier with custom metric properties
 
-## Overview
+In the [first post](https://aws.hashnode.com/lambda-custom-metrics-aws) of the series we saw how we can use the [`aws-embedded-metrics`](https://github.com/awslabs/aws-embedded-metrics-node) npm package to easily output custom metrics from our Lambda functions. In the [second post](https://aws.hashnode.com/creating-custom-metric-alarms-with-cdk), we saw how we could use custom metrics to trigger alarms when our application went wrong. In this final post of the series, we will see how we can add properties to our custom metrics to help us diagnose what has gone wrong.
 
-In the [first post](TODO) of the series we saw how we can use the [`aws-embedded-metrics`](TODO) npm package to easily output custom metrics from our Lambda functions. In the [second post](TODO), we saw how we could use custom metrics to trigger alarms when our application went wrong. In this final post of the series, we will see how we can add properties to our custom metrics to help us diagnose what has gone wrong.
-
-TODO: GitHub repo
+The code for this post can be found in the accompanying [GitHub repo](https://github.com/andybalham/blog-embedded-metrics-3) ready to be cloned and run.
 
 ## TL;DR
 
 * Custom metrics can have arbitrary additional properties
 * These properties can be queried using CloudWatch Insights
+* You can't delete metrics, they are retained for 15 months
 
 ## The application
 
@@ -114,7 +113,7 @@ Again, we need to update the corresponding state in the step function definition
 
 ## Generating some errors
 
-The next thing to do is to run our application and wait for errors. This is straightforward, as we can configure the APIs being called to error a certain percentage of the time. With these set to 10%, we can run a [unit test](TODO) to call the step function every few seconds and wait.
+The next thing to do is to run our application and wait for errors. This is straightforward, as we can configure the APIs being called to error a certain percentage of the time. With these set to 10%, we can run a [unit test](https://github.com/andybalham/blog-embedded-metrics-3/blob/master/test/LoanProcesor.test.ts) to call the step function every few seconds and wait.
 
 Sure enough, before long we see that our alarm has triggered:
 
