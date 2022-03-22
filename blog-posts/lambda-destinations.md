@@ -1,8 +1,89 @@
-[Asynchronous invocation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async.html)
+# Building a state machine with Lambda destinations and CDK
+
+In this post we will look at how we can use [Lambda destinations](TODO) and CDK to create an asynchronous and idempotent state machine. [AWS announced Lambda destinations](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-destinations/) in November 2019, so perhaps I am a little late to the party, but I hadn't yet used them and I wanted to try them out.
+
+The code for this blog post is ready to be cloned, deployed, and run from the accompanying [GitHub repo](TODO).
+
+## TL;DR
+
+TODO
+
+## Introduction to Lambda destinations
+
+The blog post [Introducing AWS Lambda Destinations](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-destinations/) provides a thorough introduction to the destinations, but we will cover the basics here.
+
+To paraphrase the article above, Destinations routes the response from a Lambda invocation as follows:
+
+> - **On Success** - When a function is invoked successfully, Lambda routes the record to the destination resource for every successful invocation.
+> - **On Failure** - When a function invocation fails, Destinations routes the record to the destination resource for every failed invocation for further investigation or processing.
+
+A destination resource can be one of the following targets:
+
+- [SQS](https://aws.amazon.com/sqs/)
+- [SNS](https://aws.amazon.com/sns/)
+- [Lambda](https://aws.amazon.com/lambda/)
+- [EventBridge](https://aws.amazon.com/eventbridge/)
+
+Now, as the AWS documentation [Asynchronous invocation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async.html) says:
 
 > When you invoke a function asynchronously, you don't wait for a response from the function code. You can configure how Lambda handles errors, and can send invocation records to a downstream resource **to chain together components of your application**.
 
+We are going to take advantage of this ability to chain components together to create a simple state machine.
+
+## The state machine
+
+The state machine we are going to build is shown below. It is going to take an input state, then make a call to an identity check service and a credit check service, before outputting the result to a 'success' SQS queue. If either calls fail, the error and state is going to be sent to a 'failure' SQS queue. We are going to wrap all this in a [CDK construct](https://docs.aws.amazon.com/cdk/v2/guide/constructs.html).
+
+![Destination-based state machine](https://cdn.hashnode.com/res/hashnode/image/upload/v1647807109617/WnD-Qax-N.png)
+
+The following interface shows the structure of the data that is passed through the state machine. The state machine is called with the `input` property populated, then the Lambda functions add the `identityCheck` and `creditReference` values. The final result is then sent to the 'success' SQS queue for further processing.
+
+```TypeScript
+export interface LoanProcessorState {
+  input: {
+    firstName: string;
+    lastName: string;
+    postcode: string;
+  };
+  identityCheck?: {
+    electoralRole: boolean;
+    bankAccount: boolean;
+  };
+  creditReference?: {
+    creditReferenceRating: 'Good' | 'Bad' | 'Poor';
+  };
+}
+```
+
+## Yes, Step Functions would work as well
+
+At this point, it is worth mentioning that [Step Functions](https://aws.amazon.com/step-functions/) would be a good solution for a problem such as this. One advantage of this approach for simple chains is that it incurs no additional charge. However, since our example is not long-running, [express workflows](https://aws.amazon.com/about-aws/whats-new/2019/12/introducing-aws-step-functions-express-workflows/) would address that concern. One definite advantage that Step Functions would have is that, as the service calls are independent, they could be performed in parallel.
+
+## The Lambda functions
+
+TODO
+
+## Assembling the construct
+
+TODO
+
+## Testing the happy path
+
+TODO
+
+## When things go wrong
+
+TODO
+
+## Summary
+
+TODO
+
+## Notes
+
 Talk about how we are going to use destinations to loosely couple functions together.
+
+Talk about how the execution time does not compound.
 
 Talk about how we invoked synchronously by accident and nothing happened.
 
@@ -94,21 +175,6 @@ Then finally expose the input function:
 ```TypeScript
 this.inputFunction = identityCheckProxyFunction;
 ```
-
-# Application
-
-Talk about how we pass the initial state in and then pass from state to state, adding details as we go.
-
-```TypeScript
-export interface LoanProcessorState {
-  input: LoanProcessorInput;
-  creditReference?: CreditReference;
-  identityCheck?: IdentityCheck;
-}
-```
-
-![Destination-based state machine](https://cdn.hashnode.com/res/hashnode/image/upload/v1647807109617/WnD-Qax-N.png)
-
 
 # Links
 
