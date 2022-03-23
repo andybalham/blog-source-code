@@ -61,40 +61,25 @@ At this point, it is worth mentioning that [Step Functions](https://aws.amazon.c
 
 ## The Lambda functions
 
-TODO
+Both Lambda functions follow the same pattern:
 
-## Assembling the construct
+* Return the current state if it already contains the API response
+* Call the API and store the response in the state
+* Return the updated state
 
-TODO
+Note that the Lambda functions have no knowledge of the other, they only have a dependency on the state. We will use Destinations to link them together.
 
-## Testing the happy path
-
-TODO
-
-## When things go wrong
-
-TODO
-
-## Summary
-
-TODO
-
-## Notes
-
-Talk about how we are going to use destinations to loosely couple functions together.
-
-Talk about how the execution time does not compound.
-
-Talk about how we invoked synchronously by accident and nothing happened.
-
-Talk through the code, using a cut-down version:
+The code for the credit reference Lambda function is shown below:
 
 ```TypeScript
-export const handler = async (state: LoanProcessorState): Promise<LoanProcessorState> => {
+export const handler = 
+  async (state: LoanProcessorState): Promise<LoanProcessorState> => {
+
+  if (state.creditReference) {
+    return state;
+  }
 
   const request: CreditReferenceRequest = {
-    requestId: nanoid(),
-    correlationId: state.input.correlationId,
     firstName: state.input.firstName,
     lastName: state.input.lastName,
     postcode: state.input.postcode,
@@ -110,11 +95,9 @@ export const handler = async (state: LoanProcessorState): Promise<LoanProcessorS
 };
 ```
 
-Talk about how to assemble them together with CDK.
+## Assembling the construct
 
-When testing, do screenshots showing the messages in the queues using the console.
-
-For Construct, first the interface:
+As for any construct, we first define the interface. That is, what we need to pass in and what we need to expose. In this case, we don't need to pass anything in, but we do need to expose the function to call and the two queues were the result or the error will be sent. 
 
 ```TypeScript
 export default class LoanProcessor extends cdk.Construct {
@@ -128,7 +111,7 @@ export default class LoanProcessor extends cdk.Construct {
 }
 ```
 
-Then the queues, noting [long polling](TODO):
+Next we define the queues, using [long polling](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-short-and-long-polling.html):
 
 ```TypeScript
 this.outputQueue = new sqs.Queue(this, 'OutputQueue', {
@@ -140,7 +123,7 @@ this.failureQueue = new sqs.Queue(this, 'FailureQueue', {
 });
 ```
 
-Then our functions in reverse order.
+Then we define our functions in reverse order.
 
 First the last in the chain:
 
@@ -155,7 +138,7 @@ const creditReferenceProxyFunction = new lambdaNodejs.NodejsFunction(
 );
 ```
 
-Then last, the first in the chain, noting `responseOnly`:
+Then the first in the chain:
 
 ```TypeScript
 const identityCheckProxyFunction = new lambdaNodejs.NodejsFunction(
@@ -163,18 +146,44 @@ const identityCheckProxyFunction = new lambdaNodejs.NodejsFunction(
   'IdentityCheckProxyFunction',
   {
     onSuccess: new lambdaDestinations.LambdaDestination(creditReferenceProxyFunction, {
-      responseOnly: true, // auto-extract on success
+      responseOnly: true, // Don't wrap the output
     }),
     onFailure: new lambdaDestinations.SqsDestination(this.failureQueue),
   }
 );
 ```
 
-Then finally expose the input function:
+Note that we are specifying `true` for the `responseOnly` property. To quote the documentation:
+
+> When set to `true` and used as `onSuccess` destination, the destination function will be invoked with the payload returned by the source function.
+
+This will ensure the state will be passed between our functions as expected.
+
+Finally, we expose the input function so that our state machine can be called:
 
 ```TypeScript
 this.inputFunction = identityCheckProxyFunction;
 ```
+
+## Testing the happy path
+
+TODO
+
+Talk about how we invoked synchronously by accident and nothing happened.
+
+When testing, do screenshots showing the messages in the queues using the console.
+
+## When things go wrong
+
+TODO
+
+## Summary
+
+TODO
+
+## Notes
+
+Talk about how the execution time does not compound.
 
 # Links
 
