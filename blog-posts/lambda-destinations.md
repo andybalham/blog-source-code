@@ -157,7 +157,25 @@ Note that we are specifying `true` for the `responseOnly` property. To quote the
 
 > When set to `true` and used as `onSuccess` destination, the destination function will be invoked with the payload returned by the source function.
 
-This will ensure the state will be passed between our functions as expected.
+This will ensure that just the `LoanProcessorState` structure will be passed between our functions. If we do not set this, then it will be wrapped as follows:
+
+```json
+{
+  "version": "1.0",
+  "timestamp": "2019-11-24T23:08:25.651Z",
+  "requestContext": {
+    // Snip
+  },
+  "requestPayload": {
+    "Success": true
+  },
+  "responseContext": {
+    "statusCode": 200,
+    "executedVersion": "$LATEST"
+  },
+  "responsePayload": "<data returned by the function here>"
+}
+```
 
 Finally, we expose the input function so that our state machine can be called:
 
@@ -167,11 +185,13 @@ this.inputFunction = identityCheckProxyFunction;
 
 ## Testing the happy path
 
+To test our state machine, we deploy it as part of an [Integration Test Stack](TODO) and create a [unit test](TODO) to invoke it asynchronously.
+
+If we invoke the Lambda function synchronously, then we will get a `200 - Success` response. However, the 'success' Destination will not be invoked and our state machine will not run. I wondered if we could use the [AWS Lambda context object](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-context.html) to see if we could check within a Lambda function if it had been invoked synchronously or not. However, as far as I could tell, this is not currently possible. So if we intend for a Lambda function to only be called asynchronously, then we need to be careful to only invoke it asynchronously. We cannot assert the calling method within the Lambda function itself.
+
 TODO
 
-Talk about how we invoked synchronously by accident and nothing happened.
-
-When testing, do screenshots showing the messages in the queues using the console.
+When testing, do screenshots showing the messages in the queues using the console. Show the message contents too.
 
 ## When things go wrong
 
@@ -204,27 +224,6 @@ const myFn = new lambda.Function(this, 'Fn', {
   // sns topic for successful invocations
   onSuccess: new destinations.SnsDestination(myTopic),
 })
-```
-
-```json
-{
-  "version": "1.0",
-  "timestamp": "2019-11-24T23:08:25.651Z",
-  "requestContext": {
-    "requestId": "c2a6f2ae-7dbb-4d22-8782-d0485c9877e2",
-    "functionArn": "arn:aws:lambda:sa-east-1:123456789123:function:event-destinations:$LATEST",
-    "condition": "Success",
-    "approximateInvokeCount": 1
-  },
-  "requestPayload": {
-    "Success": true
-  },
-  "responseContext": {
-    "statusCode": 200,
-    "executedVersion": "$LATEST"
-  },
-  "responsePayload": "<data returned by the function here>"
-}
 ```
 
 # Failure
