@@ -1,4 +1,4 @@
-# Building a state machine with Lambda destinations and CDK
+# Building a state machine with Lambda Destinations and CDK
 
 In this post we will look at how we can use [Lambda destinations](TODO) and CDK to create an asynchronous and idempotent state machine. [AWS announced Lambda destinations](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-destinations/) in November 2019, so perhaps I am a little late to the party, but I hadn't yet used them and I wanted to try them out.
 
@@ -63,16 +63,16 @@ At this point, it is worth mentioning that [Step Functions](https://aws.amazon.c
 
 Both Lambda functions follow the same pattern:
 
-* Return the current state if it already contains the API response
-* Call the API and store the response in the state
-* Return the updated state
+- Return the current state if it already contains the API response
+- Call the API and store the response in the state
+- Return the updated state
 
 Note that the Lambda functions have no knowledge of the other, they only have a dependency on the state. We will use Destinations to link them together.
 
 The code for the credit reference Lambda function is shown below:
 
 ```TypeScript
-export const handler = 
+export const handler =
   async (state: LoanProcessorState): Promise<LoanProcessorState> => {
 
   if (state.creditReference) {
@@ -97,7 +97,7 @@ export const handler =
 
 ## Assembling the construct
 
-As for any construct, we first define the interface. That is, what we need to pass in and what we need to expose. In this case, we don't need to pass anything in, but we do need to expose the function to call and the two queues were the result or the error will be sent. 
+As for any construct, we first define the interface. That is, what we need to pass in and what we need to expose. In this case, we don't need to pass anything in, but we do need to expose the function to call and the two queues were the result or the error will be sent.
 
 ```TypeScript
 export default class LoanProcessor extends cdk.Construct {
@@ -185,86 +185,120 @@ this.inputFunction = identityCheckProxyFunction;
 
 ## Testing the happy path
 
-To test our state machine, we deploy it as part of an [Integration Test Stack](TODO) and create a [unit test](TODO) to invoke it asynchronously.
+To test our state machine, we deploy the construct as part of an [Integration Test Stack](TODO) and create a [unit test](TODO) to invoke it asynchronously.
 
-If we invoke the Lambda function synchronously, then we will get a `200 - Success` response. However, the 'success' Destination will not be invoked and our state machine will not run. I wondered if we could use the [AWS Lambda context object](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-context.html) to see if we could check within a Lambda function if it had been invoked synchronously or not. However, as far as I could tell, this is not currently possible. So if we intend for a Lambda function to only be called asynchronously, then we need to be careful to only invoke it asynchronously. We cannot assert the calling method within the Lambda function itself.
+> If we invoke the Lambda function synchronously, then we will get a `200 - Success` response. However, the 'success' Destination will not be invoked and our state machine will not run. I wondered if we could use the [AWS Lambda context object](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-context.html) to see if we could check within a Lambda function if it had been invoked synchronously or not. However, as far as I could tell, this is not currently possible. So if we intend for a Lambda function to only be called asynchronously, then we need to be careful to only invoke it asynchronously. We cannot assert the calling method within the Lambda function itself.
 
-TODO
+Looking at the AWS Console we can see that one of our queue contains a message:
 
-When testing, do screenshots showing the messages in the queues using the console. Show the message contents too.
+![AWS Console showing success message](https://cdn.hashnode.com/res/hashnode/image/upload/v1648492372015/_1e3mQCnJ.png)
 
-## When things go wrong
-
-TODO
-
-## Summary
-
-TODO
-
-## Notes
-
-Talk about how the execution time does not compound.
-
-# Links
-
-- [@aws-cdk/aws-lambda-destinations module](https://docs.aws.amazon.com/cdk/api/v1/docs/aws-lambda-destinations-readme.html)
-
-# Success
-
-```TypeScript
-// An sns topic for successful invocations of a lambda function
-import * as sns from '@aws-cdk/aws-sns';
-
-const myTopic = new sns.Topic(this, 'Topic');
-
-const myFn = new lambda.Function(this, 'Fn', {
-  runtime: lambda.Runtime.NODEJS_12_X,
-  handler: 'index.handler',
-  code: lambda.Code.fromAsset(path.join(__dirname, 'lambda-handler')),
-  // sns topic for successful invocations
-  onSuccess: new destinations.SnsDestination(myTopic),
-})
-```
-
-# Failure
-
-```TypeScript
-// An sqs queue for unsuccessful invocations of a lambda function
-import * as sqs from '@aws-cdk/aws-sqs';
-
-const deadLetterQueue = new sqs.Queue(this, 'DeadLetterQueue');
-
-const myFn = new lambda.Function(this, 'Fn', {
-  runtime: lambda.Runtime.NODEJS_12_X,
-  handler: 'index.handler',
-  code: lambda.Code.fromInline('// your code'),
-  // sqs queue for unsuccessful invocations
-  onFailure: new destinations.SqsDestination(deadLetterQueue),
-});
-```
+When we look at the message body we see the following:
 
 ```json
 {
   "version": "1.0",
-  "timestamp": "2019-11-24T21:52:47.333Z",
+  "timestamp": "2022-03-28T18:21:24.430Z",
   "requestContext": {
-    "requestId": "8ea123e4-1db7-4aca-ad10-d9ca1234c1fd",
-    "functionArn": "arn:aws:lambda:sa-east-1:123456678912:function:event-destinations:$LATEST",
-    "condition": "RetriesExhausted",
-    "approximateInvokeCount": 3
+    "requestId": "e87961f5-ca55-450b-87fe-8a29c9c41646",
+    "functionArn": "arn:aws:lambda:eu-west-2:xxxxxxxxx:function:LoanProcessorTestStack-CreditReferenceProxyFunctio-XXXXXXXXX:$LATEST",
+    "condition": "Success",
+    "approximateInvokeCount": 1
   },
   "requestPayload": {
-    "Success": false
+    "input": {
+      "firstName": "Trevor",
+      "lastName": "Potato",
+      "postcode": "MK3 9SE"
+    },
+    "retryCount": 0,
+    "identityCheck": {
+      "bankAccount": true,
+      "electoralRole": false
+    }
+  },
+  "responseContext": {
+    "statusCode": 200,
+    "executedVersion": "$LATEST"
+  },
+  "responsePayload": {
+    "input": {
+      "firstName": "Trevor",
+      "lastName": "Potato",
+      "postcode": "MK3 9SE"
+    },
+    "identityCheck": {
+      "bankAccount": true,
+      "electoralRole": false
+    },
+    "creditReference": {
+      "creditReferenceRating": "Good"
+    }
+  }
+}
+```
+
+We can see the `responsePayload` property contains the output from both Lambda functions, so our state machine ran as expected and we successfully chained them together.
+
+Note that because we are invoking the Lambda functions asynchronously, the execution time does not compound. If the first Lambda function called the second synchronously, then its execution time would include the time for the second to respond. So you would be being charged twice! Never a good thing.
+
+## When things go wrong
+
+To test what happens when things go wrong, we configure one of our mock API endpoints to always error. In this case, the credit reference endpoint. Now when we run our unit test, we can see the failure queue has a message in it:
+
+![AWS Console showing failure message](https://cdn.hashnode.com/res/hashnode/image/upload/v1648493054613/-AG7qm61I.png)
+
+When we look at the message body we see the following:
+
+```json
+{
+  "version": "1.0",
+  "timestamp": "2022-03-28T18:42:06.919Z",
+  "requestContext": {
+    "requestId": "296ebcc2-c642-4b2e-9956-9d0f581c40cc",
+    "functionArn": "arn:aws:lambda:eu-west-2:XXXXXXX:function:LoanProcessorTestStack-CreditReferenceProxyFunctio-XXXXXXX:$LATEST",
+    "condition": "RetriesExhausted",
+    "approximateInvokeCount": 1
+  },
+  "requestPayload": {
+    "input": {
+      "firstName": "Trevor",
+      "lastName": "Potato",
+      "postcode": "MK3 9SE"
+    },
+    "identityCheck": {
+      "bankAccount": true,
+      "electoralRole": true
+    }
   },
   "responseContext": {
     "statusCode": 200,
     "executedVersion": "$LATEST",
-    "functionError": "Handled"
+    "functionError": "Unhandled"
   },
   "responsePayload": {
-    "errorMessage": "Failure from event, Success = false, I am failing!",
     "errorType": "Error",
-    "stackTrace": ["exports.handler (/var/task/index.js:18:18)"]
+    "errorMessage": "Request failed with status code 500",
+    "trace": [
+      "Error: Request failed with status code 500",
+      "    at createError (/var/task/index.js:335:19)",
+      "    at settle (/var/task/index.js:351:16)",
+      "    at IncomingMessage.handleStreamEnd (/var/task/index.js:2091:15)",
+      "    at IncomingMessage.emit (events.js:412:35)",
+      "    at IncomingMessage.emit (domain.js:475:12)",
+      "    at endReadableNT (internal/streams/readable.js:1334:12)",
+      "    at processTicksAndRejections (internal/process/task_queues.js:82:21)"
+    ]
   }
 }
 ```
+
+In this case, we can see that the `responsePayload` contains details of the error and the `requestContext` tells us which Lambda function failed.
+
+## Summary
+
+In this post we saw how we can use Destinations to chain Lambda functions together to form a basic state machine. The functions were combined in a loosely-coupled way that avoided the execution time compounding. We also saw how we can add error handling to capture what went wrong when an asynchronous invocation fails.
+
+# Links
+
+- [@aws-cdk/aws-lambda-destinations module](https://docs.aws.amazon.com/cdk/api/v1/docs/aws-lambda-destinations-readme.html)

@@ -174,6 +174,8 @@ Throughout this series, you may have been wondering if you can delete metrics. W
 
 Metrics are retained for 15 months, so I wondered about whether I would be charged for them for 15 months. However, the following StackOverflow question answered my query: [AWS CloudWatch unused custom metrics retention and pricing](https://stackoverflow.com/questions/48115239/aws-cloudwatch-unused-custom-metrics-retention-and-pricing-2018)
 
+> The [pricing page](https://aws.amazon.com/cloudwatch/pricing/) states that "All custom metrics charges are prorated by the hour and metered only when you send metrics to CloudWatch". By this, they mean that they charge 1/720 of the monthly costs for the custom metrics for every hour in which you push at least one data point to the custom metric (counting 30 * 24 = 720 hours in a month).
+
 ## Summary
 
 In this post, we saw how we can add extra information to our custom metrics using properties. These properties can then be queried using CloudWatch Insights, allowing us to such things as help us investigate system errors.
