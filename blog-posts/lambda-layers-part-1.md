@@ -98,7 +98,9 @@ Code structure?
       \CustomerUpdateHandler.AccountUpdaterFunction.ts
 \test
    \application
+      \CustomerUpdateHandler.AccountUpdaterFunction.test.ts
+         - Jest-based unit tests mocking the repositories
       \CustomerUpdateHandlerTestStack.ts (use table constructs from data-storage?)
-      ??? How would this work ??? 
-      If the data access layer relies on a GSI, then our test stack would need it.
+         - Use Table constructs from data-storage
+         - Have a test SNS topic to trigger the function
 ```
