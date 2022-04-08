@@ -29,10 +29,10 @@ Questions
 
 What application are we going to build?
 
-- We need a repository? What could be in it?
+- We need a Store? What could be in it?
 - Do we need more than one Lambda function? No, over-complicated.
 - What is the Lambda function going to do?
-  - Should it interact with more than one repository?
+  - Should it interact with more than one Store?
   - What business functionality could it do?
 
 What is the progression that we want to show:
@@ -54,10 +54,10 @@ What is the progression that we want to show:
 So, the plan is for a Lambda function that does the following:
 
 - Triggered by `CustomerUpdatedEvent` containing a `customerId`
-- Call `ICustomerRepository.loadAsync` to get `Customer`
-- Call `IAccountRepository.listByCustomerIdAsync` to get `Account[]`
+- Call `ICustomerStore.loadAsync` to get `Customer`
+- Call `IAccountStore.listByCustomerIdAsync` to get `Account[]`
 - Update all `Account.address` with `Customer.address`
-- Call `IAccountRepository.saveBatchAsync` with updated `Account[]`
+- Call `IAccountStore.saveBatchAsync` with updated `Account[]`
 
 > Q. Should there be a domain layer somewhere?
 
@@ -75,8 +75,8 @@ We will have the following stacks:
     - `Address`
     - `Account`
   - Repositories:
-    - `CustomerRepository`
-    - `AccountRepository`
+    - `CustomerStore`
+    - `AccountStore`
 - `ApplicationStack` containing:
    - `CustomerUpdateHandler` CDK construct
    - `AccountUpdaterFunction` Lambda function
@@ -84,23 +84,36 @@ We will have the following stacks:
 Code structure?
 ```
 \src
-   \cdk-app.ts
+   \cdk-app.ts (DataStorageStack and ApplicationStack)
+   \cdk-app-test.ts (CustomerStoreTestStack, AccountStoreTestStack and CustomerUpdatedHandlerTestStack)
    \data-storage
       \DataStorageStack.ts (export names of SSM params and env variables)
       \CustomerTable.ts (construct)
       \AccountTable.ts (construct)
    \data-access (to be turned into a layer later)
+      \DataAccessStack.ts (outputs a layer and sets SSM parameters)
+      \CustomerStore.ts
+      \AccountStore.ts
+   \domain-contracts (pure interface)
+      \events.ts (CustomerUpdated)
       \models.ts (Customer, Address, and Account)
-      \CustomerRepository.ts
-      \AccountRepository.ts
+      \services.ts (ICustomerStore, IAccountStore)
    \application
+      \ApplicationStack.ts (use SSM parameters for table names)
       \CustomerUpdateHandler.ts
-      \CustomerUpdateHandler.AccountUpdaterFunction.ts
+      \CustomerUpdateHandler.AccountUpdaterFunction-v1.ts (with all code in it)
+      \CustomerUpdateHandler.AccountUpdaterFunction-v2.ts (using domain-contracts and data-access)
 \test
    \application
-      \CustomerUpdateHandler.AccountUpdaterFunction.test.ts
+      \CustomerUpdatedHandler.AccountUpdaterFunction.test.ts
          - Jest-based unit tests mocking the repositories
-      \CustomerUpdateHandlerTestStack.ts (use table constructs from data-storage?)
+      \CustomerUpdatedHandlerTestStack.ts (use table constructs from data-storage?)
          - Use Table constructs from data-storage
          - Have a test SNS topic to trigger the function
+      \CustomerUpdatedHandler.test.ts
+   \data-access
+      \CustomerStoreTestStack.ts
+      \CustomerStore.test.ts
+      \AccountStoreTestStack.ts
+      \AccountStore.test.ts
 ```
