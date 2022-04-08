@@ -1,6 +1,6 @@
 # Title - Make debugging easier with custom metric properties
 
-In the [first post](https://aws.hashnode.com/lambda-custom-metrics-aws) of the series we saw how we can use the [`aws-embedded-metrics`](https://github.com/awslabs/aws-embedded-metrics-node) npm package to easily output custom metrics from our Lambda functions. In the [second post](https://aws.hashnode.com/creating-custom-metric-alarms-with-cdk), we saw how we could use custom metrics to trigger alarms when our application went wrong. In this final post of the series, we will see how we can add properties to our custom metrics to help us diagnose what has gone wrong.
+In the [first post](https://www.10printiamcool.com/adding-lambda-custom-metrics-the-easy-way) of the series we saw how we can use the [`aws-embedded-metrics`](https://github.com/awslabs/aws-embedded-metrics-node) npm package to easily output custom metrics from our Lambda functions. In the [second post](https://www.10printiamcool.com/creating-custom-metric-alarms-with-cdk), we saw how we could use custom metrics to trigger alarms when our application went wrong. In this final post of the series, we will see how we can add properties to our custom metrics to help us diagnose what has gone wrong.
 
 The code for this post can be found in the accompanying [GitHub repo](https://github.com/andybalham/blog-embedded-metrics-3) ready to be cloned and run.
 
