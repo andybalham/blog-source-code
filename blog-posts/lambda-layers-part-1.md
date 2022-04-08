@@ -85,7 +85,6 @@ Code structure?
 ```
 \src
    \cdk-app.ts (DataStorageStack and ApplicationStack)
-   \cdk-app-test.ts (CustomerStoreTestStack, AccountStoreTestStack and CustomerUpdatedHandlerTestStack)
    \data-storage
       \DataStorageStack.ts (export names of SSM params and env variables)
       \CustomerTable.ts (construct)
@@ -100,10 +99,11 @@ Code structure?
       \services.ts (ICustomerStore, IAccountStore)
    \application
       \ApplicationStack.ts (use SSM parameters for table names)
-      \CustomerUpdateHandler.ts
-      \CustomerUpdateHandler.AccountUpdaterFunction-v1.ts (with all code in it)
-      \CustomerUpdateHandler.AccountUpdaterFunction-v2.ts (using domain-contracts and data-access)
+      \  
+      \CustomerUpdatedHandler.AccountUpdaterFunctionV1.ts (with all code in it)
+      \CustomerUpdatedHandler.AccountUpdaterFunctionV2.ts (using domain-contracts and data-access)
 \test
+   \cdk-app-test.ts (CustomerStoreTestStack, AccountStoreTestStack and CustomerUpdatedHandlerTestStack)
    \application
       \CustomerUpdatedHandler.AccountUpdaterFunction.test.ts
          - Jest-based unit tests mocking the repositories
