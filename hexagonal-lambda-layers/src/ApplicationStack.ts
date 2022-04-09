@@ -3,7 +3,9 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import * as cdk from '@aws-cdk/core';
 import * as sns from '@aws-cdk/aws-sns';
-import CustomerUpdatedHandler from './CustomerUpdatedHandler';
+import * as ssm from '@aws-cdk/aws-ssm';
+import CustomerUpdatedHandler from './application/CustomerUpdatedHandler';
+import { AccountDetailTable } from './data-storage';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface ApplicationStackProps {
@@ -16,10 +18,22 @@ export default class ApplicationStack extends cdk.Stack {
 
     const customerUpdatedTopic = new sns.Topic(this, 'CustomerUpdatedTopic');
 
+    const customerTableNameParameter = ssm.StringParameter.fromStringParameterName(
+      this,
+      'CustomerTableNameParameter',
+      AccountDetailTable.TABLE_NAME_SSM_PARAMETER
+    );
+
+    const accountDetailTableNameParameter = ssm.StringParameter.fromStringParameterName(
+      this,
+      'AccountDetailTableNameParameter',
+      AccountDetailTable.TABLE_NAME_SSM_PARAMETER
+    );
+
     new CustomerUpdatedHandler(this, 'CustomerUpdatedHandler', {
       customerUpdatedTopic,
-      customerTableName: 'TODO: Get from SSM parameter',
-      accountDetailTableName: 'TODO: Get from SSM parameter',
+      customerTableName: customerTableNameParameter.stringValue,
+      accountDetailTableName: accountDetailTableNameParameter.stringValue,
     });
   }
 }
