@@ -11,7 +11,11 @@
     "test": "mocha --require ts-node/register test/**/*.ts",
     "test-coverage": "nyc npm run test",
     "cdk-synth-application": "tsc && cdk synth ApplicationStack > .cdk-synth.yml",
+    "cdk-deploy-application": "tsc && cdk deploy ApplicationStack",
+    "cdk-hotswap-application": "tsc && cdk deploy ApplicationStack --hotswap",
+    "cdk-destroy-application": "tsc && cdk destroy ApplicationStack",
     "cdk-synth-data-storage": "tsc && cdk synth DataStorageStack > .cdk-synth.yml",
+    "cdk-deploy-data-storage": "tsc && cdk deploy DataStorageStack",
     "cdk-synth": "tsc && cdk synth > .cdk-synth.yml",
     "cdk-destroy-all": "tsc && cdk destroy --all"
   },

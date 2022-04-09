@@ -23,9 +23,15 @@ export const handler = async (event: SNSEvent): Promise<void> => {
 
   const accountUpdaterFunctionResults = await Promise.allSettled(accountUpdaterFunctionPromises);
 
-  if (accountUpdaterFunctionResults.some((r) => r.status === 'rejected')) {
+  const rejectedReasons = accountUpdaterFunctionResults
+    .filter((r) => r.status === 'rejected')
+    .map((r) => (r as PromiseRejectedResult).reason);
+
+  if (rejectedReasons.length > 0) {
     throw new Error(
-      `One or more records were not successfully processed: ${JSON.stringify({ event })}`
+      `One or more records were not successfully processed: ${JSON.stringify({
+        rejectedReasons,
+      })}`
     );
   }
 };

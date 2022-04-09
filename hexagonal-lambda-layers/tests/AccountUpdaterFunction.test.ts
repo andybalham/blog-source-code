@@ -16,11 +16,11 @@ describe('AccountUpdaterFunction Test Suite', () => {
   const testCustomerId = 'TestCustomerId';
 
   const testCustomer: Customer = {
-    customerId: testCustomerId,
-    name: 'Test Customer',
-    address: {
-      lines: ['Line1', 'Line2'],
-      postalCode: 'PostalCode',
+    "customerId": testCustomerId,
+    "name": 'Test Customer',
+    "address": {
+      "lines": ['Line1', 'Line2'],
+      "postalCode": 'PostalCode',
     },
   };
 
@@ -70,7 +70,7 @@ describe('AccountUpdaterFunction Test Suite', () => {
     // Arrange
 
     const accountDetail: AccountDetail = {
-      accountId: 'TestAccountId',
+      accountDetailId: 'TestAccountId',
       customerId: testCustomerId,
       correspondenceAddress: {
         lines: ['CorrespondenceLine1', 'CorrespondenceLine2'],

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable import/extensions, import/no-absolute-path */
 import { CustomerUpdatedEvent, IAccountDetailStore, ICustomerStore } from '../../domain-contracts';
 
@@ -12,7 +13,9 @@ export default class AccountUpdaterFunction {
     const customer = await this.customerStore.retrieveCustomerAsync(event.customerId);
 
     if (!customer) {
-      throw new Error(`No customer found for event: ${JSON.stringify(event)}`);
+      const errorMessage = `No customer found for event: ${JSON.stringify(event)}`;
+      console.error(errorMessage);
+      throw new Error(errorMessage);
     }
 
     const accountDetails = await this.accountDetailsStore.listAccountDetailsByCustomerIdAsync(
@@ -32,10 +35,14 @@ export default class AccountUpdaterFunction {
 
     const updateAccountDetailResults = await Promise.allSettled(updateAccountDetailPromises);
 
-    if (updateAccountDetailResults.some((r) => r.status === 'rejected')) {
+    const rejectedReasons = updateAccountDetailResults
+      .filter((r) => r.status === 'rejected')
+      .map((r) => (r as PromiseRejectedResult).reason);
+
+    if (rejectedReasons.length > 0) {
       throw new Error(
         `One or more account detail updates were not processed successfully: ${JSON.stringify({
-          event,
+          rejectedReasons,
         })}`
       );
     }

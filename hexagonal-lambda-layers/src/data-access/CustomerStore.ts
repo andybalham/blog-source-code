@@ -24,10 +24,11 @@ export default class CustomerStore implements ICustomerStore {
     //
     if (this.tableName === undefined) throw new Error('this.tableName === undefined');
 
-    const itemOutput = await documentClient
-      .get({ TableName: this.tableName, Key: { customerId } })
-      .promise();
+    const getItemInput = { TableName: this.tableName, Key: { customerId } };
+    console.log(JSON.stringify({ getItemInput }, null, 2));
 
-    return itemOutput.Item === undefined ? undefined : (itemOutput.Item as Customer);
+    const getItemOutput = await documentClient.get(getItemInput).promise();
+
+    return getItemOutput.Item === undefined ? undefined : (getItemOutput.Item as Customer);
   }
 }

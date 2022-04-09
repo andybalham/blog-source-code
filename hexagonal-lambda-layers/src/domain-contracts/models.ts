@@ -10,7 +10,7 @@ export interface Customer {
 }
 
 export interface AccountDetail {
-  accountId: string;
+  accountDetailId: string;
   customerId: string;
   correspondenceAddress: Address;
   billingAddress: Address;

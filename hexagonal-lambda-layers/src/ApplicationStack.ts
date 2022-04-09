@@ -5,7 +5,7 @@ import * as cdk from '@aws-cdk/core';
 import * as sns from '@aws-cdk/aws-sns';
 import * as ssm from '@aws-cdk/aws-ssm';
 import CustomerUpdatedHandler from './application/CustomerUpdatedHandler';
-import { AccountDetailTable } from './data-storage';
+import { AccountDetailTable, CustomerTable } from './data-storage';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface ApplicationStackProps {
@@ -21,7 +21,7 @@ export default class ApplicationStack extends cdk.Stack {
     const customerTableNameParameter = ssm.StringParameter.fromStringParameterName(
       this,
       'CustomerTableNameParameter',
-      AccountDetailTable.TABLE_NAME_SSM_PARAMETER
+      CustomerTable.TABLE_NAME_SSM_PARAMETER
     );
 
     const accountDetailTableNameParameter = ssm.StringParameter.fromStringParameterName(
