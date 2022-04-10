@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable import/extensions, import/no-absolute-path */
 import { SNSEvent } from 'aws-lambda';
-import { AccountDetailStore, CustomerStore } from '../data-access';
+import { AccountDetailStore, CustomerStore } from '/opt/nodejs/data-access';
 import AccountUpdaterFunction from '../domain-functions/AccountUpdaterFunction';
 import { CustomerUpdatedEvent } from '../domain-contracts';
 

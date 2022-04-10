@@ -1,12 +1,12 @@
 /* eslint-disable no-console */
 /* eslint-disable import/extensions, import/no-absolute-path */
-import AccountUpdaterFunction from '../src/application/domain-functions/AccountUpdaterFunction';
+import AccountUpdaterFunction from '../../src/domain-functions/AccountUpdaterFunction';
 import {
   Customer,
   ICustomerStore,
   IAccountDetailStore,
   AccountDetail,
-} from '../src/domain-contracts';
+} from '../../src/domain-contracts';
 
 describe('AccountUpdaterFunction Test Suite', () => {
   //

@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 /* eslint-disable import/extensions, import/no-absolute-path */
-import { CustomerUpdatedEvent, IAccountDetailStore, ICustomerStore } from '../../domain-contracts';
+import { CustomerUpdatedEvent, IAccountDetailStore, ICustomerStore } from '../domain-contracts';
 
 export default class AccountUpdaterFunction {
   constructor(

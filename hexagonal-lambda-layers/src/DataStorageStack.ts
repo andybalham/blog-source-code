@@ -5,12 +5,12 @@ import * as cdk from '@aws-cdk/core';
 import { CustomerTable, AccountDetailTable } from './data-storage';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface DataStorageProps {
+export interface DataStorageStackProps {
   // TODO 08Apr22: Do we need to pass anything in here?
 }
 
-export default class DataStorage extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props: DataStorageProps) {
+export default class DataStorageStack extends cdk.Stack {
+  constructor(scope: cdk.Construct, id: string, props: DataStorageStackProps) {
     super(scope, id);
 
     new CustomerTable(this, 'CustomerTable');

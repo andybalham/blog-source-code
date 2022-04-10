@@ -32,9 +32,12 @@ export default class CustomerUpdatedHandler extends cdk.Construct {
       props.accountDetailTableName
     );
 
+    // TODO 10Apr22: We don't want to use ESBuild here for V3
+
     const accountUpdaterFunction = new lambdaNodejs.NodejsFunction(
       scope,
-      'AccountUpdaterFunctionV2',
+      // 'AccountUpdaterFunctionV2',
+      'AccountUpdaterFunctionV3',
       {
         environment: {
           [ENV_VAR_CUSTOMER_TABLE_NAME]: props.customerTableName,
