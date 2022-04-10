@@ -187,7 +187,7 @@ this.inputFunction = identityCheckProxyFunction;
 
 To test our state machine, we deploy the construct as part of an [Integration Test Stack](TODO) and create a [unit test](TODO) to invoke it asynchronously.
 
-> If we invoke the Lambda function synchronously, then we will get a `200 - Success` response. However, the 'success' Destination will not be invoked and our state machine will not run. I wondered if we could use the [AWS Lambda context object](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-context.html) to see if we could check within a Lambda function if it had been invoked synchronously or not. However, as far as I could tell, this is not currently possible. So if we intend for a Lambda function to only be called asynchronously, then we need to be careful to only invoke it asynchronously. We cannot assert the calling method within the Lambda function itself.
+> If we invoke the Lambda function synchronously, then we will get a `200 - Success` response. However, the 'success' Destination will not be invoked and our state machine will not run. I wondered if we could use the [AWS Lambda context object](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-context.html) to see if we could check within a Lambda function if it had been invoked synchronously or not. However, as far as I could tell, this is not currently possible. So if we intend for a Lambda function to only be called asynchronously, then we need to be careful to only invoke it asynchronously. We cannot assert how the Lambda function is being called from within the Lambda function itself.
 
 Looking at the AWS Console we can see that one of our queue contains a message:
 
