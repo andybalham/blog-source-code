@@ -2,7 +2,7 @@
 /* eslint-disable no-new */
 /* eslint-disable import/no-extraneous-dependencies */
 import * as cdk from '@aws-cdk/core';
-import { CustomerTable, AccountDetailTable } from './data-storage';
+import { CustomerTable, AccountDetailTable } from '../data-storage';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface DataStorageStackProps {

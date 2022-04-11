@@ -2,7 +2,7 @@
 /* eslint-disable no-new */
 /* eslint-disable import/no-extraneous-dependencies */
 import * as cdk from '@aws-cdk/core';
-import DataAccessLayer from './data-access/DataAccessLayer';
+import DataAccessLayer from '../data-access/DataAccessLayer';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface DataAccessStackProps {

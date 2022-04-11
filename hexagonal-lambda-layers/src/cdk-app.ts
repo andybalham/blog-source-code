@@ -1,9 +1,9 @@
 /* eslint-disable import/no-extraneous-dependencies */
 /* eslint-disable no-new */
 import * as cdk from '@aws-cdk/core';
-import ApplicationStack from './ApplicationStack';
-import DataAccessStack from './DataAccessStack';
-import DataStorageStack from './DataStorageStack';
+import ApplicationStack from './stacks/ApplicationStack';
+import DataAccessStack from './stacks/DataAccessStack';
+import DataStorageStack from './stacks/DataStorageStack';
 
 const app = new cdk.App();
 cdk.Tags.of(app).add('app', 'HexagonalLambdaLayersApp');
