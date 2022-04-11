@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 /* eslint-disable import/extensions, import/no-absolute-path */
-import AccountUpdaterFunction from '../../src/domain-functions/AccountUpdaterFunction';
+import AccountUpdater from '../../src/application/account-updater/AccountUpdater';
 import {
   Customer,
   ICustomerStore,
@@ -8,7 +8,7 @@ import {
   AccountDetail,
 } from '../../src/domain-contracts';
 
-describe('AccountUpdaterFunction Test Suite', () => {
+describe('AccountUpdater Test Suite', () => {
   //
   let customerStoreMock: ICustomerStore;
   let accountDetailStoreMock: IAccountDetailStore;
@@ -16,11 +16,11 @@ describe('AccountUpdaterFunction Test Suite', () => {
   const testCustomerId = 'TestCustomerId';
 
   const testCustomer: Customer = {
-    "customerId": testCustomerId,
-    "name": 'Test Customer',
-    "address": {
-      "lines": ['Line1', 'Line2'],
-      "postalCode": 'PostalCode',
+    customerId: testCustomerId,
+    name: 'Test Customer',
+    address: {
+      lines: ['Line1', 'Line2'],
+      postalCode: 'PostalCode',
     },
   };
 
@@ -42,14 +42,11 @@ describe('AccountUpdaterFunction Test Suite', () => {
     customerStoreMock.retrieveCustomerAsync = jest.fn().mockResolvedValue(testCustomer);
     accountDetailStoreMock.listAccountDetailsByCustomerIdAsync = jest.fn().mockResolvedValue([]);
 
-    const accountUpdaterFunction = new AccountUpdaterFunction(
-      customerStoreMock,
-      accountDetailStoreMock
-    );
+    const accountUpdaterFunction = new AccountUpdater(customerStoreMock, accountDetailStoreMock);
 
     // Act
 
-    await accountUpdaterFunction.handleAsync({
+    await accountUpdaterFunction.updateAccountsAsync({
       customerId: testCustomerId,
       billingUpdateRequested: false,
     });
@@ -90,14 +87,11 @@ describe('AccountUpdaterFunction Test Suite', () => {
     const updateAccountDetailMock = jest.fn();
     accountDetailStoreMock.updateAccountDetailAsync = updateAccountDetailMock;
 
-    const accountUpdaterFunction = new AccountUpdaterFunction(
-      customerStoreMock,
-      accountDetailStoreMock
-    );
+    const accountUpdaterFunction = new AccountUpdater(customerStoreMock, accountDetailStoreMock);
 
     // Act
 
-    await accountUpdaterFunction.handleAsync({
+    await accountUpdaterFunction.updateAccountsAsync({
       customerId: testCustomerId,
       billingUpdateRequested: false,
     });

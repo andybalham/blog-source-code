@@ -2,7 +2,7 @@
 /* eslint-disable no-new */
 /* eslint-disable import/no-extraneous-dependencies */
 import * as cdk from '@aws-cdk/core';
-import * as lambda from '@aws-cdk/aws-lambda';
+import DataAccessLayer from './data-access/DataAccessLayer';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface DataAccessStackProps {
@@ -16,16 +16,10 @@ export default class DataAccessStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props: DataAccessStackProps) {
     super(scope, id);
 
-    const layer = new lambda.LayerVersion(this, 'DataAccessLayer', {
-      compatibleRuntimes: [lambda.Runtime.NODEJS_12_X, lambda.Runtime.NODEJS_14_X],
-      code: lambda.Code.fromAsset('src/data-access'),
-      description: 'Provides data access clients',
-    });
-
-    // TODO 10Apr22: Make the layer a construct that updates the SSM parameter?
+    const dataAccessLayer = new DataAccessLayer(this, 'DataAccessLayer');
 
     new cdk.CfnOutput(this, 'DataAccessLayerArn', {
-      value: layer.layerVersionArn,
+      value: dataAccessLayer.layer.layerVersionArn,
     });
   }
 }

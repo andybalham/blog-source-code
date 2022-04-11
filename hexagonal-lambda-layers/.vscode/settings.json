@@ -17,6 +17,7 @@
     "outfile",
     "plusplus",
     "resourcegroupstaggingapi",
+    "Runtimes",
     "stepfunctions",
     "TRes",
     "vars"
@@ -31,6 +32,19 @@
         {
           "region": "eu-west-2",
           "stackName": "ApplicationStack",
+          "stage": "dev"
+        }
+      ]
+    },
+    {
+      "type": "cloudformation",
+      "title": "Data Storage Stack",
+      "timeOffsetInMs": 0,
+      "awsProfile": "default",
+      "stacks": [
+        {
+          "region": "eu-west-2",
+          "stackName": "DataStorageStack",
           "stage": "dev"
         }
       ]

@@ -4,8 +4,8 @@
 /* eslint-disable class-methods-use-this */
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import https from 'https';
-import { Customer } from '../../domain-contracts/models';
-import { ICustomerStore } from '../../domain-contracts/services';
+import { Customer } from '../../../domain-contracts/models';
+import { ICustomerStore } from '../../../domain-contracts/services';
 
 const agent = new https.Agent({
   keepAlive: true,

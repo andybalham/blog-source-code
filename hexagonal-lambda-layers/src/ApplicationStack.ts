@@ -6,6 +6,7 @@ import * as sns from '@aws-cdk/aws-sns';
 import * as ssm from '@aws-cdk/aws-ssm';
 import CustomerUpdatedHandler from './application/CustomerUpdatedHandler';
 import { AccountDetailTable, CustomerTable } from './data-storage';
+import DataAccessLayer from './data-access/DataAccessLayer';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface ApplicationStackProps {
@@ -30,7 +31,14 @@ export default class ApplicationStack extends cdk.Stack {
       AccountDetailTable.TABLE_NAME_SSM_PARAMETER
     );
 
+    const dataAccessLayerArnSsmParameter = ssm.StringParameter.fromStringParameterName(
+      this,
+      'DataAccessLayerArnSsmParameter',
+      DataAccessLayer.LAYER_ARN_SSM_PARAMETER
+    );
+
     new CustomerUpdatedHandler(this, 'CustomerUpdatedHandler', {
+      dataAccessLayerArn: dataAccessLayerArnSsmParameter.stringValue,
       customerUpdatedTopic,
       customerTableName: customerTableNameParameter.stringValue,
       accountDetailTableName: accountDetailTableNameParameter.stringValue,

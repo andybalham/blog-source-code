@@ -1,14 +1,14 @@
 /* eslint-disable no-console */
 /* eslint-disable import/extensions, import/no-absolute-path */
-import { CustomerUpdatedEvent, IAccountDetailStore, ICustomerStore } from '../domain-contracts';
+import { CustomerUpdatedEvent, IAccountDetailStore, ICustomerStore } from '../../domain-contracts';
 
-export default class AccountUpdaterFunction {
+export default class AccountUpdater {
   constructor(
     private customerStore: ICustomerStore,
     private accountDetailsStore: IAccountDetailStore
   ) {}
 
-  async handleAsync(event: CustomerUpdatedEvent): Promise<void> {
+  async updateAccountsAsync(event: CustomerUpdatedEvent): Promise<void> {
     //
     const customer = await this.customerStore.retrieveCustomerAsync(event.customerId);
 

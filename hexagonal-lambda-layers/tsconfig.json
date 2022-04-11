@@ -57,7 +57,7 @@
     "forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */,
     "baseUrl": "./" /* Base directory to resolve non-absolute module names. */,
     "paths": {
-      "/opt/nodejs/data-access": ["src/data-access/nodejs/data-access"]
+      "/opt/nodejs/data-access": ["src/data-access/layer/nodejs/data-access"]
     }
   },
   "include": ["src/**/*", "tests/**/*"]
