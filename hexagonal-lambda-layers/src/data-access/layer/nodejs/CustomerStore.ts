@@ -25,7 +25,6 @@ export default class CustomerStore implements ICustomerStore {
     if (this.tableName === undefined) throw new Error('this.tableName === undefined');
 
     const getItemInput = { TableName: this.tableName, Key: { customerId } };
-    console.log(JSON.stringify({ getItemInput }, null, 2));
 
     const getItemOutput = await documentClient.get(getItemInput).promise();
 

@@ -19,6 +19,8 @@ export interface CustomerUpdatedProps {
   accountDetailTableName: string;
 }
 
+const dataAccessImplementation: 'inline' | 'package' | 'layer' = 'layer';
+
 export default class CustomerUpdatedHandler extends cdk.Construct {
   constructor(scope: cdk.Construct, id: string, props: CustomerUpdatedProps) {
     super(scope, id);
@@ -35,6 +37,19 @@ export default class CustomerUpdatedHandler extends cdk.Construct {
       props.accountDetailTableName
     );
 
+    // V1 with data access
+
+    const accountUpdaterFunctionV1 = new lambdaNodejs.NodejsFunction(
+      scope,
+      'AccountUpdaterFunctionV1',
+      {
+        environment: {
+          [ENV_VAR_CUSTOMER_TABLE_NAME]: props.customerTableName,
+          [ENV_VAR_ACCOUNT_DETAIL_TABLE_NAME]: props.accountDetailTableName,
+        },
+      }
+    );
+
     // V2 with domain contracts
 
     const accountUpdaterFunctionV2 = new lambdaNodejs.NodejsFunction(
@@ -47,13 +62,6 @@ export default class CustomerUpdatedHandler extends cdk.Construct {
         },
       }
     );
-
-    // props.customerUpdatedTopic.addSubscription(
-    //   new snsSubs.LambdaSubscription(accountUpdaterFunctionV2)
-    // );
-
-    customerTable.grantReadData(accountUpdaterFunctionV2);
-    accountDetailTable.grantReadWriteData(accountUpdaterFunctionV2);
 
     // V3 with Lambda layer
 
@@ -76,11 +84,30 @@ export default class CustomerUpdatedHandler extends cdk.Construct {
       layers: [dataAccessLayer],
     });
 
+    let accountUpdaterFunction: lambda.IFunction;
+
+    switch (dataAccessImplementation) {
+      case 'inline':
+        accountUpdaterFunction = accountUpdaterFunctionV1;
+        break;
+
+      case 'package':
+        accountUpdaterFunction = accountUpdaterFunctionV2;
+        break;
+
+      case 'layer':
+        accountUpdaterFunction = accountUpdaterFunctionV3;
+        break;
+
+      default:
+        throw new Error(`Unhandled: ${JSON.stringify({ dataAccessImplementation })}`);
+    }
+
     props.customerUpdatedTopic.addSubscription(
-      new snsSubs.LambdaSubscription(accountUpdaterFunctionV3)
+      new snsSubs.LambdaSubscription(accountUpdaterFunction)
     );
 
-    customerTable.grantReadData(accountUpdaterFunctionV3);
-    accountDetailTable.grantReadWriteData(accountUpdaterFunctionV3);
+    customerTable.grantReadData(accountUpdaterFunction);
+    accountDetailTable.grantReadWriteData(accountUpdaterFunction);
   }
 }
