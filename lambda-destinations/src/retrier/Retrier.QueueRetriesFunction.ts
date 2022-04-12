@@ -4,7 +4,7 @@
 /* eslint-disable import/prefer-default-export */
 import { SQSEvent } from 'aws-lambda/trigger/sqs';
 import SQS, { SendMessageRequest } from 'aws-sdk/clients/sqs';
-import { LoanProcessorState } from '../contracts/loan-processor';
+import { RetriableState } from './RetriableState';
 
 export const RETRY_QUEUE_URL_ENV_VAR = 'RETRY_QUEUE_URL';
 export const MAX_RETRY_COUNT_ENV_VAR = 'MAX_RETRY_COUNT';
@@ -36,25 +36,25 @@ export const handler = async (failureEvent: SQSEvent): Promise<void> => {
     )
   );
 
-  const loanProcessorState = failureEventBody.requestPayload as LoanProcessorState;
+  const retriableState = failureEventBody.requestPayload as RetriableState;
 
-  if (loanProcessorState.retryCount >= maxRetryCount) {
+  if (retriableState.retryCount >= maxRetryCount) {
     console.error(
       `Maximum retry count exceeded: ${JSON.stringify({
         maxRetryCount,
-        retryCount: loanProcessorState.retryCount,
-        correlationId: loanProcessorState.input.correlationId,
+        retryCount: retriableState.retryCount,
+        correlationId: retriableState.correlationId,
       })}`
     );
     return;
   }
-  loanProcessorState.retryCount += 1;
+  retriableState.retryCount += 1;
 
   if (queueUrl === undefined) throw new Error('queueUrl === undefined');
 
   const sendMessageRequest: SendMessageRequest = {
     QueueUrl: queueUrl,
-    MessageBody: JSON.stringify(loanProcessorState),
+    MessageBody: JSON.stringify(retriableState),
   };
 
   const sendMessageResult = await sqs.sendMessage(sendMessageRequest).promise();

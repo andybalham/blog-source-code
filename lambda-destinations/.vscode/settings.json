@@ -17,6 +17,7 @@
     "outfile",
     "plusplus",
     "resourcegroupstaggingapi",
+    "Retriable",
     "Retrier",
     "stepfunctions",
     "TRes",

@@ -66,7 +66,7 @@ export const handler = async (state: LoanProcessorState): Promise<LoanProcessorS
 
   const request: IdentityCheckRequest = {
     requestId: nanoid(),
-    correlationId: state.input.correlationId,
+    correlationId: state.correlationId,
     firstName: state.input.firstName,
     lastName: state.input.lastName,
     postcode: state.input.postcode,

@@ -1,14 +1,13 @@
 import { CreditReferenceRating } from './credit-reference';
+import { RetriableState } from '../retrier/RetriableState';
 
-export interface LoanProcessorState {
+export interface LoanProcessorState extends RetriableState {
   input: LoanProcessorInput;
   creditReference?: CreditReference;
   identityCheck?: IdentityCheck;
-  retryCount: number;
 }
 
 export interface LoanProcessorInput {
-  correlationId: string;
   firstName: string;
   lastName: string;
   postcode: string;

@@ -28,8 +28,8 @@ describe('LoanProcessor Test Suite', () => {
   it.only('invoke state machine once', async () => {
     //
     const initialLoanProcessState: LoanProcessorState = {
+      correlationId: nanoid(),
       input: {
-        correlationId: nanoid(),
         firstName: 'Trevor',
         lastName: 'Potato',
         postcode: 'MK3 9SE',
