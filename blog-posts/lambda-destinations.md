@@ -1,12 +1,14 @@
 # Building a state machine with Lambda Destinations and CDK
 
-In this post we will look at how we can use [Lambda destinations](TODO) and CDK to create an asynchronous and idempotent state machine. [AWS announced Lambda destinations](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-destinations/) in November 2019, so perhaps I am a little late to the party, but I hadn't yet used them and I wanted to try them out.
+In this post we will look at how we can use [Lambda destinations](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-destinations/) and CDK to create an asynchronous and idempotent state machine. [AWS announced Lambda destinations](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-destinations/) in November 2019, so perhaps I am a little late to the party, but I hadn't yet used them and I wanted to try them out.
 
-The code for this blog post is ready to be cloned, deployed, and run from the accompanying [GitHub repo](TODO).
+The code for this blog post is ready to be cloned, deployed, and run from the accompanying [GitHub repo](https://github.com/andybalham/blog-lambda-destinations).
 
 ## TL;DR
 
-TODO
+- Destinations can be used to loosely couple Lambda functions together
+- Destinations are not used when a Lambda function is invoked synchronously
+- You can't inspect how a Lambda function is invoked
 
 ## Introduction to Lambda destinations
 
@@ -185,7 +187,7 @@ this.inputFunction = identityCheckProxyFunction;
 
 ## Testing the happy path
 
-To test our state machine, we deploy the construct as part of an [Integration Test Stack](TODO) and create a [unit test](TODO) to invoke it asynchronously.
+To test our state machine, we deploy the construct as part of an [Integration Test Stack](https://github.com/andybalham/blog-lambda-destinations/blob/master/lib/LoanProcessorTestStack.ts) and create a [unit test](https://github.com/andybalham/blog-lambda-destinations/blob/master/test/LoanProcesor.test.ts) to invoke it asynchronously.
 
 > If we invoke the Lambda function synchronously, then we will get a `200 - Success` response. However, the 'success' Destination will not be invoked and our state machine will not run. I wondered if we could use the [AWS Lambda context object](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-context.html) to see if we could check within a Lambda function if it had been invoked synchronously or not. However, as far as I could tell, this is not currently possible. So if we intend for a Lambda function to only be called asynchronously, then we need to be careful to only invoke it asynchronously. We cannot assert how the Lambda function is being called from within the Lambda function itself.
 
