@@ -18,4 +18,21 @@ We want to add retry functionality
 
 Idempotency, two Lambda functions and an SQS queue
 
-## Wrap in a construct
+Explain the two-taps approach
+
+## The implementation
+
+Show how we can build a CDK construct that we can reuse
+
+## Testing 
+
+Step through capturing a set of errors, then retrying, failing again, then succeeding
+
+## Summary
+
+Highlight how we now have 
+
+## Resources
+
+* [Idempotence - wikipedia](https://en.wikipedia.org/wiki/Idempotence)
+* [What Is Idempotence?](https://www.bmc.com/blogs/idempotence/)

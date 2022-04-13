@@ -1,10 +1,12 @@
-What do we want to put in the lambda layer?
+## What did we learn?
 
-The idea was to have a data access layer:
+* Lambda layers are immutable
+* `esbuild` will bundle code not in excluded modules
+   * Need to bundle manually
+* Can use paths in `tsconfig`
+* Can use SSM parameters to deploy updates with no rebuild
 
-```TypeScript
-
-```
+## Notes
 
 What is the story that we want to tell?
 

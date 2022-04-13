@@ -3,6 +3,7 @@
 import { IntegrationTestStack } from '@andybalham/sls-testing-toolkit';
 import * as cdk from '@aws-cdk/core';
 import LoanProcessor from '../src/loan-processor/LoanProcessor';
+import Retrier from '../src/retrier/Retrier';
 
 export interface LoanProcessorTestStackProps {
   creditReferenceUrlParameterName: string;
@@ -17,14 +18,11 @@ export default class LoanProcessorTestStack extends IntegrationTestStack {
 
   static readonly LoanProcessorOutputId = 'LoanProcessorOutput';
 
-  static readonly LoanProcessorFailureId = 'LoanProcessorFailure';
-
   constructor(scope: cdk.Construct, id: string, props: LoanProcessorTestStackProps) {
     super(scope, id, {
       testStackId: LoanProcessorTestStack.StackId,
       testFunctionIds: [
         // LoanProcessorTestStack.LoanProcessorOutputId,
-        // LoanProcessorTestStack.LoanProcessorFailureId,
       ],
     });
 
@@ -33,14 +31,14 @@ export default class LoanProcessorTestStack extends IntegrationTestStack {
       identityCheckUrlParameterName: props.identityCheckUrlParameterName,
     });
 
+    new Retrier(this, 'Retrier', {
+      failureQueue: loanProcessor.failureQueue,
+      retryFunction: loanProcessor.inputFunction,
+    });
+
     // this.addSQSQueueConsumer(
     //   loanProcessor.outputQueue,
     //   LoanProcessorTestStack.LoanProcessorOutputId
-    // );
-
-    // this.addSQSQueueConsumer(
-    //   loanProcessor.failureQueue,
-    //   LoanProcessorTestStack.LoanProcessorFailureId
     // );
 
     this.addTestResourceTag(
