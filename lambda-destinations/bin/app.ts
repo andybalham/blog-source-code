@@ -10,12 +10,12 @@ cdk.Tags.of(app).add('app', 'EmbeddedMetricsTestApp2');
 const creditReferenceUrlParameterName = '/mock-apis/credit-reference-api/base-url';
 const identityCheckUrlParameterName = '/mock-apis/identity-check-api/base-url';
 
-new MockApiStack(app, 'MockApiStack', {
+new MockApiStack(app, 'RetrierMockApiStack', {
   creditReferenceUrlParameterName,
   identityCheckUrlParameterName,
 });
 
-new LoanProcessorTestStack(app, 'LoanProcessorTestStack', {
+new LoanProcessorTestStack(app, 'RetrierLoanProcessorTestStack', {
   creditReferenceUrlParameterName,
   identityCheckUrlParameterName,
 });

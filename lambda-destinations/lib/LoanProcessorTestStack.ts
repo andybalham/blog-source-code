@@ -22,7 +22,7 @@ export default class LoanProcessorTestStack extends IntegrationTestStack {
     super(scope, id, {
       testStackId: LoanProcessorTestStack.StackId,
       testFunctionIds: [
-        // LoanProcessorTestStack.LoanProcessorOutputId,
+        LoanProcessorTestStack.LoanProcessorOutputId,
       ],
     });
 
@@ -36,10 +36,10 @@ export default class LoanProcessorTestStack extends IntegrationTestStack {
       retryFunction: loanProcessor.inputFunction,
     });
 
-    // this.addSQSQueueConsumer(
-    //   loanProcessor.outputQueue,
-    //   LoanProcessorTestStack.LoanProcessorOutputId
-    // );
+    this.addSQSQueueConsumer(
+      loanProcessor.outputQueue,
+      LoanProcessorTestStack.LoanProcessorOutputId
+    );
 
     this.addTestResourceTag(
       loanProcessor.inputFunction,

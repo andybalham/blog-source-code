@@ -26,13 +26,13 @@
   "serverlessConsole.services": [
     {
       "type": "cloudformation",
-      "title": "Loan Processor Test Stack",
+      "title": "Retrier Loan Processor Stack",
       "timeOffsetInMs": 0,
       "awsProfile": "default",
       "stacks": [
         {
           "region": "eu-west-2",
-          "stackName": "LoanProcessorTestStack",
+          "stackName": "RetrierLoanProcessorTestStack",
           "stage": "dev"
         }
       ]

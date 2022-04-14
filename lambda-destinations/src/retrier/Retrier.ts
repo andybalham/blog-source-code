@@ -30,6 +30,7 @@ export default class Retrier extends cdk.Construct {
       // Does being on a queue count as being called asynchronously?
       // No, see https://aws.amazon.com/blogs/compute/introducing-aws-lambda-destinations/
       // onSuccess: new lambdaDestinations.SqsDestination(retryQueue),
+      description: 'Queues up the requests to be retried',
       environment: {
         [RETRY_QUEUE_URL_ENV_VAR]: retryQueue.queueUrl,
         [MAX_RETRY_COUNT_ENV_VAR]: '3',
@@ -51,6 +52,7 @@ export default class Retrier extends cdk.Construct {
     // Retry function
 
     const retryFunction = new lambdaNodejs.NodejsFunction(scope, 'RetryFunction', {
+      description: 'Retries the queued requests',
       environment: {
         [INPUT_FUNCTION_NAME_ENV_VAR]: props.retryFunction.functionName,
       },
