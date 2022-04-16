@@ -8,4 +8,4 @@ Serverless technology simplifies the creation of event-driven applications, but 
 
 # Bio
 
-Andy Blackledg  e is a Lead Engineer with [finova](https://www.finova.tech/). He has over thirty years professional experience, spanning COBOL on mainframes to TypeScript in the cloud. He also owns more ukuleles than necessary.
+Andy Blackledge is a Lead Engineer with [finova](https://www.finova.tech/). He has over thirty years professional experience, spanning COBOL on mainframes to TypeScript in the cloud. He also owns more ukuleles than necessary.
