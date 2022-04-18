@@ -13,7 +13,6 @@ export interface RetrierProps {
 }
 export default class Retrier extends cdk.Construct {
   //
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(scope: cdk.Construct, id: string, props: RetrierProps) {
     super(scope, id);
 

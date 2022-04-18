@@ -36,7 +36,7 @@ We are going to take advantage of this ability to chain components together to c
 
 The state machine we are going to build is shown below. It is going to take an input state, then make a call to an identity check service and a credit check service, before outputting the result to a 'success' SQS queue. If either calls fail, the error and state is going to be sent to a 'failure' SQS queue. We are going to wrap all this in a [CDK construct](https://docs.aws.amazon.com/cdk/v2/guide/constructs.html).
 
-![Destination-based state machine](https://cdn.hashnode.com/res/hashnode/image/upload/v1647807109617/WnD-Qax-N.png)
+![Destination-based state machine](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/lambda-destinations/state-machine.png?raw=true)
 
 The following interface shows the structure of the data that is passed through the state machine. The state machine is called with the `input` property populated, then the Lambda functions add the `identityCheck` and `creditReference` values. The final result is then sent to the 'success' SQS queue for further processing.
 
@@ -193,7 +193,7 @@ To test our state machine, we deploy the construct as part of an [Integration Te
 
 Looking at the AWS Console we can see that one of our queue contains a message:
 
-![AWS Console showing success message](https://cdn.hashnode.com/res/hashnode/image/upload/v1648492372015/_1e3mQCnJ.png)
+![AWS Console showing success message](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/lambda-destinations/console-success-message.png?raw=true)
 
 When we look at the message body we see the following:
 
@@ -248,7 +248,7 @@ Note that because we are invoking the Lambda functions asynchronously, the execu
 
 To test what happens when things go wrong, we configure one of our mock API endpoints to always error. In this case, the credit reference endpoint. Now when we run our unit test, we can see the failure queue has a message in it:
 
-![AWS Console showing failure message](https://cdn.hashnode.com/res/hashnode/image/upload/v1648493054613/-AG7qm61I.png)
+![AWS Console showing failure message](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/lambda-destinations/console-failure-message.png?raw=true)
 
 When we look at the message body we see the following:
 
