@@ -1,7 +1,8 @@
 TODO: Title?
+
 # Creating composable CDK constructs
 
-In this post we demonstrate the power of composable CDK constructs. We build a generic construct to add retry functionality to idempotent state machines. 
+In this post we demonstrate the power of composable CDK constructs. We build a generic construct to add retry functionality to idempotent state machines.
 
 TODO: GitHub
 
@@ -77,7 +78,6 @@ const queueRetriesFunction = new lambdaNodejs.NodejsFunction(scope, 'QueueRetrie
   environment: {
     'RETRY_QUEUE_URL_ENV_VAR': retryQueue.queueUrl,
   },
-  reservedConcurrentExecutions: 1,
 });
 
 props.failureQueue.grantConsumeMessages(queueRetriesFunction);
@@ -89,8 +89,6 @@ queueRetriesFunction.addEventSource(
 retryQueue.grantSendMessages(queueRetriesFunction);
 ```
 
-> Note that we have set `reservedConcurrentExecutions` here to `1`. This is to help mitigate the effect if we accidentally get a loop. By specify this value, we ensure that we will only have at most one Lambda function running at once.
-
 The 'Retry' function is equally simple, it consumes messages from the 'Retry' queue and invokes the a Lambda function to retry the request.
 
 The implementation of the function can be found in the [GitHub repo](TODO).
@@ -101,7 +99,6 @@ const retryFunction = new lambdaNodejs.NodejsFunction(scope, 'RetryFunction', {
   environment: {
     'INPUT_FUNCTION_NAME_ENV_VAR': props.retryFunction.functionName,
   },
-  reservedConcurrentExecutions: 1,
 });
 
 retryQueue.grantConsumeMessages(retryFunction);
@@ -117,7 +114,7 @@ props.retryFunction.grantInvoke(retryFunction);
 
 For this Lambda function, we have set `enabled` to `false`. This means that, by default, the construct will consume failed requests, but not retry them until we decide.
 
-Note how we have created a construct that makes very few assumptions of the state machine. It assumes that the requests are handled in an idempotent manner and that the state can fit within the limitations of an SQS queue message. See ['How do I configure the maximum message size for Amazon SQS?'](https://aws.amazon.com/sqs/faqs/). 
+Note how we have created a construct that makes very few assumptions of the state machine. It assumes that the requests are handled in an idempotent manner and that the state can fit within the limitations of an SQS queue message. See ['How do I configure the maximum message size for Amazon SQS?'](https://aws.amazon.com/sqs/faqs/).
 
 ## Composing the constructs
 
@@ -140,6 +137,8 @@ Now the power of composable constructs becomes apparent, as we can see how easil
 TODO
 
 Step through capturing a set of errors, then retrying, failing again, then succeeding
+
+In order to
 
 ## Summary
 

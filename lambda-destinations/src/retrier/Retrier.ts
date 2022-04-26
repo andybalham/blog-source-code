@@ -35,7 +35,6 @@ export default class Retrier extends cdk.Construct {
         [MAX_RETRY_COUNT_ENV_VAR]: '3',
       },
       retryAttempts: 0,
-      reservedConcurrentExecutions: 1,
     });
 
     props.failureQueue.grantConsumeMessages(queueRetriesFunction);
@@ -57,7 +56,6 @@ export default class Retrier extends cdk.Construct {
         [INPUT_FUNCTION_NAME_ENV_VAR]: props.retryFunction.functionName,
       },
       retryAttempts: 0,
-      reservedConcurrentExecutions: 1,
     });
 
     retryQueue.grantConsumeMessages(retryFunction);

@@ -1,6 +1,6 @@
 # Building a state machine with Lambda Destinations and CDK
 
-In this post we will look at how we can use [Lambda destinations](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-destinations/) and CDK to create an asynchronous and idempotent state machine. [AWS announced Lambda destinations](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-destinations/) in November 2019, so perhaps I am a little late to the party, but I hadn't yet used them and I wanted to try them out.
+In this post we will look at how we can use [Lambda destinations](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-destinations/) and CDK to create a simple state machine. [AWS announced Lambda destinations](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-destinations/) in November 2019, so perhaps I am a little late to the party, but I hadn't yet used them and I wanted to try them out.
 
 The code for this blog post is ready to be cloned, deployed, and run from the accompanying [GitHub repo](https://github.com/andybalham/blog-lambda-destinations).
 
@@ -301,6 +301,6 @@ In this case, we can see that the `responsePayload` contains details of the erro
 
 In this post we saw how we can use Destinations to chain Lambda functions together to form a basic state machine. The functions were combined in a loosely-coupled way that avoided the execution time compounding. We also saw how we can add error handling to capture what went wrong when an asynchronous invocation fails.
 
-# Links
+## Links
 
 - [@aws-cdk/aws-lambda-destinations module](https://docs.aws.amazon.com/cdk/api/v1/docs/aws-lambda-destinations-readme.html)

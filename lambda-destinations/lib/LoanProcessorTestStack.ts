@@ -36,10 +36,10 @@ export default class LoanProcessorTestStack extends IntegrationTestStack {
       retryFunction: loanProcessor.inputFunction,
     });
 
-    this.addSQSQueueConsumer(
-      loanProcessor.outputQueue,
-      LoanProcessorTestStack.LoanProcessorOutputId
-    );
+    // this.addSQSQueueConsumer(
+    //   loanProcessor.outputQueue,
+    //   LoanProcessorTestStack.LoanProcessorOutputId
+    // );
 
     this.addTestResourceTag(
       loanProcessor.inputFunction,
