@@ -1,22 +1,19 @@
-TODO: Title?
-
 # Creating composable CDK constructs
 
-In this post we demonstrate the power of composable CDK constructs. We build a generic construct to add retry functionality to idempotent state machines.
+In this post we demonstrate the power of composable CDK constructs. We do this by building a generic construct to add retry functionality to idempotent state machines.
 
-TODO: GitHub
+The code for this post is ready to be cloned, built, and deployed from the [companion repo](https://github.com/andybalham/blog-composable-cdk-constructs).
 
 ## TL;DR
 
 - Think about the interface first
 - Keep coupling one-way
-- Think idempotent
 
 ## The requirement
 
-Our starting point is a state machine that makes a sequence of HTTP API calls and sends the result to an 'Output' SQS queue. If any of the calls fail, then the state is sent to a 'Failure' SQS queue. See an earlier [post](TODO) for a full description of how this was built.
+Our starting point is a state machine that makes a sequence of HTTP API calls and sends the result to an 'Output' SQS queue. If any of the calls fail, then the state is sent to a 'Failure' SQS queue. See an earlier [post](https://aws.hashnode.com/building-a-state-machine-with-lambda-destinations-and-cdk) for a full description of how this was built.
 
-![Diagram of the state machine with question - TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/composable-cdk-constructs/state-machine.png?raw=true)
+![Diagram of the state machine with question](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/composable-cdk-constructs/state-machine.png?raw=true)
 
 Our challenge is to add retry functionality. That is, if one API is erroring, we can wait until it is fixed and then push the requests back through the state machine.
 
@@ -70,7 +67,7 @@ const retryQueue = new sqs.Queue(this, 'RetryQueue', {
 
 The first function consumes messages from the 'Failure' queue passed in via the properties. It then writes them to the 'Retry' queue to await replaying.
 
-The implementation of the function can be found in the [GitHub repo](TODO).
+The implementation of the function can be found in the [companion GitHub repo](https://github.com/andybalham/blog-composable-cdk-constructs/blob/master/src/retrier/Retrier.QueueRetriesFunction.ts).
 
 ```TypeScript
 const queueRetriesFunction = new lambdaNodejs.NodejsFunction(scope, 'QueueRetriesFunction', {
@@ -91,7 +88,7 @@ retryQueue.grantSendMessages(queueRetriesFunction);
 
 The 'Retry' function is equally simple, it consumes messages from the 'Retry' queue and invokes the a Lambda function to retry the request.
 
-The implementation of the function can be found in the [GitHub repo](TODO).
+The implementation of the function can be found in the [GitHub repo](https://github.com/andybalham/blog-composable-cdk-constructs/blob/master/src/retrier/Retrier.RetryFunction.ts).
 
 ```TypeScript
 const retryFunction = new lambdaNodejs.NodejsFunction(scope, 'RetryFunction', {
@@ -134,15 +131,29 @@ Now the power of composable constructs becomes apparent, as we can see how easil
 
 ## Testing
 
-TODO
+To test our construct, we first configure the mock APIs to always fail. We then invoke the first Lambda function in the state machine and view the SQS queues in the AWS Console. As expected, the `QueueRetriesFunction` consumed a message from the failure queue and forwarded it on to the retry queue. 
 
-Step through capturing a set of errors, then retrying, failing again, then succeeding
+![Console showing a message in the retry queue](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/composable-cdk-constructs/message-in-retry-queue.png?raw=true)
 
-In order to
+The next step is to fix problem that caused the error. In our case, this is as simple as reconfiguring the mock API. For real applications, this might not be so straightforward 😉
+
+With the problem fixed, we can look at retrying. The first step is to disable the SQS trigger on the `QueueRetriesFunction` to ensure that when we retry we don't end up looping.
+
+![Console showing the disabled failure queue](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/composable-cdk-constructs/disabled-failure-queue.png?raw=true)
+
+Now that is is safe to retry, we enable the SQS trigger on the `RetryFunction`. This should retry the original request. 
+
+![Console showing the enabled retry queue](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/composable-cdk-constructs/enabled-retry-queue.png?raw=true)
+
+Looking at the SQS queues, we can see the output queue now has a message in it. Success! 🍾
+
+![Console showing a message in the output queue](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/composable-cdk-constructs/message-in-output-queue.png?raw=true)
+
+The next step in the real world would be to disable the `RetryFunction` trigger and enable the `QueueRetriesFunction` and wait for further failures.
 
 ## Summary
 
-In this post we built a construct that can be used to provide generic retry functionality to idempotent state machines. We saw how straightforward it is to compose higher-level functionality using constructs as building blocks.
+In this post, we built a construct that can be used to provide generic retry functionality to idempotent state machines. We saw how straightforward it is to compose higher-level functionality using constructs as building blocks.
 
 ## Resources
 
