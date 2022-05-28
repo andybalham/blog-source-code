@@ -28,21 +28,16 @@ Within our problem domain we have the concept of a customer entity, each of whic
 
 When the address on a customer is updated, an event is raised and the correspondence address on the accounts must be updated in line. The event also contains a flag indicating whether the customer wanted the new address to also update their billing addresses.
 
-## The domain interfaces
+## The domain objects
 
 A hexagonal approach relies on business-level abstractions. So the first thing we will do is define a set of interfaces for the entities, events, and services in out domain.
 
 TODO: Do we want to use DDD terminology here? Should we just let the code do the talking?
 > The `Address` is defined as a [value object](TODO), that is it is an object that only exists in the context of an [entity](TODO). The `Customer` and `AccountDetail` are defined as entities, 
 
-TODO: Add some text to accompany the objects
+The main two objects in our domain are the customer and their account details. In [DDD](TODO) terminology, these are both entities in that they have an identity and a lifecycle, i.e. they can change over time.
 
 ```typescript
-export interface Address {
-  lines: string[];
-  postalCode: string;
-}
-
 export interface Customer {
   customerId: string;
   name: string;
@@ -57,7 +52,16 @@ export interface AccountDetail {
 }
 ```
 
-TODO: Add some text to accompany the event
+The address object, on the other hand, is a [value object](TODO). That is, it has no identity of its own and never changes.
+
+```typescript
+export interface Address {
+  lines: string[];
+  postalCode: string;
+}
+```
+
+The event simply contains the id of the customer updated and whether or not they requested that their billing addresses be updated. 
 
 ```typescript
 export interface CustomerUpdatedEvent {
@@ -66,7 +70,7 @@ export interface CustomerUpdatedEvent {
 }
 ```
 
-TODO: Add some text to accompany the services
+Finally, we define the services that our hexagonal code will use. In this case, these comprise two data stores. One for the customer data and one for the account detail data. Again, these are abstract in that they do not include any references to how we are going to implement them.
 
 ```typescript
 export interface ICustomerStore {
@@ -80,55 +84,59 @@ export interface IAccountDetailStore {
 }
 ```
 
-## Implementing the domain service
+## Implementing the domain handler
 
-TODO: I don't like the word 'service' here...
+TODO: Go through the following implementation
 
 ```typescript
-export default class AccountUpdater {
+export default class CustomerUpdatedHandler {
   constructor(
     private customerStore: ICustomerStore,
     private accountDetailsStore: IAccountDetailStore
   ) {}
 
-  // TODO: Would this be better named 'handleAsync'?
-  // TODO: Should the class be called CustomerUpdatedHandler
-  // TODO: In a folder called domain-handlers 
-  async updateAccountsAsync(event: CustomerUpdatedEvent): Promise<void> {
+  async handleAsync(event: CustomerUpdatedEvent): Promise<void> {
     //
-    const customer = await this.customerStore.retrieveCustomerAsync(event.customerId);
-
-    if (!customer) {
-      const errorMessage = `No customer found for event: ${JSON.stringify(event)}`;
-      throw new Error(errorMessage);
-    }
-
-    const accountDetails = await this.accountDetailsStore.listAccountDetailsByCustomerIdAsync(
+    const customer = await this.customerStore.retrieveCustomerAsync(
       event.customerId
     );
 
+    if (!customer) {
+      throw new Error(`No customer found for id: ${event.customerId}`);
+    }
+
+    const accountDetails =
+      await this.accountDetailsStore.listAccountDetailsByCustomerIdAsync(
+        event.customerId
+      );
+
     const updateAccountDetailPromises = accountDetails.map((ad) => {
       //
-      const updatedAccountDetail = { ...ad, correspondenceAddress: customer.address };
+      const updatedAccountDetail = {
+        ...ad,
+        correspondenceAddress: customer.address,
+      };
 
       if (event.billingUpdateRequested) {
         updatedAccountDetail.billingAddress = customer.address;
       }
 
-      return this.accountDetailsStore.upsertAccountDetailAsync(updatedAccountDetail);
+      return this.accountDetailsStore.upsertAccountDetailAsync(
+        updatedAccountDetail
+      );
     });
 
-    const updateAccountDetailResults = await Promise.allSettled(updateAccountDetailPromises);
+    const updateAccountDetailResults = await Promise.allSettled(
+      updateAccountDetailPromises
+    );
 
     const rejectedReasons = updateAccountDetailResults
       .filter((r) => r.status === 'rejected')
-      .map((r) => (r as PromiseRejectedResult).reason);
+      .map((r) => (r as PromiseRejectedResult).reason as string);
 
     if (rejectedReasons.length > 0) {
       throw new Error(
-        `One or more account detail updates were not processed successfully: ${JSON.stringify({
-          rejectedReasons,
-        })}`
+        `One or more updates were not processed: ${rejectedReasons.join(', ')}`
       );
     }
   }
