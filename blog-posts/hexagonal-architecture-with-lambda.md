@@ -1,4 +1,4 @@
-## Title: TODO
+## Hexagonal Architecture with CDK, Lambda, and TypeScript
 
 In this post we look at how we can adopt a hexagonal architecture approach when developing Lambda functions. I am not proposing that this approach is the one true way, but I think it is useful to be aware of the concept and the advantages that it can convey. Even if you do not adopt the approach wholesale, adopting facets of it can be useful in itself. 
 
