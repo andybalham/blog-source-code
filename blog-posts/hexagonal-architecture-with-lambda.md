@@ -38,13 +38,13 @@ TODO: Do we want to use DDD terminology here? Should we just let the code do the
 The main two objects in our domain are the customer and their account details. In [DDD](TODO) terminology, these are both entities in that they have an identity and a lifecycle, i.e. they can change over time.
 
 ```typescript
-export interface Customer {
+export class Customer {
   customerId: string;
   name: string;
   address: Address;
 }
 
-export interface AccountDetail {
+export class AccountDetail {
   accountDetailId: string;
   customerId: string;
   correspondenceAddress: Address;
@@ -55,7 +55,7 @@ export interface AccountDetail {
 The address object, on the other hand, is a [value object](TODO). That is, it has no identity of its own and never changes.
 
 ```typescript
-export interface Address {
+export class Address {
   lines: string[];
   postalCode: string;
 }
@@ -64,13 +64,13 @@ export interface Address {
 The event simply contains the id of the customer updated and whether or not they requested that their billing addresses be updated. 
 
 ```typescript
-export interface CustomerUpdatedEvent {
+export class CustomerUpdatedEvent {
   customerId: string;
   billingUpdateRequested: boolean;
 }
 ```
 
-Finally, we define the services that our hexagonal code will use. In this case, these comprise two data stores. One for the customer data and one for the account detail data. Again, these are abstract in that they do not include any references to how we are going to implement them.
+Finally, we define the services that our hexagonal code will use. In this case, these comprise two data stores. One for the customer data and one for the account detail data. These differ from the previous objects in that they are abstract. That is, they do not include any references to how we are going to implement them.
 
 ```typescript
 export interface ICustomerStore {
@@ -88,60 +88,134 @@ export interface IAccountDetailStore {
 
 TODO: Go through the following implementation
 
+Now that we have the domain objects defined, we can move on to the implementation of the handler class.
+
+We start by specify in the constructor that we require two data stores. We use the interface definitions to isolate our handler from the underlying implementation details.
+
 ```typescript
 export default class CustomerUpdatedHandler {
   constructor(
     private customerStore: ICustomerStore,
     private accountDetailsStore: IAccountDetailStore
   ) {}
-
-  async handleAsync(event: CustomerUpdatedEvent): Promise<void> {
-    //
-    const customer = await this.customerStore.retrieveCustomerAsync(
-      event.customerId
-    );
-
-    if (!customer) {
-      throw new Error(`No customer found for id: ${event.customerId}`);
-    }
-
-    const accountDetails =
-      await this.accountDetailsStore.listAccountDetailsByCustomerIdAsync(
-        event.customerId
-      );
-
-    const updateAccountDetailPromises = accountDetails.map((ad) => {
-      //
-      const updatedAccountDetail = {
-        ...ad,
-        correspondenceAddress: customer.address,
-      };
-
-      if (event.billingUpdateRequested) {
-        updatedAccountDetail.billingAddress = customer.address;
-      }
-
-      return this.accountDetailsStore.upsertAccountDetailAsync(
-        updatedAccountDetail
-      );
-    });
-
-    const updateAccountDetailResults = await Promise.allSettled(
-      updateAccountDetailPromises
-    );
-
-    const rejectedReasons = updateAccountDetailResults
-      .filter((r) => r.status === 'rejected')
-      .map((r) => (r as PromiseRejectedResult).reason as string);
-
-    if (rejectedReasons.length > 0) {
-      throw new Error(
-        `One or more updates were not processed: ${rejectedReasons.join(', ')}`
-      );
-    }
-  }
 }
 ```
+
+Next we define the `handleAsync` method that will handle the event.
+
+```typescript
+async handleAsync(event: CustomerUpdatedEvent): Promise<void> {
+}
+```
+
+The first thing the method needs to do is to retrieve the customer. We are careful to throw an informative error if none is found.
+
+```typescript
+//
+const customer = await this.customerStore.retrieveCustomerAsync(
+  event.customerId
+);
+
+if (!customer) {
+  throw new Error(`No customer found for id: ${event.customerId}`);
+}
+```
+
+Next we retrieve all the account details for the customer and build up an array of promises containing the updates required. Note how the code is able to express the logic in purely business terms.
+
+```typescript
+const accountDetails =
+  await this.accountDetailsStore.listAccountDetailsByCustomerIdAsync(
+    event.customerId
+  );
+
+const updateAccountDetailPromises = accountDetails.map((ad) => {
+  //
+  const updatedAccountDetail = {
+    ...ad,
+    correspondenceAddress: customer.address,
+  };
+
+  if (event.billingUpdateRequested) {
+    updatedAccountDetail.billingAddress = customer.address;
+  }
+
+  return this.accountDetailsStore.upsertAccountDetailAsync(
+    updatedAccountDetail
+  );
+});
+```
+
+Finally, we use the `Promise.allSettled` method to perform the updates and we check the results in case any failed. If so, we throw an error to ensure these do not go unnoticed.
+
+```typescript
+const updateAccountDetailResults = await Promise.allSettled(
+  updateAccountDetailPromises
+);
+
+const rejectedReasons = updateAccountDetailResults
+  .filter((r) => r.status === 'rejected')
+  .map((r) => (r as PromiseRejectedResult).reason as string);
+
+if (rejectedReasons.length > 0) {
+  throw new Error(
+    `One or more updates were not processed: ${rejectedReasons.join(', ')}`
+  );
+}
+```
+
+## Testing the handler logic
+
+TODO: Go through a test, highlighting how easy it is.
+
+## Implementing the Lambda function
+
+TODO: What do we say about `CustomerStore` and `AccountDetailStore`?
+
+TODO: 
+
+```typescript
+import DomainHandler from '../domain-handlers/CustomerUpdatedHandler';
+
+const domainHandler = new DomainHandler(
+  new CustomerStore(process.env['CUSTOMER_TABLE_NAME']),
+  new AccountDetailStore(process.env['CUSTOMER_TABLE_NAME'])
+);
+```
+
+TODO
+
+```typescript
+export const handler = async (event: SNSEvent): Promise<void> => {
+  //
+  const accountUpdaterFunctionPromises = event.Records.map((r) => {
+    const customerUpdatedEvent = JSON.parse(
+      r.Sns.Message
+    ) as CustomerUpdatedEvent;
+    return domainHandler.handleAsync(customerUpdatedEvent);
+  });
+
+  const accountUpdaterFunctionResults = await Promise.allSettled(
+    accountUpdaterFunctionPromises
+  );
+
+  const rejectedReasons = accountUpdaterFunctionResults
+    .filter((r) => r.status === 'rejected')
+    .map((r) => (r as PromiseRejectedResult).reason as string);
+
+  if (rejectedReasons.length > 0) {
+    throw new Error(
+      `One or more updates were not processed: ${rejectedReasons.join(', ')}`
+    );
+  }
+};
+```
+
+## TODO
+
+Is this as far as we go?
+
+Do we want to go through the construct?
 
 ## Resources
 
