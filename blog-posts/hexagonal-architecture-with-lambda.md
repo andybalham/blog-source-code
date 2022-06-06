@@ -1,6 +1,6 @@
 ## Hexagonal Architecture with CDK, Lambda, and TypeScript
 
-In this post we look at how we can adopt a hexagonal architecture approach when developing Lambda functions. I am not proposing that this approach is the one true way, but I think it is useful to be aware of the concept and the advantages that it can convey. Even if you do not adopt the approach wholesale, adopting facets of it can be useful in itself. 
+In this post we look at how we can adopt a hexagonal architecture approach when developing Lambda functions. I am not proposing that this approach is the one true way, but I think it is useful to be aware of the concept and the advantages that it can convey. Even if you do not embrace the approach wholesale, adopting some facets of it can be useful in itself. 
 
 ## Hexagonal Architecture in a nutshell
 
@@ -22,20 +22,20 @@ The post [The trade-offs with functionless integration patterns in serverless ar
 
 After considering the cons, let us now look at our example and see how we can use hexagonal architecture principles. We shall see how it affects the code we write and how we can test it.
 
-## The domain problem
+## The business problem
 
-Within our problem domain we have the concept of a customer entity, each of which has a single address. Each customer can have multiple accounts, which are separate entities. Each of these accounts have a correspondence address and a billing address. 
+Within our business domain we have the concept of a customer entity, each of which has a single address. Each customer can have multiple accounts, which are separate entities. Each of these accounts have a correspondence address and a billing address. 
 
 When the address on a customer is updated, an event is raised and the correspondence address on the accounts must be updated in line. The event also contains a flag indicating whether the customer wanted the new address to also update their billing addresses.
 
 ## The domain objects
 
-A hexagonal approach relies on business-level abstractions. So the first thing we will do is define a set of interfaces for the entities, events, and services in out domain.
+A hexagonal approach relies on business-level abstractions. So the first thing we will do is define the entities, events, and services in our domain.
 
 TODO: Do we want to use DDD terminology here? Should we just let the code do the talking?
 > The `Address` is defined as a [value object](TODO), that is it is an object that only exists in the context of an [entity](TODO). The `Customer` and `AccountDetail` are defined as entities, 
 
-The main two objects in our domain are the customer and their account details. In [DDD](TODO) terminology, these are both entities in that they have an identity and a lifecycle, i.e. they can change over time.
+The main two objects in our domain are the customer and their account details. In [DDD](TODO) terminology, these are both [entities](TODO) in that they have an identity and a lifecycle, i.e. they can change over time.
 
 ```typescript
 export class Customer {
@@ -84,11 +84,9 @@ export interface IAccountDetailStore {
 }
 ```
 
-## Implementing the domain handler
+## Implementing the business logic
 
-TODO: Go through the following implementation
-
-Now that we have the domain objects defined, we can move on to the implementation of the handler class.
+Now that we have the domain objects defined, we can move on to implementing the business logic in a handler class.
 
 We start by specify in the constructor that we require two data stores. We use the interface definitions to isolate our handler from the underlying implementation details.
 
@@ -108,7 +106,7 @@ async handleAsync(event: CustomerUpdatedEvent): Promise<void> {
 }
 ```
 
-The first thing the method needs to do is to retrieve the customer. We are careful to throw an informative error if none is found.
+The first thing the `handleAsync` method needs to do is to retrieve the customer. Here we use the `ICustomerStore` that was passed in to the constructor.
 
 ```typescript
 //
@@ -164,15 +162,99 @@ if (rejectedReasons.length > 0) {
 }
 ```
 
-## Testing the handler logic
+## Testing the business logic
 
-TODO: Go through a test, highlighting how easy it is.
+One of the advantages of adopting a hexagonal approach is the ease of testing business logic. We can use our favourite mocking tool to supply mocks for the services and avoid having to mock AWS services or provide local simulated services.
+
+In our case, we are using the [Jest](TODO) testing framework and its in-built mocking. Before each test we provide a default mock implementation of the two store interfaces.
+
+```TypeScript
+let customerStoreMock: ICustomerStore;
+let accountDetailStoreMock: IAccountDetailStore;
+
+beforeEach(() => {
+  customerStoreMock = {
+    retrieveCustomerAsync: jest.fn(),
+    upsertCustomerAsync: jest.fn(),
+  };
+
+  accountDetailStoreMock = {
+    listAccountDetailsByCustomerIdAsync: jest.fn(),
+    upsertAccountDetailAsync: jest.fn(),
+  };
+});
+```
+
+Now we have our base mocks, we can create the boilerplate for our first test scenario.
+
+```TypeScript
+it('handles no accounts', async () => {
+
+  // Arrange
+
+  // Act
+
+  // Assert
+
+});
+```
+
+Our 'arrange' step involves creating our test data, mocking the store methods, and then creating the handler passing in the mock implementations.
+
+```TypeScript
+const testCustomerId = 'TestCustomerId';
+
+const testCustomer: Customer = {
+  customerId: testCustomerId,
+  name: 'Test Customer',
+  address: {
+    lines: ['Line1', 'Line2'],
+    postalCode: 'PostalCode',
+  },
+};
+
+customerStoreMock.retrieveCustomerAsync = jest
+  .fn()
+  .mockResolvedValue(testCustomer);
+accountDetailStoreMock.listAccountDetailsByCustomerIdAsync = jest
+  .fn()
+  .mockResolvedValue([]);
+
+const accountUpdaterFunction = new CustomerUpdatedHandler(
+  customerStoreMock,
+  accountDetailStoreMock
+);
+```
+
+Now that we have our handler, we can call the `handleAsync` method in our 'act' step.
+
+
+```TypeScript
+await accountUpdaterFunction.handleAsync({
+  customerId: testCustomerId,
+  billingUpdateRequested: false,
+});
+```
+
+Our 'assert' step is similarly simple, using the Jest expectations to verify the calls made.
+
+```TypeScript
+expect(customerStoreMock.retrieveCustomerAsync).toBeCalledWith(
+  testCustomerId
+);
+
+expect(
+  accountDetailStoreMock.listAccountDetailsByCustomerIdAsync
+).toBeCalledWith(testCustomerId);
+
+expect(accountDetailStoreMock.upsertAccountDetailAsync).toBeCalledTimes(0);
+```
+
+This simple example shows how the separation of implementation from business logic can make testing the latter easier. The accompanying [GitHub repo](TODO) contains more examples of business logic tests. 
 
 ## Implementing the Lambda function
 
-TODO: What do we say about `CustomerStore` and `AccountDetailStore`?
-
-TODO: 
+Now that we have verified the business logic, we can look at how we can use it in the context of a Lambda function. The first thing to do is to instantiate it with concrete implementations for the `ICustomerStore` and `IAccountDetailStore`.
 
 ```typescript
 import DomainHandler from '../domain-handlers/CustomerUpdatedHandler';
@@ -183,7 +265,9 @@ const domainHandler = new DomainHandler(
 );
 ```
 
-TODO
+I won't go into the actual implementation of `CustomerStore` and `AccountDetailStore` here, but they can be found in the accompanying [repo](TODO). The repo also contains examples of how the service implementations themselves can be tested independently. 
+
+With the instance of the domain handler, we write the Lambda function handler. The function takes care of translating the `SNSEvent` objects into domain events, which are then despatched to the domain handler `handleAsync` method.
 
 ```typescript
 export const handler = async (event: SNSEvent): Promise<void> => {
@@ -211,11 +295,11 @@ export const handler = async (event: SNSEvent): Promise<void> => {
 };
 ```
 
-## TODO
+Here we can see that there is a clear separation of responsibilities, with the Lambda function handler hiding the AWS service details from the domain handler. We can also see potential for making such a handler generic, as the business logic is hidden from it.
 
-Is this as far as we go?
+## Summary
 
-Do we want to go through the construct?
+In this post, we saw how we can structure our TypeScript Lambda functions using hexagonal architecture principles to isolate the business logic from the AWS service details. This gives advantages in testability and portability, amongst others. However, this comes at the expense of additional levels of abstraction, which many might find unnecessary for their scale of application. I have found that the bigger the application, the more need for structure. The trick is knowing how big 🙂
 
 ## Resources
 
