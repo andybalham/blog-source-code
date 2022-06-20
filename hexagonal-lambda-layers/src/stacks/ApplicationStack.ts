@@ -19,23 +19,26 @@ export default class ApplicationStack extends cdk.Stack {
 
     const customerUpdatedTopic = new sns.Topic(this, 'CustomerUpdatedTopic');
 
-    const customerTableNameParameter = ssm.StringParameter.fromStringParameterName(
-      this,
-      'CustomerTableNameParameter',
-      CustomerTable.TABLE_NAME_SSM_PARAMETER
-    );
+    const customerTableNameParameter =
+      ssm.StringParameter.fromStringParameterName(
+        this,
+        'CustomerTableNameParameter',
+        CustomerTable.TABLE_NAME_SSM_PARAMETER
+      );
 
-    const accountDetailTableNameParameter = ssm.StringParameter.fromStringParameterName(
-      this,
-      'AccountDetailTableNameParameter',
-      AccountDetailTable.TABLE_NAME_SSM_PARAMETER
-    );
+    const accountDetailTableNameParameter =
+      ssm.StringParameter.fromStringParameterName(
+        this,
+        'AccountDetailTableNameParameter',
+        AccountDetailTable.TABLE_NAME_SSM_PARAMETER
+      );
 
-    const dataAccessLayerArnSsmParameter = ssm.StringParameter.fromStringParameterName(
-      this,
-      'DataAccessLayerArnSsmParameter',
-      DataAccessLayer.LAYER_ARN_SSM_PARAMETER
-    );
+    const dataAccessLayerArnSsmParameter =
+      ssm.StringParameter.fromStringParameterName(
+        this,
+        'DataAccessLayerArnSsmParameter',
+        DataAccessLayer.LAYER_ARN_SSM_PARAMETER
+      );
 
     new CustomerUpdatedHandler(this, 'CustomerUpdatedHandler', {
       dataAccessLayerArn: dataAccessLayerArnSsmParameter.stringValue,
