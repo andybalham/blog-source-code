@@ -1,20 +1,26 @@
 ## Hexagonal Architecture with CDK, Lambda, and TypeScript
 
-In this post we look at how we can adopt a hexagonal architecture approach when developing Lambda functions. I am not proposing that this approach is the one true way, but I think it is useful to be aware of the concept and the advantages that it can convey. Even if you do not embrace the approach wholesale, adopting some facets of it can be useful in itself. 
+In this post we look at how we can adopt a hexagonal architecture approach when developing Lambda functions. I am not proposing that this approach is the one true way, but I think it is useful to be aware of the concept and the advantages that it can convey. Even if you do not embrace the approach wholesale, adopting some facets of it can be useful in itself.
 
 ## Hexagonal Architecture in a nutshell
 
-Hexagonal architecture is an approach to writing software, where the essence of the problem - the domain - is separated from from the underlying implementation details. 
+Hexagonal architecture is an approach to writing software, where the essence of the problem - the domain - is separated from from the underlying implementation details.
 
-For example, the problem might involve responding to a customer order by initiating multiple downstream processes. This response might also involve some business rules to determine the parameters passed to those processes. 
+For example, the problem might involve responding to a customer order by initiating multiple downstream processes. This response might also involve some business rules to determine the parameters passed to those processes.
 
-In practice the process may be handling an EventBridge event, reading and writing to DynamoDB tables, and then sending SQS messages. With a hexagonal architecture, these implementation details are hidden behind abstractions. This enables the business logic to be expressed in purely business terms. 
+In practice the process may be handling an EventBridge event, reading and writing to DynamoDB tables, and then sending SQS messages. With a hexagonal architecture, these implementation details are hidden behind abstractions. This enables the business logic to be expressed in purely business terms.
+
+In our case, we are going to be implementing a Lambda function that hosts the business logic as follows:
+
+![Hexagonal Lambda overview](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/hexagonal-architecture-with-lambda/hexagonal-lambda.png?raw=true)
+
+The Lambda function will take care of mapping the AWS-specific inputs to the business domain logic. It will also provide AWS-specific services that use interfaces to isolate the logic from the implementation details.
 
 For a more in-depth explanation, please see [Hexagonal Architecture, there are always two sides to every story](https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c) and [Hexagonal (Ports & Adapters) Architecture](https://medium.com/idealo-tech-blog/hexagonal-ports-adapters-architecture-e3617bcf00a0).
 
 ## Is this really necessary?
 
-You would be quite right at this point to ask the question of whether this level of abstraction is justified. It can be argued that abstracting too early is a trap that many have fallen into. The result being code that has clumsy abstractions or is hard to follow with indirection after indirection. 
+You would be quite right at this point to ask the question of whether this level of abstraction is justified. It can be argued that abstracting too early is a trap that many have fallen into. The result being code that has clumsy abstractions or is hard to follow with indirection after indirection.
 
 In fact, there is a current movement to replace 'classical' coding with 'function-less' coding. This approach uses direct integrations, such a VTL templates in API Gateway or AWS SDK integrations in Step Functions. These are undoubtedly very efficient and have their place. However, such a low-level approach has downsides such as readability and portability.
 
@@ -24,18 +30,15 @@ After considering the cons, let us now look at our example and see how we can us
 
 ## The business problem
 
-Within our business domain we have the concept of a customer entity, each of which has a single address. Each customer can have multiple accounts, which are separate entities. Each of these accounts have a correspondence address and a billing address. 
+Within our business domain we have the concept of a customer entity, each of which has a single address. Each customer can have multiple accounts, which are separate entities. Each of these accounts have a correspondence address and a billing address.
 
 When the address on a customer is updated, an event is raised and the correspondence address on the accounts must be updated in line. The event also contains a flag indicating whether the customer wanted the new address to also update their billing addresses.
 
 ## The domain objects
 
-A hexagonal approach relies on business-level abstractions. So the first thing we will do is define the entities, events, and services in our domain.
+A hexagonal approach relies on business-level abstractions. So the first thing we will do is define the entities, events, and services in our business domain.
 
-TODO: Do we want to use DDD terminology here? Should we just let the code do the talking?
-> The `Address` is defined as a [value object](TODO), that is it is an object that only exists in the context of an [entity](TODO). The `Customer` and `AccountDetail` are defined as entities, 
-
-The main two objects in our domain are the customer and their account details. In [DDD](TODO) terminology, these are both [entities](TODO) in that they have an identity and a lifecycle, i.e. they can change over time.
+The main two objects in our business domain are the customer and their account details. In [domain-driven design](https://en.wikipedia.org/wiki/Domain-driven_design) terminology, these are both [entities](https://blog.jannikwempe.com/domain-driven-design-entities-value-objects) in that they have an identity and a lifecycle, i.e. they can change over time.
 
 ```typescript
 export class Customer {
@@ -52,7 +55,7 @@ export class AccountDetail {
 }
 ```
 
-The address object, on the other hand, is a [value object](TODO). That is, it has no identity of its own and never changes.
+The address object, on the other hand, is a [value object](https://blog.jannikwempe.com/domain-driven-design-entities-value-objects). That is, it has no identity of its own and never changes.
 
 ```typescript
 export class Address {
@@ -61,7 +64,7 @@ export class Address {
 }
 ```
 
-The event simply contains the id of the customer updated and whether or not they requested that their billing addresses be updated. 
+The event simply contains the id of the customer updated and whether or not they requested that their billing addresses be updated.
 
 ```typescript
 export class CustomerUpdatedEvent {
@@ -79,7 +82,9 @@ export interface ICustomerStore {
 }
 
 export interface IAccountDetailStore {
-  listAccountDetailsByCustomerIdAsync(customerId: string): Promise<AccountDetail[]>;
+  listAccountDetailsByCustomerIdAsync(
+    customerId: string
+  ): Promise<AccountDetail[]>;
   upsertAccountDetailAsync(accountDetail: AccountDetail): Promise<void>;
 }
 ```
@@ -109,7 +114,6 @@ async handleAsync(event: CustomerUpdatedEvent): Promise<void> {
 The first thing the `handleAsync` method needs to do is to retrieve the customer. Here we use the `ICustomerStore` that was passed in to the constructor.
 
 ```typescript
-//
 const customer = await this.customerStore.retrieveCustomerAsync(
   event.customerId
 );
@@ -128,7 +132,7 @@ const accountDetails =
   );
 
 const updateAccountDetailPromises = accountDetails.map((ad) => {
-  //
+
   const updatedAccountDetail = {
     ...ad,
     correspondenceAddress: customer.address,
@@ -152,12 +156,12 @@ const updateAccountDetailResults = await Promise.allSettled(
 );
 
 const rejectedReasons = updateAccountDetailResults
-  .filter((r) => r.status === 'rejected')
+  .filter((r) => r.status === "rejected")
   .map((r) => (r as PromiseRejectedResult).reason as string);
 
 if (rejectedReasons.length > 0) {
   throw new Error(
-    `One or more updates were not processed: ${rejectedReasons.join(', ')}`
+    `One or more updates were not processed: ${rejectedReasons.join(", ")}`
   );
 }
 ```
@@ -166,7 +170,7 @@ if (rejectedReasons.length > 0) {
 
 One of the advantages of adopting a hexagonal approach is the ease of testing business logic. We can use our favourite mocking tool to supply mocks for the services and avoid having to mock AWS services or provide local simulated services.
 
-In our case, we are using the [Jest](TODO) testing framework and its in-built mocking. Before each test we provide a default mock implementation of the two store interfaces.
+In our case, we are using the [Jest](https://jestjs.io/) testing framework and its in-built mocking. Before each test we provide a default mock implementation of the two store interfaces.
 
 ```TypeScript
 let customerStoreMock: ICustomerStore;
@@ -228,7 +232,6 @@ const accountUpdaterFunction = new CustomerUpdatedHandler(
 
 Now that we have our handler, we can call the `handleAsync` method in our 'act' step.
 
-
 ```TypeScript
 await accountUpdaterFunction.handleAsync({
   customerId: testCustomerId,
@@ -250,28 +253,28 @@ expect(
 expect(accountDetailStoreMock.upsertAccountDetailAsync).toBeCalledTimes(0);
 ```
 
-This simple example shows how the separation of implementation from business logic can make testing the latter easier. The accompanying [GitHub repo](TODO) contains more examples of business logic tests. 
+This simple example shows how the separation of implementation from business logic can make testing the latter easier. The accompanying [GitHub repo](https://github.com/andybalham/blog-hexagonal-lambda-functions) contains more examples of business logic tests.
 
 ## Implementing the Lambda function
 
 Now that we have verified the business logic, we can look at how we can use it in the context of a Lambda function. The first thing to do is to instantiate it with concrete implementations for the `ICustomerStore` and `IAccountDetailStore`.
 
 ```typescript
-import DomainHandler from '../domain-handlers/CustomerUpdatedHandler';
+import DomainHandler from "../domain-handlers/CustomerUpdatedHandler";
 
 const domainHandler = new DomainHandler(
-  new CustomerStore(process.env['CUSTOMER_TABLE_NAME']),
-  new AccountDetailStore(process.env['CUSTOMER_TABLE_NAME'])
+  new CustomerStore(process.env["CUSTOMER_TABLE_NAME"]),
+  new AccountDetailStore(process.env["CUSTOMER_TABLE_NAME"])
 );
 ```
 
-I won't go into the actual implementation of `CustomerStore` and `AccountDetailStore` here, but they can be found in the accompanying [repo](TODO). The repo also contains examples of how the service implementations themselves can be tested independently. 
+I won't go into the actual implementation of `CustomerStore` and `AccountDetailStore` here, but they can be found in the accompanying [repo](https://github.com/andybalham/blog-hexagonal-lambda-functions). The repo also contains examples of how the service implementations themselves can be tested independently.
 
 With the instance of the domain handler, we write the Lambda function handler. The function takes care of translating the `SNSEvent` objects into domain events, which are then despatched to the domain handler `handleAsync` method.
 
 ```typescript
 export const handler = async (event: SNSEvent): Promise<void> => {
-  //
+
   const accountUpdaterFunctionPromises = event.Records.map((r) => {
     const customerUpdatedEvent = JSON.parse(
       r.Sns.Message
@@ -284,12 +287,12 @@ export const handler = async (event: SNSEvent): Promise<void> => {
   );
 
   const rejectedReasons = accountUpdaterFunctionResults
-    .filter((r) => r.status === 'rejected')
+    .filter((r) => r.status === "rejected")
     .map((r) => (r as PromiseRejectedResult).reason as string);
 
   if (rejectedReasons.length > 0) {
     throw new Error(
-      `One or more updates were not processed: ${rejectedReasons.join(', ')}`
+      `One or more updates were not processed: ${rejectedReasons.join(", ")}`
     );
   }
 };
@@ -303,8 +306,8 @@ In this post, we saw how we can structure our TypeScript Lambda functions using 
 
 ## Resources
 
-* [Hexagonal architecture - wikipedia](https://en.wikipedia.org/wiki/Hexagonal_architecture_(software))
-* [Hexagonal Architecture, there are always two sides to every story](https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c)
-* [Hexagonal (Ports & Adapters) Architecture](https://medium.com/idealo-tech-blog/hexagonal-ports-adapters-architecture-e3617bcf00a0)
+- [Hexagonal architecture - wikipedia](<https://en.wikipedia.org/wiki/Hexagonal_architecture_(software)>)
+- [Hexagonal Architecture, there are always two sides to every story](https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c)
+- [Hexagonal (Ports & Adapters) Architecture](https://medium.com/idealo-tech-blog/hexagonal-ports-adapters-architecture-e3617bcf00a0)
 
-* [The trade-offs with functionless integration patterns in serverless architectures](https://serverlessfirst.com/functionless-integration-trade-offs/)
+- [The trade-offs with functionless integration patterns in serverless architectures](https://serverlessfirst.com/functionless-integration-trade-offs/)
