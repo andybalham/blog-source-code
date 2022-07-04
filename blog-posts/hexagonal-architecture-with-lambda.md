@@ -302,7 +302,9 @@ Here we can see that there is a clear separation of responsibilities, with the L
 
 ## Summary
 
-In this post, we saw how we can structure our TypeScript Lambda functions using hexagonal architecture principles to isolate the business logic from the AWS service details. This gives advantages in testability and portability, amongst others. However, this comes at the expense of additional levels of abstraction, which many might find unnecessary for their scale of application. I have found that the bigger the application, the more need for structure. The trick is knowing how big 🙂
+In this post, we saw how we can structure our TypeScript Lambda functions using hexagonal architecture principles to isolate the business logic from the AWS service details. This gives advantages in testability and portability, amongst others. 
+
+However, this approach does come at the expense of additional levels of abstraction, which many might find unnecessary for their scale of application. In my experience, I have found that the bigger the application, the more need for structure. The trick is knowing how big that is, and it is surprisingly easy to reach that limit.
 
 ## Resources
 

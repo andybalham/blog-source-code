@@ -1,12 +1,18 @@
 ## What did we learn?
 
+This becomes the `TL;DR`.
+
 * Lambda layers are immutable
 * `esbuild` will bundle code not in excluded modules
    * Need to bundle manually
 * Can use paths in `tsconfig`
 * Can use SSM parameters to deploy updates with no rebuild
 
+Conclusion, npm better for most use cases of reuse.
+
 ## Notes
+
+This is a good article [AWS Lambda Use Cases: When to use Lambda layers](https://lumigo.io/blog/lambda-layers-when-to-use-it/)
 
 What is the story that we want to tell?
 
