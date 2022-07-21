@@ -86,15 +86,19 @@ export default class DataAccessStack extends Stack {
 }
 ```
 
-## Compiling against the layer
+TODO: Deploy and show the Lambda layer in the console
 
-TODO
+## Using the Lambda layer
+
+Now that we have our Lambda layer, we need to work out how to use it. The first trick is how we need to reference the layer so that it will work at runtime. This involves referencing an absolute path starting with `/opt/nodejs`, as shown below.
 
 ```TypeScript
 import { AccountDetailStore, CustomerStore } from '/opt/nodejs/data-access';
 ```
 
-TODO
+This gives us the first major problem, which is how do we compile our TypeScript code against it. Although we have the source code for the layer, it isn't at the location that our `import` is pointing to.
+
+The solution is to use the `paths` compiler option in `tsconfig.json` to point the compiler at the actual location of the layer source code. 
 
 ```json
 {
@@ -104,15 +108,23 @@ TODO
       "/opt/nodejs/data-access": ["src/data-access/layer/nodejs/data-access"]
     }
   },
-  "include": ["src/**/*", "tests/**/*"]
+  /* Snip */
 }
 ```
 
-TODO
+With this in place, we can happily build our Lambda function. However, it raises the question of how would you do this if the layer source code was not so handy. You can download the layers via the console, and possibly by the SDK, but this is not ideal. 
 
-## Packaging the Lambda
+## Packaging the Lambda function
 
-TODO
+Our next challenge is how we can package up our Lambda function. The trick here is not to package up the layer code with the Lambda function code. The first example I looked at was using the `NodejsFunction` construct. This construct uses esbuild to bundle the code into a single file, which is very convenient but had the result of including the layer code directly. When I updated the example layer, the Lambda function behaviour didn't change.
+
+You can specify [BundlingOptions](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_nodejs.BundlingOptions.html) for the `NodejsFunction` construct, which has a `externalModules` property that is documented as follows:
+
+> A list of modules that should be considered as externals (already available in the runtime).
+
+For our project, we avoid this bundling issue by using the `Function` construct and the `AssetCode` class. 
+
+We use the `layers` property to make the layer available to the function. We obtain the reference to the layer by using the `LayerVersion.fromLayerVersionArn` method and the ARN of the layer, which we pass in via props.
 
 ```TypeScript
 export interface CustomerUpdatedProps {
@@ -159,7 +171,7 @@ export default class CustomerUpdatedHandler extends Construct {
 }
 ```
 
-TODO
+Now we have our function construct we can use it in a stack. Here we obtain the layer ARN from the SSM Parameter that we created when we deployed the layer. This approach means that every time we deploy the function it picks up the latest version of the layer.
 
 ```TypeScript
 export default class ApplicationStack extends Stack {
@@ -185,119 +197,21 @@ export default class ApplicationStack extends Stack {
 }
 ```
 
-## Notes
+> I am not recommending this approach, but it was an interesting concept to play with. I had wondered if functions could reference the latest layer and then if you could update the latest layer. However, functions have to reference a specific layer version. So the approach above is as close as I could manage, where you can update a function without a code change.
 
-This is a good article [AWS Lambda Use Cases: When to use Lambda layers](https://lumigo.io/blog/lambda-layers-when-to-use-it/)
+After we deploy the Lambda function, we can see in the console that we have referenced as expected.
 
-What is the story that we want to tell?
+TODO: Console image
 
-1. Hexagonal architecture with Lambda functions
-   - Pass dependencies into the function class
-   - Would this just be for TypeScript? Yes - for us.
-1. Move data layer to Lambda layer
-   - What is the best strategy for packaging `aws-sdk`?
-   -
-1. Deployment strategies for Lambda layers
-   - Manually update the ARN
-   - Use SSM to store the ARN on update and retrieve on deployment
+## What about testing?
 
-Questions
-
-- What about testing...
   - ...the functionality in a Lambda layer?
   - ...the functionality that uses a Lambda layer?
-    - Can we download the layer and unzip it locally?
-- Can we have step function that updates all Lambda function that use a Lambda layer?
-  - I.e., can we recognise what Lambda function use a layer and update them to the latest?
 
-What application are we going to build?
+- Can we download the layer and unzip it locally?
 
-- We need a Store? What could be in it?
-- Do we need more than one Lambda function? No, over-complicated.
-- What is the Lambda function going to do?
-  - Should it interact with more than one Store?
-  - What business functionality could it do?
+## Summary
 
-What is the progression that we want to show:
+TODO
 
-1. Lambda function with direct SDK usage
-1. Lambda function with injected service
-
-   - Demonstrate easier unit testing
-
-1. Convert service to Lambda layer in same stack
-1. Show how to test using Jest
-
-1. Move Lambda layer a separate stack
-1. Unit test layer functionality? Integration test?
-1. Use SSM for simpler deployment (step function?)
-
-1. Download layer for local unit testing
-
-So, the plan is for a Lambda function that does the following:
-
-- Triggered by `CustomerUpdatedEvent` containing a `customerId`
-- Call `ICustomerStore.loadAsync` to get `Customer`
-- Call `IAccountStore.listByCustomerIdAsync` to get `Account[]`
-- Update all `Account.address` with `Customer.address`
-- Call `IAccountStore.saveBatchAsync` with updated `Account[]`
-
-> Q. Should there be a domain layer somewhere?
-
-> Q. How would that work with layers?
-
-We will have the following stacks:
-
-- `DataStorageStack` containing:
-  - `CustomerTable`
-  - `AccountTable`
-  - Q. Could this set SSM parameters to be used on deployment?
-- `DataAccessLayerStack` containing:
-  - Data access models:
-    - `Customer`
-    - `Address`
-    - `Account`
-  - Repositories:
-    - `CustomerStore`
-    - `AccountStore`
-- `ApplicationStack` containing:
-  - `CustomerUpdateHandler` CDK construct
-  - `AccountUpdaterFunction` Lambda function
-
-Code structure?
-
-```
-\src
-   \cdk-app.ts (DataStorageStack and ApplicationStack)
-   \data-storage
-      \DataStorageStack.ts (export names of SSM params and env variables)
-      \CustomerTable.ts (construct)
-      \AccountTable.ts (construct)
-   \data-access (to be turned into a layer later)
-      \DataAccessStack.ts (outputs a layer and sets SSM parameters)
-      \CustomerStore.ts
-      \AccountStore.ts
-   \domain-contracts (pure interface)
-      \events.ts (CustomerUpdated)
-      \models.ts (Customer, Address, and Account)
-      \services.ts (ICustomerStore, IAccountStore)
-   \application
-      \ApplicationStack.ts (use SSM parameters for table names)
-      \
-      \CustomerUpdatedHandler.AccountUpdaterFunctionV1.ts (with all code in it)
-      \CustomerUpdatedHandler.AccountUpdaterFunctionV2.ts (using domain-contracts and data-access)
-\test
-   \cdk-app-test.ts (CustomerStoreTestStack, AccountStoreTestStack and CustomerUpdatedHandlerTestStack)
-   \application
-      \CustomerUpdatedHandler.AccountUpdaterFunction.test.ts
-         - Jest-based unit tests mocking the repositories
-      \CustomerUpdatedHandlerTestStack.ts (use table constructs from data-storage?)
-         - Use Table constructs from data-storage
-         - Have a test SNS topic to trigger the function
-      \CustomerUpdatedHandler.test.ts
-   \data-access
-      \CustomerStoreTestStack.ts
-      \CustomerStore.test.ts
-      \AccountStoreTestStack.ts
-      \AccountStore.test.ts
-```
+This is a good article [AWS Lambda Use Cases: When to use Lambda layers](https://lumigo.io/blog/lambda-layers-when-to-use-it/)
