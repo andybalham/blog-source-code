@@ -6,19 +6,15 @@ All the code in this post can be downloaded and run by cloning the [companion re
 
 ## TL;DR
 
-TODO: revisit this
-
-- Lambda layers are immutable
-- `esbuild` will bundle code not in excluded modules
-  - Need to bundle manually
-- Can use paths in `tsconfig`
-- Can use SSM parameters to deploy updates with no rebuild
-
-Conclusion, npm better for most use cases of reuse.
+- `esbuild` will bundle layer code if you are not careful
+- Use `paths` in `tsconfig` to compile locally
+- Lambda layers are immutable and functions reference a specific version
+- SSM parameters can be used to deploy updates with no rebuild
+- Conclusion, `npm` better for most use cases of reuse.
 
 ## The starting point
 
-In a previous [post](TODO), I created a Lambda function that used a hexagonal architecture approach. The following diagram shows how we abstracted the implementation of the data stores from the domain logic.
+In an earlier post, I created a Lambda function that used a hexagonal architecture approach. The following diagram shows how we abstracted the implementation of the data stores from the domain logic.
 
 ![Lambda function with hexagonal architecture](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/hexagonal-lambda-layers/hexagonal-lambda.png?raw=true)
 
@@ -67,7 +63,7 @@ export default class DataAccessLayer extends Construct {
 
 The `LayerVersion` construct uses the `Code.fromAsset` method to point to the output from the TypeScript compiler (the `dist` subfolders). Note that it points to the parent folder of the `nodejs` folder.
 
-Lambda layers have a version number, which is incremented each time it is deployed. As part of this construct we create an [SSM Parameter](TODO) to store the latest version. We will use this later on when deploying dependent components.
+Lambda layers have a version number, which is incremented each time it is deployed. As part of this construct we create an [SSM Parameter](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) to store the latest version. We will use this later on when deploying dependent components.
 
 Now that we have our construct, we can create a stack to deploy it.
 
@@ -86,7 +82,9 @@ export default class DataAccessStack extends Stack {
 }
 ```
 
-TODO: Deploy and show the Lambda layer in the console
+Once deployed, we can see the layer in the console.
+
+![Lambda layer shown in the console](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/hexagonal-lambda-layers/console-lambda-layer.png?raw=true)
 
 ## Using the Lambda layer
 
@@ -98,7 +96,7 @@ import { AccountDetailStore, CustomerStore } from '/opt/nodejs/data-access';
 
 This gives us the first major problem, which is how do we compile our TypeScript code against it. Although we have the source code for the layer, it isn't at the location that our `import` is pointing to.
 
-The solution is to use the `paths` compiler option in `tsconfig.json` to point the compiler at the actual location of the layer source code. 
+The solution is to use the `paths` compiler option in `tsconfig.json` to point the compiler at the actual location of the layer source code.
 
 ```json
 {
@@ -107,24 +105,22 @@ The solution is to use the `paths` compiler option in `tsconfig.json` to point t
     "paths": {
       "/opt/nodejs/data-access": ["src/data-access/layer/nodejs/data-access"]
     }
-  },
+  }
   /* Snip */
 }
 ```
 
-With this in place, we can happily build our Lambda function. However, it raises the question of how would you do this if the layer source code was not so handy. You can download the layers via the console, and possibly by the SDK, but this is not ideal. 
+With this in place, we can happily build our Lambda function. However, it raises the question of how would you do this if the layer source code was not available locally. You can download the layers via the console, and possibly by the SDK, but this is not ideal. This is one of challenges that seem to make working with layers more complicated than working with `npm` packages.
 
 ## Packaging the Lambda function
 
-Our next challenge is how we can package up our Lambda function. The trick here is not to package up the layer code with the Lambda function code. The first example I looked at was using the `NodejsFunction` construct. This construct uses esbuild to bundle the code into a single file, which is very convenient but had the result of including the layer code directly. When I updated the example layer, the Lambda function behaviour didn't change.
+Our next challenge is how we can package up our Lambda function. The trick here is not to package up the layer code with the Lambda function code. The first example I looked at was using the `NodejsFunction` construct. This construct uses `esbuild` to bundle the code into a single file, which is very convenient but had the result of including the layer code directly. When I updated the example layer, the Lambda function behaviour didn't change.
 
 You can specify [BundlingOptions](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_nodejs.BundlingOptions.html) for the `NodejsFunction` construct, which has a `externalModules` property that is documented as follows:
 
 > A list of modules that should be considered as externals (already available in the runtime).
 
-For our project, we avoid this bundling issue by using the `Function` construct and the `AssetCode` class. 
-
-We use the `layers` property to make the layer available to the function. We obtain the reference to the layer by using the `LayerVersion.fromLayerVersionArn` method and the ARN of the layer, which we pass in via props.
+However, for our project, we can avoid this bundling issue by using the `Function` construct and the `AssetCode` class and pointing at the TypeScript output folder `dist`.
 
 ```TypeScript
 export interface CustomerUpdatedProps {
@@ -171,6 +167,8 @@ export default class CustomerUpdatedHandler extends Construct {
 }
 ```
 
+We used the `layers` property to make the layer available to the function. We obtain the reference to the layer by using the `LayerVersion.fromLayerVersionArn` method and the ARN of the layer, which we pass in via props.
+
 Now we have our function construct we can use it in a stack. Here we obtain the layer ARN from the SSM Parameter that we created when we deployed the layer. This approach means that every time we deploy the function it picks up the latest version of the layer.
 
 ```TypeScript
@@ -197,21 +195,19 @@ export default class ApplicationStack extends Stack {
 }
 ```
 
-> I am not recommending this approach, but it was an interesting concept to play with. I had wondered if functions could reference the latest layer and then if you could update the latest layer. However, functions have to reference a specific layer version. So the approach above is as close as I could manage, where you can update a function without a code change.
+> I am not recommending this approach, but it was an interesting concept to play with. I had wondered if functions could reference the latest layer and then if you could update the latest layer underneath it. However, functions have to reference a specific layer version. So the approach above is as close as I could manage, where you can update a function without a code change.
 
 After we deploy the Lambda function, we can see in the console that we have referenced as expected.
 
-TODO: Console image
-
-## What about testing?
-
-  - ...the functionality in a Lambda layer?
-  - ...the functionality that uses a Lambda layer?
-
-- Can we download the layer and unzip it locally?
+![Lambda function referencing layer in console](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/hexagonal-lambda-layers/console-lambda-function-1.png?raw=true)
+![Lambda function referencing layer in console](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/hexagonal-lambda-layers/console-lambda-function-2.png?raw=true)
 
 ## Summary
 
-TODO
+It was interesting to have a play with Lambda layers and it was a bit of a challenge to get it all working. Given this, I suspect that I will not be reaching for them out of my toolbox any time soon.
 
-This is a good article [AWS Lambda Use Cases: When to use Lambda layers](https://lumigo.io/blog/lambda-layers-when-to-use-it/)
+In this post, we covered deploying and building, but we didn't cover testing. The [companion repo](https://github.com/andybalham/blog-hexagonal-lambda-layers) includes some tests, but local testing is tricky. I prefer integration testing in AWS, so this isn't so much of a negative for me. However, it may be a deal-breaker for some.
+
+All in all, I think I agree with the conclusions in the fine article "[AWS Lambda Use Cases: When to use Lambda layers](https://lumigo.io/blog/lambda-layers-when-to-use-it/)" by [Yan Cui](https://aws.amazon.com/developer/community/heroes/yan-cui/), one of which is to prefer `npm` as the default reuse approach.
+
+That said, it was interesting to actually kick the tyres on layers. If you are curious, then clone the [repo](https://github.com/andybalham/blog-hexagonal-lambda-layers) and have a play yourself.
