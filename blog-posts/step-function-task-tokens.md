@@ -2,7 +2,7 @@
 
 In this post, we will see how to implement the ['Wait for a Callback' Service Integration Pattern](https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html#connect-wait-token) using task tokens and the [CDK](https://aws.amazon.com/cdk/).
 
-The pattern is described in the [AWS documentation]((https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html#connect-wait-token)) as follows (slight paraphrasing):
+The pattern is described in the [AWS documentation](<(https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html#connect-wait-token)>) as follows (slight paraphrasing):
 
 > Callback tasks provide a way to pause a workflow until a task token is returned. A task might need to wait for a human approval, integrate with a third party, or call legacy systems. For tasks like these, you can pause Step Functions indefinitely, and wait for an external process or workflow to complete. For these situations Step Functions allows you to pass a task token to the service. The task will pause until it receives that task token back.
 
@@ -20,32 +20,61 @@ We are going to implement a mock Valuation Service that uses a step function to 
 
 ## Requesting a valuation
 
-TODO
-
-```TypeScript
-    const requestValuationTask = new LambdaInvoke(this, 'RequestValuation', {
-      lambdaFunction: valuationRequestFunction,
-      integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,
-      payload: TaskInput.fromObject({
-        taskToken: JsonPath.taskToken,
-        'loanApplication.$': '$',
-      }),
-      // payloadResponseOnly: true,
-    });
-```
-
-```TypeScript
-  const valuationRequest: ValuationRequest = {
-    property: event.loanApplication.property,
-    callbackUrl,
-  };
-
-  const response = await axios.post(valuationServiceUrl, valuationRequest);
-```
-
 ![Requesting a valuation](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/overview-diagram-step-01-request.png?raw=true)
 
-## Waiting (TODO)
+Our calling step function consists of a single task that invokes a Lambda function. The definition is shown below.
+
+```TypeScript
+const requestValuationTask = new LambdaInvoke(this, 'RequestValuation', {
+  lambdaFunction: valuationRequestFunction,
+  integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,
+  payload: TaskInput.fromObject({
+    taskToken: JsonPath.taskToken, // NOT "$$.Task.Token" as in some examples
+    'loanApplication.$': '$',
+  }),
+  // NOT payloadResponseOnly: true,
+});
+```
+
+Things to note are:
+
+- `integrationPattern` needs to be set to `IntegrationPattern.WAIT_FOR_TASK_TOKEN`.
+- `payload` must be specified and contain a property set to `JsonPath.taskToken`
+- If you specify `'taskToken.$': '$$.Task.Token'`, then you get the following error at synth time:
+  > Error: Task Token is required in `payload` for callback. Use JsonPath.taskToken to set the token.
+- If you specify `'taskToken.$': JsonPath.taskToken`, then you get the error at runtime:
+  > The Parameters '\<snip\> ' could not be used to start the Task: [The value for the field 'taskToken.$' must be a valid JSONPath or a valid intrinsic function call]
+- `payloadResponseOnly` must not be set to `true`, otherwise you get the following error:
+  > Error: The 'payloadResponseOnly' property cannot be used if 'integrationPattern', 'invocationType', 'clientContext', or 'qualifier' are specified.
+
+The valuation service is a third-party service and the a request is shown below.
+
+```TypeScript
+export interface ValuationRequest {
+  property: {
+    nameOrNumber: string;
+    postcode: string;
+  };
+  callbackUrl: string;
+}
+```
+
+The details of the property to be valued are specified, along with a URL to be called with the actual valuation.
+
+Below is a snippet from the [Lambda function](https://github.com/andybalham/blog-task-tokens/blob/master/src/LoanProcessor.ValuationRequestFunction.ts) that makes the call to the service. It uses the property details passed in from the step function along with callback URL obtained from the environment to make a simple call using the `axios` library.
+
+```TypeScript
+const valuationRequest: ValuationRequest = {
+  property: event.loanApplication.property,
+  callbackUrl,
+};
+
+const response = await axios.post(valuationServiceUrl, valuationRequest);
+```
+
+## Waiting for the callback
+
+![Storing the task token and waiting](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/overview-diagram-step-02-store-token.png?raw=true)
 
 ```TypeScript
 export interface ValuationRequestResponse {
@@ -54,10 +83,6 @@ export interface ValuationRequestResponse {
 ```
 
 ```TypeScript
-  if (response.status !== 201) {
-    throw new Error(`Unexpected response.status: ${response.status}`);
-  }
-
   const valuationRequestResponse = response.data as ValuationRequestResponse;
 
   await taskTokenStore.putAsync({
@@ -66,9 +91,9 @@ export interface ValuationRequestResponse {
   });
 ```
 
-![Storing the task token and waiting](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/overview-diagram-step-02-store-token.png?raw=true)
-
 ## Processing the callback
+
+![Receiving the request and restarting the step function](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/overview-diagram-step-03-response.png?raw=true)
 
 ```TypeScript
 export interface ValuationResponse {
@@ -92,7 +117,9 @@ export interface ValuationResponse {
     .promise();
 ```
 
-![Receiving the request and restarting the step function](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/overview-diagram-step-03-response.png?raw=true)
+```TypeScript
+    this.stateMachine.grantTaskResponse(valuationCallbackFunction);
+```
 
 ## Testing
 
