@@ -12,7 +12,10 @@ Clone the [companion repo](https://github.com/andybalham/https://github.com/andy
 
 ## TL;DR
 
-TODO
+- `integrationPattern` needs to be set to `IntegrationPattern.WAIT_FOR_TASK_TOKEN`
+- `payload` must be specified and contain a property set to `JsonPath.taskToken`
+- `payloadResponseOnly` must not be set to `true`
+- Use the `sendTaskSuccess` method to restart the step function
 
 ## Application overview
 
@@ -132,6 +135,10 @@ this.stateMachine.grantTaskResponse(valuationCallbackFunction);
 ## Testing
 
 TODO: Test via the console, but also mention the integration tests too.
+
+![AWS Console graph inspector showing transition](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/step-function-event-history.png?raw=true)
+
+![AWS Console showing event history](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/step-function-event-history.png?raw=true)
 
 ## What could possibly go wrong?
 
