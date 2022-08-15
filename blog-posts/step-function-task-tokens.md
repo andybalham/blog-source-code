@@ -8,7 +8,7 @@ The pattern is described in the [AWS documentation](<(https://docs.aws.amazon.co
 
 In our example, we will have the step function call an API endpoint and then wait for a webhook to be called, before restarting the step function.
 
-Clone the [companion repo](https://github.com/andybalham/https://github.com/andybalham/blog-task-tokens) to run the code for yourself.
+Clone the [companion repo](https://github.com/andybalham/blog-task-tokens) to run the code for yourself.
 
 ## TL;DR
 
@@ -134,25 +134,37 @@ this.stateMachine.grantTaskResponse(valuationCallbackFunction);
 
 ## Testing
 
-TODO: Test via the console, but also mention the integration tests too.
+Once deployed, we can test test either via the AWS console or by the [unit test in the companion repo](https://github.com/andybalham/blog-task-tokens/blob/master/tests/LoanProcessor.test.ts).
+
+In the AWS console, we can submit the following request:
+
+```json
+{
+  "applicationReference": "app-ref",
+  "property": {
+    "nameOrNumber": "999",
+    "postcode": "PO1 1CE"
+  }
+}
+```
+
+In the graph inspector, we then see the task go blue as it waits for the callback. Then, after the six second delay, going green as the callback is received and processed.
+
+![AWS Console showing event history](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/step-function-graph-inspector.png?raw=true)
+
+Looking at the event history, we can clearly see the delay in the execution time. We can also see that we have passed the response from the valuation service back into the step function.
 
 ![AWS Console graph inspector showing transition](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/step-function-event-history.png?raw=true)
 
-![AWS Console showing event history](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/step-function-event-history.png?raw=true)
-
-## What could possibly go wrong?
-
-TODO
-
 ## Summary
 
-TODO
+In this post we saw how we can use the [CDK](https://aws.amazon.com/cdk/) to define a step function that implements the 'Wait for a Callback' Service Integration Pattern. We saw how we need to be careful in how we define the task and how we might need to store the task token if calling external services.
 
-## Notes
+What we didn't consider, was what happens if things go wrong. For example, what if the valuation service never called us back? What if the valuation service returned an error or a reference we didn't understand? These are all questions for the next post 🙂
 
-What wasn't clear to me?
+## Links
 
-- Where does the task token come from?
-- How do you restart a step function with a token?
-
-Follow-up post with considering timeouts and late replies.
+- ['Wait for a Callback' Service Integration Pattern - AWS docs](https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html#connect-wait-token)
+- [Integrating AWS Step Functions callbacks and external systems - AWS docs](https://aws.amazon.com/blogs/compute/integrating-aws-step-functions-callbacks-and-external-systems/)
+- [aws-step-functions-callback-example on GitHub](https://github.com/aws-samples/aws-step-functions-callback-example)
+- [Best practices for using AWS StepFunctions](https://dev.to/lukvonstrom/best-practices-for-using-aws-stepfunctions-2io#use-waitfortasktoken)
