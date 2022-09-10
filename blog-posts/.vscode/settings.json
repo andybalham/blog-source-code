@@ -7,5 +7,10 @@
     "nanoid",
     "Nextable",
     "stepfunctions"
-  ]
+  ],
+  "workbench.colorCustomizations": {
+    "[Default Dark+]": {
+      "titleBar.activeBackground": "#268500"
+    }
+  }
 }
