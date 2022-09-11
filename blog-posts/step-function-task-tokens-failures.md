@@ -2,7 +2,7 @@
 
 TODO
 
-In the [previous post in the series](TODO) we looked at how to implement the ['Wait for a Callback' Service Integration Pattern](https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html#connect-wait-token) using task tokens and the [CDK](https://aws.amazon.com/cdk/). 
+In the [previous post in the series](TODO) we looked at how to implement the ['Wait for a Callback' Service Integration Pattern](https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html#connect-wait-token) using task tokens and the [CDK](https://aws.amazon.com/cdk/).
 
 However, we only considered what happens if everything goes to plan. As you might have heard somewhere, everything fails all the time and step functions and task token are no different.
 
@@ -18,24 +18,53 @@ As with any piece of software, we need to consider the ways in which things coul
 
 With this in mind, let us list out some ways the integration with the valuation service could fail:
 
-1. The service could fail to respond leaving us in an unknown state
-1. The service could return a response that indicates it couldn't fulfil the request
-1. The service could return a reference that we cannot match to a task token
+1. The valuation service could fail to respond leaving us in an unknown state.
+1. The valuation service could return a response that indicates it couldn't fulfil the request.
+1. The valuation service could return a reference that we do not expect.
 
 Now we have our failure modes, let us consider how we can handle them in such a way that we can easily identify what went wrong.
 
-## Heartbeats and timeouts
+## Timeouts and heartbeats
 
-TODO
+The first failure we will consider is where the valuation service fails to respond. If we do nothing, then our step function will stay stuck on the same step. Looking at the [step function quota documentation](https://docs.aws.amazon.com/step-functions/latest/dg/limits-overview.html), this will be the maximum execution time of one year.
+
+Clearly, this is not what we want. Thankfully, the solution is quite straightforward. What we need to do is to add a timeout to the asynchronous step, as shown below.
 
 ```TypeScript
-      heartbeat: Duration.seconds(10),
-      timeout: Duration.seconds(30),
+const requestValuationTask = new LambdaInvoke(this, 'RequestValuation', {
+  lambdaFunction: valuationRequestFunction,
+  integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,
+  payload: TaskInput.fromObject({
+    taskToken: JsonPath.taskToken,
+    'loanApplication.$': '$',
+  }),
+  timeout: Duration.seconds(30), // Don't wait forever for a reply
+});
 ```
 
-TODO
+> At first I thought that it was necessary to also set a value for `heartbeat`. It was only when writing this post that I consulted the ['Task state timeouts and heartbeat intervals' documentation](https://docs.aws.amazon.com/step-functions/latest/dg/amazon-states-language-task-state.html) and found that this wasn't the case for our example. The `heartbeat` setting is only required if the task is sending heartbeat notifications to indicate it is still progressing.
 
-Talk about the case where there is no response
+Our example includes a mock valuation service. To test the timeout, we update this [mock service](https://github.com/andybalham/blog-task-tokens-part-2/blob/master/src/valuation-service/MockValuationService.RequestHandlerFunction.ts). so that if it receives a certain request, then it simply returns without initiating the callback.
+
+```TypeScript
+if (valuationRequest.property.nameOrNumber === 'No callback') {
+  return {
+    statusCode: 201,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(valuationRequestResponse),
+  };
+}
+```
+
+With this in place, we can write a [unit test](https://github.com/andybalham/blog-task-tokens-part-2/blob/master/tests/LoanProcessor.test.ts) to send such a request and then see what happens. The result is shown below.
+
+![Event history showing the task timed out error](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/event-history-task-timed-out.png?raw=true)
+
+Now we know that our step function will not wait for year before failing. However, it does raise another failure mode. What happens if our step function has timed out just before the response comes back from the valuation service?
+
+## Handling late responses
+
+TODO
 
 Talk about the case where there is a late response
 
@@ -57,9 +86,13 @@ Talk about trying to give ourselves as much traceable info as possible.
 
 Mention having alerts off logs as an alternative.
 
-## Testing the failure modes ???
+## Failed requests and invalid responses
 
 TODO
 
 Talk about the mock valuation service
 
+## Links
+
+- ['Wait for a Callback' Service Integration Pattern](https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html#connect-wait-token)
+- [Step function quotas](https://docs.aws.amazon.com/step-functions/latest/dg/limits-overview.html)
