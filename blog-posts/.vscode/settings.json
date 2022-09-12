@@ -11,7 +11,8 @@
   "workbench.colorCustomizations": {
     "[Default Dark+]": {
       "titleBar.activeBackground": "#185300",
-      "activityBar.background": "#185300"
+      "activityBar.background": "#185300",
+      "sideBar.background": "#0d2e00"
     }
   }
 }

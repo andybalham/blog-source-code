@@ -113,9 +113,14 @@ With this in place, we can write another [unit test](https://github.com/andybalh
 
 So now we know what to expect when the service either doesn't reply or doesn't reply in time. The next question is how might we handle these situations.
 
-TODO
-
 ## Notifying ourselves of failure
+
+In my blog post [Better logging through technology](https://www.10printiamcool.com/better-logging-through-technology), I ask developers to see logging through the eyes of support. That is, put yourself in the position where something has gone wrong and you need to work out what. 
+
+In our case, we know that the valuation service step throws a `States.Timeout` error when the timeout is exceeded. What we decide to do, is publish an SNS message to an error topic. This will allow us to subscribe to this and do multiple activities if we want.
+
+[Step Function Context object](https://docs.aws.amazon.com/step-functions/latest/dg/input-output-contextobject.html)
+[AWS Lambda context object in Node.js](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-context.html)
 
 ```json
 {
