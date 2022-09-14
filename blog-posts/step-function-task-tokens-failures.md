@@ -44,7 +44,7 @@ const requestValuationTask = new LambdaInvoke(this, 'RequestValuation', {
 
 > At first I thought that it was necessary to also set a value for `heartbeat`. It was only when writing this post that I consulted the ['Task state timeouts and heartbeat intervals' documentation](https://docs.aws.amazon.com/step-functions/latest/dg/amazon-states-language-task-state.html) and found that this wasn't the case for our example. The `heartbeat` setting is only required if the task is sending heartbeat notifications to indicate it is still progressing.
 
-Our example includes a mock valuation service. To test the timeout, we update this [mock service](https://github.com/andybalham/blog-task-tokens-part-2/blob/master/src/valuation-service/MockValuationService.RequestHandlerFunction.ts) so that, if it receives a certain request, then it simply returns without initiating the callback.
+Our example includes a mock valuation service. To test the timeout, we update this [mock service](https://github.com/andybalham/blog-task-tokens-part-2/blob/master/src/valuation-service/MockValuationService.RequestHandlerFunction.ts) so that, if it receives a certain request, then it returns without initiating the callback.
 
 ```TypeScript
 if (valuationRequest.property.nameOrNumber === 'No callback') {
@@ -117,28 +117,36 @@ So now we know what to expect when the service either doesn't reply or doesn't r
 
 In my blog post [Better logging through technology](https://www.10printiamcool.com/better-logging-through-technology), I ask developers to see logging through the eyes of support. That is, put yourself in the position where something has gone wrong and you need to work out what. 
 
-In our case, we know that the valuation service step throws a `States.Timeout` error when the timeout is exceeded. What we decide to do, is publish an SNS message to an error topic. This will allow us to subscribe to this and do multiple activities if we want.
+In our case, we know that the valuation service step throws a `States.Timeout` error when the timeout is exceeded. What we will do is amend the step function to publish an SNS message to an error topic. This will give us flexibility to subscribe to this topic and do a range of actions, such as email. 
 
-[Step Function Context object](https://docs.aws.amazon.com/step-functions/latest/dg/input-output-contextobject.html)
-[AWS Lambda context object in Node.js](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-context.html)
+![Workflow Studio showing the step that publishes errors](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/workflow-studio-publish-error.png?raw=true)
 
-```json
-{
-  "description": "The valuation failed",
-  "ExecutionId.$": "$$.Execution.Id",
-  "ExecutionStartTime.$": "$$.Execution.StartTime"
+When things do go wrong, we want to be as helpful to those on support as we can. This means sending information that will allow someone to go directly to the thing that failed. For this, we are using the [Step Function Context object](https://docs.aws.amazon.com/step-functions/latest/dg/input-output-contextobject.html).
+
+By using the `$$` prefix, we can publish useful information along with our message. In this case, the ids of the state machine and the execution along with the start time of the execution. This information can then be used to identify exactly what has failed and when. Then the investigations can begin.
+
+To handle the scenario where the service doesn't reply in time, we can add a `try/catch` in the Lambda function and have that publish the error to our error topic. In this case, we use the [AWS Lambda context object in Node.js](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-context.html) to get hold of the function ARN.
+
+```TypeScript
+} catch (error: any) {
+
+  const publishError: PublishInput = {
+    Message: JSON.stringify({
+      source: context.invokedFunctionArn,
+      description: error.message,
+      eventRequestId: event.requestContext.requestId,
+      eventBody: event.body,
+    }),
+    TopicArn: errorTopicArn,
+  };
+
+  await sns.publish(publishError).promise();
 }
 ```
 
-![Application overview with error topic](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/application-overview-with-error-topic.png?raw=true)
+Here we try to keep to a convention of having a `source` and `description`, along with error-specific values. A bit of consistency is never a bad thing.
 
-TODO
-
-Talk about trying to give ourselves as much traceable info as possible.
-
-Mention having alerts off logs as an alternative.
-
-## Failed requests and invalid responses
+## Handling failed requests
 
 TODO
 
