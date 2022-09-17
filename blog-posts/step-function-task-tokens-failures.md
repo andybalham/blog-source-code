@@ -18,9 +18,9 @@ As with any piece of software, we need to consider the ways in which things coul
 
 With this in mind, let us list out some ways the integration with the valuation service could fail:
 
-1. The valuation service could fail to respond leaving us in an unknown state.
-1. The valuation service could return a response that indicates it couldn't fulfil the request.
-1. The valuation service could return a reference that we do not expect.
+1. It could fail to respond.
+1. It could return a response that indicates it couldn't fulfil the request.
+1. It could return a reference that we do not expect.
 
 Now we have our failure modes, let us consider how we can handle them in such a way that we can easily identify what went wrong.
 
@@ -91,17 +91,12 @@ We then bind the `Wait` step to the delay value.
 
 With this in place, we can write another [unit test](https://github.com/andybalham/blog-task-tokens-part-2/blob/master/tests/LoanProcessor.test.ts) to send such a request with 'Late callback' as the `nameOrNumber` and then run it to see what happens. What we find is the following error being thrown by the Lambda function when it tries to restart the step function.
 
-```
+```json
 {
   "errorType": "TaskTimedOut",
   "errorMessage": "Task Timed Out: 'Provided task does not exist anymore'",
   "code": "TaskTimedOut",
   "message": "Task Timed Out: 'Provided task does not exist anymore'",
-  "time": "2022-07-26T18:21:39.968Z",
-  "requestId": "9b5f54e3-9990-4c41-be67-9fda6c80c1f4",
-  "statusCode": 400,
-  "retryable": false,
-  "retryDelay": 77.92116479734025,
   "stack": [
     "TaskTimedOut: Task Timed Out: 'Provided task does not exist anymore'",
     "    at Request.extractError (/var/runtime/node_modules/aws-sdk/lib/protocol/json.js:52:27)",
@@ -111,7 +106,32 @@ With this in place, we can write another [unit test](https://github.com/andybalh
 }
 ```
 
-So now we know what to expect when the service either doesn't reply or doesn't reply in time. The next question is how might we handle these situations.
+So now we know what to expect when the service either doesn't reply or doesn't reply in time. What about the scenario when we get called more than once with the same task token?
+
+# Handling duplicate responses
+
+A duplicate response could occur when we use any service that promises an 'at least once' delivery, such as EventBridge. This means that we could receive the same message more than once. Given this, let us look at what happens when the same task token is used more than once.
+
+To do this, we amend the mock valuation service to send two responses when we send a request with 'Duplicate response' in the payload. By running another [unit test](https://github.com/andybalham/blog-task-tokens-part-2/blob/master/tests/LoanProcessor.test.ts), we then that we get another `TaskTimedOut` error.
+
+```json
+{
+  "errorType": "TaskTimedOut",
+  "errorMessage": "Task Timed Out: 'Provided task does not exist anymore'",
+  "code": "TaskTimedOut",
+  "message": "Task Timed Out: 'Provided task does not exist anymore'",
+  "stack": [
+    "TaskTimedOut: Task Timed Out: 'Provided task does not exist anymore'",
+    "    at Request.extractError (/var/runtime/node_modules/aws-sdk/lib/protocol/json.js:52:27)",
+    "    <snip>",
+    "    at Request.callListeners (/var/runtime/node_modules/aws-sdk/lib/sequential_executor.js:116:18)"
+  ]
+}
+```
+
+This is a little disappointing, as it appears to give us no way of differentiating between the duplicate scenario and the late scenario. The error is only saying that the time has passed for using the token. It doesn't say whether it was ever valid. I guess it would be impractical for the step function service to hold on to used tokens.
+
+Now we have investigated various failure scenarios, let us look at how might we handle them.
 
 ## Notifying ourselves of failure
 
@@ -150,7 +170,20 @@ Here we try to keep to a convention of having a `source` and `description`, alon
 
 TODO
 
-Talk about the mock valuation service
+Talk about returning task failures
+
+```TypeScript
+const taskFailureOutput = await stepFunctions
+  .sendTaskFailure({
+    taskToken: taskTokenItem.taskToken,
+    error: 'ValuationFailed',
+  })
+  .promise();
+```
+
+## Summary
+
+TODO
 
 ## Links
 
