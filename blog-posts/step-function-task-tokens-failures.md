@@ -129,7 +129,7 @@ To do this, we amend the mock valuation service to send two responses when we se
 }
 ```
 
-This is a little disappointing, as it appears to give us no way of differentiating between the duplicate scenario and the late scenario. The error is only saying that the time has passed for using the token. It doesn't say whether it was ever valid. I guess it would be impractical for the step function service to hold on to used tokens.
+This means that we use the error to tell the difference between the duplicate scenario and the late scenario. If it is important to us to know the difference, say we want to ignore such duplicates, then we could extend our DynamoDB table that holds the task tokens. We could add a property to record if the token has been used, then check that before trying to use it. 
 
 Now we have investigated various failure scenarios, let us look at how might we handle them.
 
@@ -168,9 +168,9 @@ Here we try to keep to a convention of having a `source` and `description`, alon
 
 ## Handling failed requests
 
-TODO
+There is another task token failure scenario, and that is when we want to restart the step function with a failure. In our example, the valuation service can call back with a response that indicates that it failed. In this case, we want our step function to exit and inform us that it failed.
 
-Talk about returning task failures
+The way we do this is by using the task token, but using the `sendTaskFailure` method. With this, we can restart the step function with an error as follows.
 
 ```TypeScript
 const taskFailureOutput = await stepFunctions
@@ -180,6 +180,10 @@ const taskFailureOutput = await stepFunctions
   })
   .promise();
 ```
+
+We then add another catch to the step function, to handle the `ValuationFailed` error and publish an SNS message to inform us.
+
+![Step function with valuation failed catch](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/step-function-with-valuation-failed.png?raw=true)
 
 ## Summary
 
