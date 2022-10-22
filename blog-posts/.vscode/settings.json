@@ -13,6 +13,15 @@
       "titleBar.activeBackground": "#185300",
       "activityBar.background": "#185300",
       "sideBar.background": "#0d2e00"
+    },
+    "[Default Light+]": {
+      "panel.background": "#e3eccb",
+      "terminal.background": "#edf3de",
+      "titleBar.activeBackground": "#1f8500",
+      "titleBar.activeForeground": "#ffffff",
+      "sideBar.background": "#e6f0cd",
+      "activityBar.background": "#1f8500",
+      "activityBar.activeBackground": "#77a868"
     }
   }
 }

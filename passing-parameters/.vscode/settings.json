@@ -5,6 +5,14 @@
     "source.fixAll.eslint": true
   },
   "cSpell.language": "en-GB",
+  "workbench.colorCustomizations": {
+    "[Default Dark+]": {
+      "titleBar.activeBackground": "#85005b",
+      "sideBar.background": "#41002c",
+      "activityBar.background": "#85005b",
+      "activityBar.activeBackground": "#a30070"
+    }
+  },
   "cSpell.words": [
     "esbuild",
     "exts",

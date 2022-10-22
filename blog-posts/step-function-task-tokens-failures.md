@@ -1,20 +1,25 @@
-## Handling Step Function Task Tokens failures with CDK
+## Handling Step Function Task Token failures with CDK
 
-TODO
+In the [previous post in the series](https://aws.hashnode.com/using-step-function-task-tokens-with-cdk) we looked at how to implement the ['Wait for a Callback' Service Integration Pattern](https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html#connect-wait-token) using task tokens and the [CDK](https://aws.amazon.com/cdk/).
 
-In the [previous post in the series](TODO) we looked at how to implement the ['Wait for a Callback' Service Integration Pattern](https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html#connect-wait-token) using task tokens and the [CDK](https://aws.amazon.com/cdk/).
+However, we only considered what happens if everything goes to plan. As you might have heard somewhere, everything fails all the time and step functions and task tokens are no different.
 
-However, we only considered what happens if everything goes to plan. As you might have heard somewhere, everything fails all the time and step functions and task token are no different.
+This post covers the various ways our previous application could fail, and then how we might handle those scenarios. All the code can be downloaded and run by cloning the [companion repo](https://github.com/andybalham/blog-task-tokens-part-2).
 
-This post covers the various ways our previous application could fail and how we might handle those scenarios. All the code can be downloaded and run by cloning the [companion repo](https://github.com/andybalham/blog-task-tokens-part-2).
+## TL:DR
+
+- Specify a value for `timeout` on asynchronous tasks
+- Catch `TaskTimedOut` errors
+- Use `sendTaskFailure` to call back with an error
+- Use the context `$$` to log debug information with errors
 
 ## Exploring the failure modes
 
-Below is a diagram that shows the step in our state machine that makes an external service call and then waits for a task token to continue. When the service calls back via a webhook, a task token is retrieved and used to restart the state machine.
+Below is a diagram that shows the step in our state machine that makes an external service call and then waits for a task token to continue. When the service calls back via a webhook, a task token is retrieved and then used to restart the state machine.
 
 ![Application overview](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/application-overview-annotated.png?raw=true)
 
-As with any piece of software, we need to consider the ways in which things could fail. It is all too easy to just consider the happy path and then be surprised when something fails. Especially if you are left scratching your head as you don't have the information to understand and fix it.
+As with any piece of software, we need to consider the ways in which things could fail. It is all too easy to just consider the happy path and then be surprised when something goes wrong. Especially if you are left scratching your head, as you don't have the information to understand and fix it.
 
 With this in mind, let us list out some ways the integration with the valuation service could fail:
 
@@ -22,7 +27,7 @@ With this in mind, let us list out some ways the integration with the valuation 
 1. It could return a response that indicates it couldn't fulfil the request.
 1. It could return a reference that we do not expect.
 
-Now we have our failure modes, let us consider how we can handle them in such a way that we can easily identify what went wrong.
+Now we have our failure modes, let us consider how we can handle them in such a way that we can easily identify what went the problem was.
 
 ## Timeouts and heartbeats
 
@@ -56,7 +61,7 @@ if (valuationRequest.property.nameOrNumber === 'No callback') {
 }
 ```
 
-With this code in place, we can write a [unit test](https://github.com/andybalham/blog-task-tokens-part-2/blob/master/tests/LoanProcessor.test.ts) to send such a request with 'No callback' as the `nameOrNumber` and then see what happens. The result is shown below.
+With this code in place, we can write a [unit test](https://github.com/andybalham/blog-task-tokens-part-2/blob/master/tests/LoanProcessor.test.ts) to send a request with 'No callback' as the `nameOrNumber` and then see what happens. The result is shown below.
 
 ![Event history showing the task timed out error](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/event-history-task-timed-out.png?raw=true)
 
@@ -64,7 +69,7 @@ Now we know that our step function will not wait for year before failing. Howeve
 
 ## Handling late responses
 
-To find out what happens, we turn again to our mock valuation service. This service uses an [Express Workflow](TODO) to add a delay before sending the mock response as shown below.
+To find out what happens, we turn again to our mock valuation service. This service uses an [Express Workflow](https://aws.amazon.com/about-aws/whats-new/2019/12/introducing-aws-step-functions-express-workflows/) to add a delay before sending the mock response as shown below.
 
 ![Mock valuation service state machine](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/mock-service-state-machine.png?raw=true)
 
@@ -129,15 +134,15 @@ To do this, we amend the mock valuation service to send two responses when we se
 }
 ```
 
-This means that we use the error to tell the difference between the duplicate scenario and the late scenario. If it is important to us to know the difference, say we want to ignore such duplicates, then we could extend our DynamoDB table that holds the task tokens. We could add a property to record if the token has been used, then check that before trying to use it. 
+This means that we use the error to tell the difference between the duplicate scenario and the late scenario. If it is important to us to know the difference, say we want to ignore such duplicates, then we could extend our DynamoDB table that holds the task tokens. We could add a property to record if the token has been used, then check that before trying to use it.
 
 Now we have investigated various failure scenarios, let us look at how might we handle them.
 
 ## Notifying ourselves of failure
 
-In my blog post [Better logging through technology](https://www.10printiamcool.com/better-logging-through-technology), I ask developers to see logging through the eyes of support. That is, put yourself in the position where something has gone wrong and you need to work out what. 
+In my blog post [Better logging through technology](https://www.10printiamcool.com/better-logging-through-technology), I ask developers to see logging through the eyes of support. That is, put yourself in the position where something has gone wrong and you need to work out what.
 
-In our case, we know that the valuation service step throws a `States.Timeout` error when the timeout is exceeded. What we will do is amend the step function to publish an SNS message to an error topic. This will give us flexibility to subscribe to this topic and do a range of actions, such as email. 
+In our case, we know that the valuation service step throws a `States.Timeout` error when the timeout is exceeded. What we will do is amend the step function to publish an SNS message to an error topic. This will give us flexibility to subscribe to this topic and do a range of actions, such as email.
 
 ![Workflow Studio showing the step that publishes errors](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/step-function-task-tokens/workflow-studio-publish-error.png?raw=true)
 
@@ -187,9 +192,10 @@ We then add another catch to the step function, to handle the `ValuationFailed` 
 
 ## Summary
 
-TODO
+In this post, we have seen a variety of ways that we can experience failures when dealing with task tokens and step functions. We saw how we can add a timeout to prevent a task from waiting a year to fail. We also saw how we can pass back a failure state to the step function and how we can handle these errors in the flow. Finally, we saw how we can notify ourselves with context information that could help ourselves to diagnose the source of any errors.
 
 ## Links
 
 - ['Wait for a Callback' Service Integration Pattern](https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html#connect-wait-token)
 - [Step function quotas](https://docs.aws.amazon.com/step-functions/latest/dg/limits-overview.html)
+- [Integrating AWS Step Functions callbacks and external systems](https://aws.amazon.com/blogs/compute/integrating-aws-step-functions-callbacks-and-external-systems/)
