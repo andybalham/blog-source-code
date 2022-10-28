@@ -6,7 +6,8 @@
     "hotswap",
     "nanoid",
     "Nextable",
-    "stepfunctions"
+    "stepfunctions",
+    "TIBCO"
   ],
   "workbench.colorCustomizations": {
     "[Default Dark+]": {
