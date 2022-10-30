@@ -32,23 +32,42 @@ Next we will consider a couple of alternative implementations using AWS serverle
 
 The sequence of events is as follows:
 
-- The API puts a message to be processed on the SQS request queue
-- A [Lambda function](https://aws.amazon.com/lambda/) consumes the request message from the queue and initiates a [step function](https://aws.amazon.com/step-functions/)
-- The step function places a message on a credit report SQS request queue and pauses
-- The credit bureau places a message on the credit report SQS response queue
-- A Lambda function consumes the response message and continues the step function
-- For each registered lender, an SNS message containing the lender identifier is published to a rate request topic, and then the step function pauses
-- Each lender has an SQS queue subscribed to rate request topic, filtered by their lender identifier
-- The lender consumes the rate request and places a message on the rate response SQS queue
-- When all lenders have responded, the step function continues
-- The best rate is selected and a message is placed on the SQS response queue
-- A Lambda function consumes the response message and calls the [webhook](https://www.getvero.com/resources/webhooks/) with the best rate
+1. The API puts a message to be processed on the SQS request queue
+1. A [Lambda function](https://aws.amazon.com/lambda/) consumes the request message from the queue and initiates a [step function](https://aws.amazon.com/step-functions/)
+1. The step function places a message on a credit report SQS request queue and pauses
+1. The credit bureau places a message on the credit report SQS response queue
+1. A Lambda function consumes the response message and continues the step function
+1. For each registered lender, an SNS message is published to a rate request topic and the step function pauses
+1. Each lender has an SQS queue subscribed to rate request topic, filtered by their lender identifier
+1. The lender consumes the rate request and places a message on the rate response SQS queue
+1. When all lenders have responded, the step function continues
+1. The best rate is selected and a message is placed on the SQS response queue
+1. A Lambda function consumes the response message and calls the [webhook](https://www.getvero.com/resources/webhooks/) with the best rate
 
 ## EventBridge implementation
 
+AWS describes [EventBridge](https://aws.amazon.com/eventbridge/) as follows:
+
+> Amazon EventBridge is a serverless event bus that lets you receive, filter, transform, route, and deliver events. 
+
+We can take the previous architecture and replace both SQS and SNS with a single EventBridge event bus. The result is shown below:
+
 ![Architecture diagram using EventBridge](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/case-study-eventbridge.png?raw=true)
 
-## Comparing and contrasting the two implementations
+The sequence of events is very similar to before, but all communication is through events sent and received through the central event bus:
+
+1. The API publishes a `QuoteSubmitted` event
+1. A [Lambda function](https://aws.amazon.com/lambda/) receives the Quote Submitted event and initiates a [step function](https://aws.amazon.com/step-functions/)
+1. The step function publishes a `CreditReportRequested` event and pauses
+1. The credit bureau receives the event, obtains the report, and then publishes a `CreditReportReceived` event
+1. A Lambda function receives the `CreditReportReceived` event and continues the step function
+1. For each registered lender, a `LenderRateRequested` event is published and the step function pauses
+1. Each lender receives a `LenderRateRequested` event, and then replies by publishing a `LenderRateReceived` event with their rate
+1. When all lenders have responded, the step function continues
+1. The best rate is selected and a `QuoteProcessed` event is published with the result
+1. A Lambda function receives the `QuoteProcessed` event and calls the [webhook](https://www.getvero.com/resources/webhooks/) with the best rate
+
+## Comparing the two implementations
 
 TODO: Mention the following articles:
 
