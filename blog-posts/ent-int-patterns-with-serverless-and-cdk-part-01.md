@@ -67,10 +67,31 @@ The sequence of events is very similar to before, but all communication is throu
 1. The best rate is selected and a `QuoteProcessed` event is published with the result
 1. A Lambda function receives the `QuoteProcessed` event and calls the [webhook](https://www.getvero.com/resources/webhooks/) with the best rate
 
-## Comparing the two implementations
+## Comparing the two approaches
 
-TODO: Mention the following articles:
+Let me start by saying that both approaches have the potential to be good solutions to the problem. Both approaches decouple all the Lambda functions by using messaging. This can help with both testing and scaling.
 
-- [Medium - Difference between Amazon EventBridge and Amazon SNS](https://medium.com/awesome-cloud/aws-difference-between-amazon-eventbridge-and-amazon-sns-comparison-aws-eventbridge-vs-aws-sns-46708bf5313)
-- [Lumigo - Choosing the right event-routing service for serverless: EventBridge, SNS, or SQS](https://lumigo.io/blog/choosing-the-right-event-routing-on-aws-eventbridge-sns-or-sqs/)
-- [Lumigo - 5 reasons why you should use EventBridge instead of SNS](https://lumigo.io/blog/5-reasons-why-you-should-use-eventbridge-instead-of-sns/)
+However, there are a number of key differences between the technologies:
+
+- SQS and SNS support ordered events, EventBridge does not
+- SQS delivers 'at most once', SNS and EventBridge deliver 'at least once'
+- EventBridge supports content-based filtering, SNS only supports attribute-based filtering
+
+For more information on the difference, I recommend the following articles:
+
+- [Difference between Amazon EventBridge and Amazon SNS](https://medium.com/awesome-cloud/aws-difference-between-amazon-eventbridge-and-amazon-sns-comparison-aws-eventbridge-vs-aws-sns-46708bf5313)
+- [Choosing the right event-routing service for serverless: EventBridge, SNS, or SQS](https://lumigo.io/blog/choosing-the-right-event-routing-on-aws-eventbridge-sns-or-sqs/)
+
+What strikes me about the two architecture diagrams, is that with the EventBridge approach puts the event bus at the centre of the architecture. With the SQS/SNS approach, the Loan Broker appears as the centre. I also noted that when explaining the sequence, the EventBridge approach centred around the publishing and receiving of domain events. With the SQS/SNS approach, the explanation had to refer to specific queues and topics.
+
+Out of the box, I can see observability advantages with the SQS/SNS approach. That is, we could use the AWS console to see how many messages were in flight at any time. This could allow us to see if things were getting backed up at any point. We would have some potentially useful control points too. We could also pause any part of the system by throttling the number of Lambda function executions. This would result in messages queuing up, but not being lost. The 'at most once' delivery would also help with ensuring [idempotency](https://www.restapitutorial.com/lessons/idempotency.html), without any additional effort on our part.
+
+So given all these positives, why am I going to choose the EventBridge approach to implement? It is partly that I wanted to get some hands-on experience with implementing domain events with EventBridge (see note below). It is also that the domain event driven approach allows us to extend the system without impacting the current behaviour. This is because new components can subscribe to and process the events independently.
+
+> CV Driven Design (CDD) is the approach of building systems based on technology that the architects want on their CVs. Please do not do this in commercial software. Please challenge the use of any technology and ensure that its use is justified, given the available alternatives.
+
+TODO: Talk about implementing the patterns using a registry and step functions
+
+## Notes
+
+- [5 reasons why you should use EventBridge instead of SNS](https://lumigo.io/blog/5-reasons-why-you-should-use-eventbridge-instead-of-sns/)
