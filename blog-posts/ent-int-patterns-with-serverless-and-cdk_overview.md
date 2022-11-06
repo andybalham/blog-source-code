@@ -14,8 +14,15 @@
 
 - Structure
   - [Amazon EventBridge: Event Payload Standards](https://www.boyney.io/blog/2022-02-11-event-payload-patterns)
+  - [Amazon EventBridge event patterns](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html)
 - Passing data
   - [Using presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html)
+  - [Event-driven architecture at PostNL with Luc van Donkersgoed](https://realworldserverless.com/episode/68)
+    - Search for 'an interesting question about versioning.'
+    - [Build Cloud-Native Apps with Serverless Integration Testing](https://www.youtube.com/watch?v=dT4o_0aVomg)
+  - Have a look at [EventCatalog](https://www.eventcatalog.dev/) 
+    - EventCatalog is an Open Source project that helps you document your events, services and domains.
+    - [Using AWS CDK to Deploy EventCatalog](https://matt.martz.codes/using-aws-cdk-to-deploy-eventcatalog)
 
 ## Testing
 
@@ -26,6 +33,7 @@
 - Hooking into domain events
   - Building up a list of events
 - Metrics and dashboard
+- [AWS Distro for OpenTelemetry](https://aws.amazon.com/otel/?otel-blogs.sort-by=item.additionalFields.createdDate&otel-blogs.sort-order=desc)
 - DLQs: [Event retry policy and using dead-letter queues](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rule-dlq.html)
 - [Amazon SQS delay queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-delay-queues.html)
   - To monitor whether we process all requests
