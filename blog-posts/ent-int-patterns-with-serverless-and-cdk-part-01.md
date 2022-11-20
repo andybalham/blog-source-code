@@ -1,12 +1,10 @@
 # Enterprise Integration Patterns with Serverless and CDK
 
-Choosing our messaging technology
+__Choosing our messaging technology__
 
 ## Overview
 
 If you are interested in [Event-Driven Architecture (EDA)](https://aws.amazon.com/event-driven-architecture/) then I would highly recommend you reading [Enterprise Integration Patterns: Designing, Building, and Deploying Messaging Solutions](https://www.amazon.co.uk/Enterprise-Integration-Patterns-Designing-Addison-Wesley/dp/0321200683). Although published first in 2003, this book contains a catalogue of sixty-five messaging patterns still relevant today. Maybe even more so, given the ease of building with such patterns today. It also explores in detail the advantages and limitations of asynchronous messaging architectures.
-
-TODO: Think of better phrase than 'case study'
 
 The book also includes some case studies and their implementation. However, this is where the age of the book shows, as this snippet from the Amazon brief indicates:
 
@@ -18,7 +16,9 @@ Full working code for this post can be found on the accompanying [GitHub repo](h
 
 ## The Loan Broker case study
 
-The case study we will look at is an application that acts as a loan broker. The application receives a request containing the details of the loan required, along with details of the individual wanting the loan. The application then interacts with a credit bureau to obtain a credit report for the individual. The loan details plus the credit report are then sent to multiple lenders, who each submit their best rates. The application then selects the best rate and publishes the result.
+The case study we will look at is an application that acts as a loan broker. The application receives a request containing the details of the loan required, along with details of the individual wanting the loan and returns the best rate from a set of lenders. 
+
+The application does this by calling a credit bureau to obtain a credit report for the individual. The loan details plus the credit report are then sent to multiple lenders, who each submit their best rates. The application then selects the best rate and publishes the result.
 
 ![Case study overview](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/case-study.png?raw=true)
 
