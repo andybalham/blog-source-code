@@ -16,7 +16,7 @@ The following diagram shows how we use a central [EventBridge](https://aws.amazo
 
 ![Architecture diagram using EventBridge](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/case-study-eventbridge.png?raw=true)
 
-The event-driven processing of each API request is as follows:
+The processing of each API request is as follows:
 
 1. The API handler publishes a `QuoteSubmitted` event
 1. The `QuoteSubmitted` event is handled and initiates a [step function](https://aws.amazon.com/step-functions/)
@@ -139,20 +139,15 @@ Now the `detail` for each of our domain events allows us see when it was raised,
 
 If there is one constant, it is change. Systems evolve over time, so it is important to bear this in mind when building them. 
 
-In the case of events, we may want to add information to them over time. In general, this will be a safe thing to do. However, this is if we know that all downstream systems accept new properties and do not rely on this new value. This puts the emphasis on us to write forgiving consumers of events. 
+In the case of events, we may want to add information to them over time. In general, this will be a safe thing to do. However, this is only true if we know that all downstream systems accept new properties. This puts the emphasis on us to write event consumers to be as forgiving as possible. 
 
-However, it may be the case that at some point we need to fundamentally change the structure of an event. How can we do this without breaking something? With a distributed system, we are not able stop everything. We also might have old events in-flight awaiting processing. So what can we do?
+However, it may be the case that at some point we need to fundamentally change the structure of an event. How can we do this without breaking something? With a distributed system, we are not able stop everything. We might have old events in-flight awaiting processing as well. So what can we do?
 
-TODO
+The solution I am proposing here was inspired by listening to the following podcast: [Real-World Serverless: Event-driven architecture at PostNL with Luc van Donkersgoed](https://realworldserverless.com/episode/68)
 
-- [Event-driven architecture at PostNL with Luc van Donkersgoed](https://realworldserverless.com/episode/68)
-  - Search for 'an interesting question about versioning.'
-- [Build Cloud-Native Apps with Serverless Integration Testing](https://www.youtube.com/watch?v=dT4o_0aVomg)
+If you search for 'an interesting question about versioning' in the transcript, then you will be taken to the discussion of how versioned events can help with this scenario. The approach is to support multiple versions of the same event for a period of time. The event producer raises both event versions and event consumers match on the version to handle the appropriate version.
 
-
-- [Amazon EventBridge event patterns](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html)
-  - TODO: Find out if sophisticated matching is available on `detail-type` or `source`
-- [Amazon EventBridge now supports enhanced filtering capabilities](https://aws.amazon.com/about-aws/whats-new/2022/11/amazon-eventbridge-enhanced-filtering-capabilities/)
+To do this, we extend the event metadata to include the event type and the event version as follows. 
 
 ```TypeScript
 export interface EventSchema {
@@ -168,6 +163,8 @@ export interface DomainEventMetadata
 }
 ```
 
+This allows us to match on event version as shown below. This way we can support consumers for both the old and new versions.
+
 ```TypeScript
 export const QUOTE_PROCESSED_PATTERN_V1 = {
   detail: {
@@ -177,19 +174,68 @@ export const QUOTE_PROCESSED_PATTERN_V1 = {
     },
   },
 };
+
+export const QUOTE_PROCESSED_PATTERN_V2 = {
+  detail: {
+    metadata: {
+      eventType: [EventType.QuoteProcessed],
+      eventVersion: [{ prefix: '2.' }],
+    },
+  },
+};
 ```
+
+Now we can have the event producer raise both the old and new versions of the event. This might be a temporary solution until we remove consumers of the old event version, or it could be a permanent state of affairs. With event versioning, we have the choice.
 
 ## Passing large and sensitive payloads
 
-- [Using presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html)
-- [How to publish large events with Amazon EventBridge using the claim check pattern](https://www.boyney.io/blog/2022-11-01-eventbridge-claim-check)
+Another consideration with our events is the size of the payload. Although in the example code the request is small, in reality such requests can be much larger in size. As the AWS article [Calculating Amazon EventBridge PutEvents event entry size](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-putevent-size.html) states, the total entry size must be less than 256KB. The solution is also mentioned:
+
+> If the entry size is larger than 256KB, we recommend uploading the event to an Amazon S3 bucket and including the Object URL in the PutEvents entry.
+
+Of course, each downstream component will need access to the data, and so they will need access to the S3 bucket. However, this introduces a form of coupling. If we decided to change the bucket location, then we would have to find all the downstream components and changes those too.
+
+The solution is to use [presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html). These allow us to implement the [Claim Check pattern](https://www.enterpriseintegrationpatterns.com/StoreInLibrary.html), where we generate a short-lived URL that only allows read access to the event data. We do this as follows:
+
+```TypeScript
+await s3
+  .putObject({
+    Bucket: bucketName,
+    Key: key,
+    ACL: 'bucket-owner-full-control',
+    Body: data,
+  } as PutObjectRequest)
+  .promise();
+
+const dataUrl = await s3.getSignedUrlPromise('getObject', {
+  ...s3Params,
+  Expires: expirySeconds ?? 60,
+});
+```
+
+We can then pass the `dataUrl` value in our event and use it to get the data. In our case, we created a function, `fetchFromUrlAsync` to do this.
+
+```TypeScript
+import fetch from 'node-fetch';
+
+export const fetchFromUrlAsync = async <T>(url: string): Promise<T> => {
+  const fetchResponse = await fetch(url);
+  return (await fetchResponse.json()) as T;
+};
+```
+
+This approach has a secondary benefit. Our events are passing [PII (personally identifiable information)](https://www.cloudflare.com/en-gb/learning/privacy/what-is-pii/), which needs very careful management. It is very easy for this information to make its way into logs, where it can leak out with very serious consequences. By using the approach outlined here, the events only ever contain a URL which can safely be logged by any component.
 
 ## Summary
 
-TODO
+In this post we looked at how we can identify and structure our events. Key to this is having separate sections for the metadata and data. We can then build on this by including context, correlation, and version information in the metadata. Finally, we looked at how the Claim Check pattern can allow us to pass large payloads and also avoid logging sensitive data.
 
 ## Links
 
+- [Build Cloud-Native Apps with Serverless Integration Testing](https://www.youtube.com/watch?v=dT4o_0aVomg)
+- [Amazon EventBridge event patterns](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html)
+- [Amazon EventBridge now supports enhanced filtering capabilities](https://aws.amazon.com/about-aws/whats-new/2022/11/amazon-eventbridge-enhanced-filtering-capabilities/)
 [The Value of Correlation IDs](https://www.rapid7.com/blog/post/2016/12/23/the-value-of-correlation-ids/)
 - [The power of Amazon EventBridge is in its detail](https://medium.com/lego-engineering/the-power-of-amazon-eventbridge-is-in-its-detail-92c07ddcaa40)
 - [Amazon EventBridge events](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-events.html)
+- [How to publish large events with Amazon EventBridge using the claim check pattern](https://www.boyney.io/blog/2022-11-01-eventbridge-claim-check)

@@ -79,7 +79,9 @@ However, there are a number of key differences between the technologies:
 
 - SQS and SNS support ordered events, EventBridge does not
 - SQS delivers 'at most once', SNS and EventBridge deliver 'at least once'
-- EventBridge supports content-based filtering, SNS only supports attribute-based filtering
+- <s>EventBridge supports content-based filtering, SNS only supports attribute-based filtering</s>
+
+> UPDATE: It was announced at re:Invent 2022 that [Amazon SNS adds support for payload-based message filtering](https://aws.amazon.com/about-aws/whats-new/2022/11/amazon-sns-payload-based-message-filtering/). This does make SNS a lot more attractive as a choice for event-driven architectures. There are still many reasons to choose EventBridge though.
 
 For more information on the difference, I recommend the following articles:
 
