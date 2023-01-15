@@ -1,4 +1,4 @@
-# Enterprise Integration Patterns - Event Design
+# Enterprise Integration Patterns - Domain Event Design
 
 ## Overview
 
@@ -35,7 +35,7 @@ Central to an [event-driven architecture](https://aws.amazon.com/event-driven-ar
 
 The identification of events can come out of walking through the process being implemented, or from a more formal process. These processes could be [domain-driven design (DDD)](https://en.wikipedia.org/wiki/Domain-driven_design) or [event storming](https://en.wikipedia.org/wiki/Event_storming).
 
-The key is that all event describe something happened in the past, not that anything should happen in the future. The latter is a request or command, not an event. To paraphrase the [Wikipedia event storming page](https://en.wikipedia.org/wiki/Event_storming), an actor executes a command that results in the creation of a __domain event__, written in __past tense__.
+The key is that all event describe something happened in the past, not that anything should happen in the future. The latter is a request or command, not an event. To paraphrase the [Wikipedia event storming page](https://en.wikipedia.org/wiki/Event_storming), an actor executes a command that results in the creation of a **domain event**, written in **past tense**.
 
 ## Basic event Structure
 
@@ -75,7 +75,7 @@ David's post was itself influenced by the [The power of Amazon EventBridge is in
    }
 ```
 
-As the [post]((https://medium.com/lego-engineering/the-power-of-amazon-eventbridge-is-in-its-detail-92c07ddcaa40)) points out:
+As the [post](<(https://medium.com/lego-engineering/the-power-of-amazon-eventbridge-is-in-its-detail-92c07ddcaa40)>) points out:
 
 > Implementing these kinds of standards within our events can provide us with some benefits:
 >
@@ -115,12 +115,15 @@ On the subject of observability, one of the challenges of event-driven systems i
 
 Every call into our application will pass both a correlation and a request id in each event. The correlation id can be externally-specified, but the request id will be generated for each call. Using a correlation id in this way, allows our application to be tracked as part in longer-running sagas. For example, if a call was retried, then it may use the same correlation id. This would allow us to piece together that the two requests were related.
 
+The final id in our context is an event id. This id is unique to each individual event. EventBridge delivers events 'at least once', which means that some events will be received more than once. To handle this scenario, the system needs to be able to behave in an [idempotent](https://www.restapitutorial.com/lessons/idempotency.html) manner. The event id allows event handlers to do so, by use the event id to recognise duplicate events.
+
 With all this is mind, we create an `EventContext` interface with our ids.
 
 ```TypeScript
 export interface EventContext {
   readonly correlationId: string; // Can be externally provided
   readonly requestId: string; // Always internally generated
+  readonly eventId: string; // Internally generated and unique to the event
 }
 ```
 
@@ -137,9 +140,9 @@ Now the `detail` for each of our domain events allows us see when it was raised,
 
 ## Evolving events with versioning
 
-If there is one constant, it is change. Systems evolve over time, so it is important to bear this in mind when building them. 
+If there is one constant, it is change. Systems evolve over time, so it is important to bear this in mind when building them.
 
-In the case of events, we may want to add information to them over time. In general, this will be a safe thing to do. However, this is only true if we know that all downstream systems accept new properties. This puts the emphasis on us to write event consumers to be as forgiving as possible. 
+In the case of events, we may want to add information to them over time. In general, this will be a safe thing to do. However, this is only true if we know that all downstream systems accept new properties. This puts the emphasis on us to write event consumers to be as forgiving as possible.
 
 However, it may be the case that at some point we need to fundamentally change the structure of an event. How can we do this without breaking something? With a distributed system, we are not able stop everything. We might have old events in-flight awaiting processing as well. So what can we do?
 
@@ -147,7 +150,7 @@ The solution I am proposing here was inspired by listening to the following podc
 
 If you search for 'an interesting question about versioning' in the transcript, then you will be taken to the discussion of how versioned events can help with this scenario. The approach is to support multiple versions of the same event for a period of time. The event producer raises both event versions and event consumers match on the version to handle the appropriate version.
 
-To do this, we extend the event metadata to include the event type and the event version as follows. 
+To do this, we extend the event metadata to include the event type and the event version as follows.
 
 ```TypeScript
 export interface EventSchema {
@@ -235,7 +238,7 @@ In this post we looked at how we can identify and structure our events. Key to t
 - [Build Cloud-Native Apps with Serverless Integration Testing](https://www.youtube.com/watch?v=dT4o_0aVomg)
 - [Amazon EventBridge event patterns](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html)
 - [Amazon EventBridge now supports enhanced filtering capabilities](https://aws.amazon.com/about-aws/whats-new/2022/11/amazon-eventbridge-enhanced-filtering-capabilities/)
-[The Value of Correlation IDs](https://www.rapid7.com/blog/post/2016/12/23/the-value-of-correlation-ids/)
+- [The Value of Correlation IDs](https://www.rapid7.com/blog/post/2016/12/23/the-value-of-correlation-ids/)
 - [The power of Amazon EventBridge is in its detail](https://medium.com/lego-engineering/the-power-of-amazon-eventbridge-is-in-its-detail-92c07ddcaa40)
 - [Amazon EventBridge events](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-events.html)
 - [How to publish large events with Amazon EventBridge using the claim check pattern](https://www.boyney.io/blog/2022-11-01-eventbridge-claim-check)

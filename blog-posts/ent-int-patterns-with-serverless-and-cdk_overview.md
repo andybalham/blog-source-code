@@ -58,6 +58,7 @@ We needed to add this to allow the use of `crypto.randomUUID()`.
 ## Testing
 
 - [Serverless integration testing with the AWS CDK](https://www.10printiamcool.com/series/integration-test-with-cdk)
+- Highlight how it is straightforward to implement mock functions with an event-driven architecture
 
 ## Observability, error handling, and idempotency
 
@@ -71,3 +72,8 @@ We needed to add this to allow the use of `crypto.randomUUID()`.
 - [Amazon SQS delay queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-delay-queues.html)
   - To monitor whether we process all requests
 - [Logging and dashboards using Lambda PowerTools and CDK](https://markilott.medium.com/aws-lambda-powertools-b74baa36ac61)
+- [CloudWatch Dashboards as Code (the Right Way) Using AWS CDK](https://medium.com/poka-techblog/cloudwatch-dashboards-as-code-the-right-way-using-aws-cdk-1453309c5481)
+- [Create AWS CloudWatch Dashboard With AWS CDK](https://www.milangatyas.com/Blog/Detail/12/create-aws-cloudwatch-dashboard-with-aws-cdk)
+- [class Dashboard (construct)](https://docs.aws.amazon.com/cdk/api/v1/docs/@aws-cdk_aws-cloudwatch.Dashboard.html)
+- [evb-cli: Pattern generator and debugging tool for EventBridge](https://www.npmjs.com/package/@mhlabs/evb-cli)
+- [How to Use AWS X-Ray to Monitor and Trace an Event-Driven Architecture on AWS](https://blog.guilleojeda.com/how-to-use-aws-x-ray-to-monitor-and-trace-an-event-driven-architecture-on-aws)
