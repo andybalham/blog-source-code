@@ -62,6 +62,13 @@ We needed to add this to allow the use of `crypto.randomUUID()`.
 
 ## Observability, error handling, and idempotency
 
+- Adding a follow-up event to check that the quote was processed (maybe for a later post)
+  - https://docs.aws.amazon.com/scheduler/latest/UserGuide/what-is-scheduler.html
+  - https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html#one-time
+  - https://dev.to/kumo/9-surprises-using-aws-eventbridge-scheduler-13b6
+  - https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Scheduler.html#createSchedule-property
+- Add a dashboard (maybe for a another post)
+
 - [Amazon EventBridge Scheduler](https://aws.amazon.com/eventbridge/scheduler/?trk=1dda356d-fbf2-4372-8247-d1aad644af59)
   - Could we use this to schedule a check that we processed a quote?
 - Hooking into domain events
