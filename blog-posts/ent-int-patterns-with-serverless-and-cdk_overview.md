@@ -71,6 +71,7 @@ We needed to add this to allow the use of `crypto.randomUUID()`.
 
 - [Amazon EventBridge Scheduler](https://aws.amazon.com/eventbridge/scheduler/?trk=1dda356d-fbf2-4372-8247-d1aad644af59)
   - Could we use this to schedule a check that we processed a quote?
+  - [About Amazon EventBridge Scheduler](https://dev.to/aws-builders/about-amazon-eventbridge-scheduler-1ocj)
 - Hooking into domain events
   - Building up a list of events
 - Metrics and dashboard

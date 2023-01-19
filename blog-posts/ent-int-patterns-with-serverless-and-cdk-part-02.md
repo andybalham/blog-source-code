@@ -2,7 +2,7 @@
 
 ## Overview
 
-In the first [post](https://aws.hashnode.com/enterprise-integration-patterns-with-serverless-and-cdk) in the [series](https://aws.hashnode.com/series/enterprise-patterns-cdk), we took a case study from [Enterprise Integration Patterns: Designing, Building, and Deploying Messaging Solutions](https://www.amazon.co.uk/Enterprise-Integration-Patterns-Designing-Addison-Wesley/dp/0321200683) and looked at how we could implement it using modern serverless technologies. We considered how we could use [SQS](https://aws.amazon.com/sqs/) and [SNS](https://aws.amazon.com/sns/), but decided to use [EventBridge](https://aws.amazon.com/eventbridge/) and a central event bus.
+In the first [post](https://www.10printiamcool.com/enterprise-integration-patterns-with-serverless-and-cdk) in the [series](https://www.10printiamcool.com/series/enterprise-patterns-cdk), we took a case study from [Enterprise Integration Patterns: Designing, Building, and Deploying Messaging Solutions](https://www.amazon.co.uk/Enterprise-Integration-Patterns-Designing-Addison-Wesley/dp/0321200683) and looked at how we could implement it using modern serverless technologies. We considered how we could use [SQS](https://aws.amazon.com/sqs/) and [SNS](https://aws.amazon.com/sns/), but decided to use [EventBridge](https://aws.amazon.com/eventbridge/) and a central event bus.
 
 In this post, we look at how we can go about identifying and designing the events that are raised and handled by the application. We consider the structure of the events, how they might evolve, and how we can handle payloads that could be potentially large and could contain sensitive information.
 
