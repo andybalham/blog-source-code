@@ -30,9 +30,7 @@ The diagram below shows how we are going add business observability to our archi
 
 ![Architecture diagram with observability added](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/case-study-observability.png?raw=true)
 
-TODO: Any more to add here?
-
-## Simple logging and Log Insights
+## Simple logging and Logs Insights
 
 One simple way to turn the business events into a searchable resource is to log our business events in a [structured way](https://stackify.com/what-is-structured-logging-and-why-developers-need-it/). This can be done via the following single-line Lambda function.
 
@@ -119,7 +117,31 @@ new ObservabilityStack(app, 'ObservabilityStack', {
 });
 ```
 
-TODO: Show the results and how to use Log Insights
+With this Lambda function in place, we can now use CloudWatch logs to see all the domain events in a single place.
+
+![Unfiltered CloudWatch log showing business events](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/cloudwatch-event-log-unfiltered.png?raw=true)
+
+We can take advantage of [log filtering](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html#matching-terms-events) to provide a more focussed view of the events.
+
+![Filtered CloudWatch log showing just business events](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/cloudwatch-event-log-filtered.png?raw=true)
+
+TODO: Show the results and how to use Logs Insights
+
+However, we can do even better by using [CloudWatch Logs Insights](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AnalyzingLogData.html). To quote the article:
+
+> CloudWatch Logs Insights enables you to interactively search and analyze your log data in Amazon CloudWatch Logs. You can perform queries to help you more efficiently and effectively respond to operational issues. If an issue occurs, you can use CloudWatch Logs Insights to identify potential causes and validate deployed fixes.
+
+This allows us to run a query such as the following and get a picture of the domain events flowing through the system.
+
+![A basic Logs Insights query](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/log-insights-query.png?raw=true)
+
+![Results from a basic Logs Insights query](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/log-insights-results.png?raw=true)
+
+As we log correlation ids, we can use these when we want to focus in on a particular request by adding criteria to our queries. The query below show how this is done.
+
+![Logs Insights query for a specific request id](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/log-insights-query-with-request-id.png?raw=true)
+
+![Results from a Logs Insights query for a specific request id](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/log-insights-results-for-request-id.png?raw=true)
 
 ## Logging business metrics
 
