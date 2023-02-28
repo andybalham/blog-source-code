@@ -93,7 +93,7 @@ export default class Observer extends Construct {
 }
 ```
 
-The contruct properties allow us to pass in the event bus to subscribe to. We create our Lambda function, along with a rule that will listen to all domain events in the application. Finally, we add our Lambda function as the target for the rule.
+The construct properties allow us to pass in the event bus to subscribe to. We create our Lambda function, along with a rule that will listen to all domain events in the application. Finally, we add our Lambda function as the target for the rule.
 
 The final step is to define a stack and add it to the application.
 
@@ -125,8 +125,6 @@ We can take advantage of [log filtering](https://docs.aws.amazon.com/AmazonCloud
 
 ![Filtered CloudWatch log showing just business events](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/cloudwatch-event-log-filtered.png?raw=true)
 
-TODO: Show the results and how to use Logs Insights
-
 However, we can do even better by using [CloudWatch Logs Insights](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AnalyzingLogData.html). To quote the article:
 
 > CloudWatch Logs Insights enables you to interactively search and analyze your log data in Amazon CloudWatch Logs. You can perform queries to help you more efficiently and effectively respond to operational issues. If an issue occurs, you can use CloudWatch Logs Insights to identify potential causes and validate deployed fixes.
@@ -146,12 +144,91 @@ As we log correlation ids, we can use these when we want to focus in on a partic
 ## Logging business metrics
 
 TODO: Recording business metrics using power tools
+
+TODO: Describe Lambda function
+
+```TypeScript
+import { Metrics, MetricUnits } from '@aws-lambda-powertools/metrics';
+
+export const METRICS_NAMESPACE = 'LoanBroker';
+export const METRICS_SERVICE_NAME = 'observer';
+export const CREDIT_REPORT_FAILED_METRIC = 'creditReportFailed';
+
+const metrics = new Metrics({
+  namespace: METRICS_NAMESPACE,
+  serviceName: METRICS_SERVICE_NAME,
+});
+```
+
+TODO: Describe logging of metric
+
+```TypeScript
+const publishCreditReportFailedMetrics = (
+  creditReportFailed: CreditReportFailedV1
+): void => {
+  metrics.addMetric(CREDIT_REPORT_FAILED_METRIC, MetricUnits.Count, 1);
+
+  addMetadata(creditReportFailed, {
+    quoteReference: creditReportFailed.data.quoteReference,
+    error: creditReportFailed.data.error,
+    executionId: creditReportFailed.data.executionId,
+    executionStartTime: creditReportFailed.data.executionStartTime,
+    stateMachineId: creditReportFailed.data.stateMachineId,
+  });
+
+  metrics.publishStoredMetrics();
+};
+```
+
+TODO: Describe handler
+
+```TypeScript
+export const handler = async (
+  event: EventBridgeEvent<'DomainEventBase', DomainEventBase>
+): Promise<void> => {
+
+  switch (event.detail.metadata.eventType) {
+    case EventType.CreditReportFailed:
+      publishCreditReportFailedMetrics(event.detail as CreditReportFailedV1);
+      break;
+    default:
+      break;
+  }
+};
+```
+
+TODO: Show metrics in the console
+
 TODO: Add an alarm to alert
+
+```TypeScript
+const creditReportFailedCount = new Metric({
+  namespace: OBSERVER_NAMESPACE,
+  metricName: CREDIT_REPORT_FAILED_METRIC,
+  dimensionsMap: {
+    service: OBSERVER_SERVICE_NAME,
+  },
+}).with({
+  statistic: 'sum',
+  period: Duration.minutes(5),
+});
+
+creditReportFailedCount.createAlarm(this, 'CreditReportFailedAlarm', {
+  evaluationPeriods: 1,
+  comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+  threshold: 0,
+  treatMissingData: TreatMissingData.NOT_BREACHING,
+});
+```
+
+TODO: Show alert in the console
 
 ## Deriving business metrics
 
 - Adding an event log to enable durations to be calculated
 - Adding error events and alarms
+
+Q. How much of the code do we want to show?
 
 ## Summary
 
