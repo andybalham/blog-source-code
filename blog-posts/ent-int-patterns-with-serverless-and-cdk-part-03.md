@@ -238,10 +238,61 @@ We can repeat this process for any of our domain events, creating metrics and al
 
 ## Deriving business metrics
 
-- Adding an event log to enable durations to be calculated
-- Adding error events and alarms
+```TypeScript
+export const handler = async (
+  event: EventBridgeEvent<'DomainEventBase', DomainEventBase>
+): Promise<void> => {
+  console.log({ ...event.detail.metadata, data: event.detail.data });
 
-Q. How much of the code do we want to show?
+  // Record the event in DynamoDB
+  await requestEventTableClient.putEventAsync(event.detail);
+};
+```
+
+TODO: Show the events in DynamoDB
+
+TODO: Describe the code below
+
+```TypeScript
+const publishQuoteProcessedMetricsAsync = async (
+  quoteProcessed: QuoteProcessedV1
+): Promise<void> => {
+  
+  // Retrieve the corresponding event for when the quote was submitted
+
+  const [quoteSubmitted] = await requestEventTableClient.getEventsByType(
+    quoteProcessed.metadata.requestId,
+    EventType.QuoteSubmitted
+  );
+
+  // Calculate the duration
+
+  const quoteSubmittedMillis = DateTime.fromISO(
+    quoteSubmitted.metadata.timestamp
+  ).toMillis();
+  const quoteProcessedMillis = DateTime.fromISO(
+    quoteProcessed.metadata.timestamp
+  ).toMillis();
+
+  const durationMillis = quoteProcessedMillis - quoteSubmittedMillis;
+
+  // Publish the metric
+
+  metrics.addMetric(
+    QUOTE_PROCESSED_DURATION_METRIC,
+    MetricUnits.Milliseconds,
+    durationMillis
+  );
+
+  addMetadata(quoteProcessed, {
+    quoteReference: quoteProcessed.data.quoteReference,
+  });
+
+  metrics.publishStoredMetrics();
+};
+```
+
+- Adding error events and alarms
 
 ## Summary
 
