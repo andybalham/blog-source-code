@@ -143,16 +143,19 @@ As we log correlation ids, we can use these when we want to focus in on a partic
 
 ## Logging business metrics
 
-TODO: Recording business metrics using power tools
+As well as outputting structured logs, we can also use this subscription to publish custom [Amazon CloudWatch metrics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/working_with_metrics.html). By [publishing custom metrics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/publishingMetrics.html) we can create dashboards and [alarms](https://docs.aws.amazon.com/managedservices/latest/userguide/custom-cloudwatch-events.html).
 
-TODO: Describe Lambda function
+To make our lives easier, we are going to use the [AWS Lambda Powertools for TypeScript](https://awslabs.github.io/aws-lambda-powertools-typescript/latest/) Metrics npm package. This will allow us to create custom metrics asynchronously by logging metrics to standard output following [Amazon CloudWatch Embedded Metric Format (EMF)](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format.html).
+
+The metric we are going to capture is a count of how many times the call to the credit report service has failed.
+
+We start by declaring a `Metrics` instance outside of the Lambda function handler. We assign it a namespace and service name using exported constants, which we will use later for setting up an alarm.
 
 ```TypeScript
 import { Metrics, MetricUnits } from '@aws-lambda-powertools/metrics';
 
 export const METRICS_NAMESPACE = 'LoanBroker';
 export const METRICS_SERVICE_NAME = 'observer';
-export const CREDIT_REPORT_FAILED_METRIC = 'creditReportFailed';
 
 const metrics = new Metrics({
   namespace: METRICS_NAMESPACE,
@@ -160,9 +163,11 @@ const metrics = new Metrics({
 });
 ```
 
-TODO: Describe logging of metric
+The next step is to create the handler to publish the metric. First, we create a function to publish a count of all the failure events. Along with adding one to the overall count, we also publish metadata about the metric. This includes as much contextual information as possible, so that the resulting log entry can aid us in debugging what failed.
 
 ```TypeScript
+export const CREDIT_REPORT_FAILED_METRIC = 'creditReportFailed';
+
 const publishCreditReportFailedMetrics = (
   creditReportFailed: CreditReportFailedV1
 ): void => {
@@ -180,7 +185,7 @@ const publishCreditReportFailedMetrics = (
 };
 ```
 
-TODO: Describe handler
+Now we have our function to publish the metric, we create a handler with a `switch` statement to route the event to our function.
 
 ```TypeScript
 export const handler = async (
@@ -197,9 +202,17 @@ export const handler = async (
 };
 ```
 
-TODO: Show metrics in the console
+Finally, we add a subscription using the `domainEventRule` we created earlier.
 
-TODO: Add an alarm to alert
+```TypeScript
+const measurerFunction = new NodejsFunction(
+  this, 'Measurer', getNodejsFunctionProps()
+);
+
+domainEventRule.addTarget(new LambdaFunction(measurerFunction));
+```
+
+Now that we have a metric for our failures, we can create an alarm to notify ourselves when the failures are occurring. For the purpose of this post, we create a simple alarm that triggers if there is at least one failure in a five minute period.
 
 ```TypeScript
 const creditReportFailedCount = new Metric({
@@ -221,7 +234,7 @@ creditReportFailedCount.createAlarm(this, 'CreditReportFailedAlarm', {
 });
 ```
 
-TODO: Show alert in the console
+We can repeat this process for any of our domain events, creating metrics and alarms that allow us to observe the business performance of the application.
 
 ## Deriving business metrics
 
