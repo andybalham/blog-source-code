@@ -10,6 +10,8 @@ The following diagram shows how we use a central [EventBridge](https://aws.amazo
 
 ![Architecture diagram using EventBridge](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/case-study-eventbridge.png?raw=true)
 
+TODO: Link to repo
+
 ## Business metrics vs. System metrics
 
 By default, AWS outputs a large number of metrics that you can use to visualise and monitor the health of your application. For example, the [Working with Lambda function metrics](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-metrics.html) AWS documentation page goes into the detail of what is outputted by default by Lambda functions. You get invocation metrics, such as the number of times that your function code is invoked, performance metrics, such as the amount of time that your function code spends processing an event, and concurrency metrics, such as the number of function instances that are processing events.
@@ -18,7 +20,9 @@ These provide an invaluable insight into the health of your application, but don
 
 This is where we can take advantage of our event-driven architecture. The application is already producing events such as the following:
 
-- TODO: Event list
+- `QuoteSubmitted`
+- `CreditReportFailed`
+- `LenderRateReceived`
 
 What we can do is subscribe to these events and translate them into custom business metrics. We can then build dashboards, alarms, and whatever else we want on top of those metrics.
 
@@ -238,6 +242,12 @@ We can repeat this process for any of our domain events, creating metrics and al
 
 ## Deriving business metrics
 
+Some business metrics directly correlate with individual business events, such as `CreditReportFailed` as we saw previously. However, there are some business metrics that do not. One example is the length of time is takes to process a quote. This process is asynchronous and, as a result, there is no single place within the application that could measure this duration.
+
+One solution is to derive such a metric by a combination of events, in this case `QuoteSubmitted` and `QuoteProcessed`. By storing the events in a DynamoDB table, indexed by the request id, we can use this table to retrieve the corresponding event and derive the metric.
+
+The first step is to extend the Lambda function that logs the event. In addition to the logging, we now write the event to a DynamoDB table.
+
 ```TypeScript
 export const handler = async (
   event: EventBridgeEvent<'DomainEventBase', DomainEventBase>
@@ -249,15 +259,19 @@ export const handler = async (
 };
 ```
 
-TODO: Show the events in DynamoDB
+An example for for a single request is shown below.
 
-TODO: Describe the code below
+![DynamoDB console showing events for a single request](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/request-table-dynamodb-console.png?raw=true)
+
+The primary key is the `requestId` and the sort key is a combination of the time the event was received by the logger and the `eventId`. This allows us to have a chronological view of the events for a particular request. In this example, we can see the requests for rates and their corresponding responses.
+
+Now that we have a searchable log of the events, we can create a Lambda function that will use this to derive our metric. The code for this is shown below.
 
 ```TypeScript
 const publishQuoteProcessedMetricsAsync = async (
   quoteProcessed: QuoteProcessedV1
 ): Promise<void> => {
-  
+
   // Retrieve the corresponding event for when the quote was submitted
 
   const [quoteSubmitted] = await requestEventTableClient.getEventsByType(
@@ -292,11 +306,11 @@ const publishQuoteProcessedMetricsAsync = async (
 };
 ```
 
-- Adding error events and alarms
+By hooking this Lambda function up to the `quoteProcessed` event, it will start emitting metrics for the duration of processing quotes. We could extend this to derive and emit metrics for how long each lender takes to respond, or any other metric that requires correlating multiple events together.
 
 ## Summary
 
-TODO
+In this post, we have seen how we can add business-level observability to our event-driven application. We were able to do this without touching the core application code at all, by taking advantage of the decoupled nature of an event-driven architecture.
 
 ## Links
 
