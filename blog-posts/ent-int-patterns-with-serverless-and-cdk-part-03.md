@@ -1,8 +1,6 @@
 # Enterprise Integration Patterns - Domain Observability
 
-## Overview
-
-In the first two parts in this , we first looked at [choosing a messaging technology](TODO) and then looked at how we can [design the domain events](TODO) that flow through the application. In this part, we will look at how we can use those domain events to implement an observability stack. This stack will output a range of business metrics that can be used to provide visibility of the system performance and to alert us when this is not as desired.
+In the first two parts in this series, we first looked at [choosing a messaging technology](https://aws.hashnode.com/enterprise-integration-patterns-with-serverless-and-cdk) and then looked at how we can [design the domain events](https://aws.hashnode.com/enterprise-integration-patterns-domain-event-design) that flow through the application. In this part, we will look at how we can use those domain events to implement an observability stack. This stack will output a range of business metrics that can be used to provide visibility of the system performance and to alert us when this is not as desired.
 
 The application in question acts as a loan broker, it receives a request containing the details of the loan required via an API, and then returns the best rate to a [webhook](https://www.getvero.com/resources/webhooks/).
 
@@ -10,7 +8,7 @@ The following diagram shows how we use a central [EventBridge](https://aws.amazo
 
 ![Architecture diagram using EventBridge](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/case-study-eventbridge.png?raw=true)
 
-TODO: Link to repo
+The code for this post can be found in the accompanying [GitHub repo](https://github.com/andybalham/blog-enterprise-integration/tree/blog-part-3).
 
 ## Business metrics vs. System metrics
 
@@ -28,7 +26,7 @@ What we can do is subscribe to these events and translate them into custom busin
 
 ## Decoupling observability
 
-In the first part of the [series](TODO), we considered using [SQS](TODO) as part of our messaging technology. One limitation of SQS is that each message can only be processed by one consumer. Our use of EventBridge has the advantage that we can subscribe to any business events without affecting any existing processing. This means we can add an observability stack entirely independently of the existing application. This demonstrates the high-level of decoupling that can be achieved and the extensibility you get with an event-driven architecture.
+In the first part of the [series](https://aws.hashnode.com/enterprise-integration-patterns-with-serverless-and-cdk), we considered using [SQS](https://aws.amazon.com/sqs/) as part of our messaging technology. One limitation of SQS is that each message can only be processed by one consumer. Our use of EventBridge has the advantage that we can subscribe to any business events without affecting any existing processing. This means we can add an observability stack entirely independently of the existing application. This demonstrates the high-level of decoupling that can be achieved and the extensibility you get with an event-driven architecture.
 
 The diagram below shows how we are going add business observability to our architecture. As you can see, it simply plugs into the event bus.
 
@@ -65,7 +63,7 @@ This will result in log entries such as the following.
 }
 ```
 
-We have flattened the metadata about the event, such as the correlation id and event type, and also included the actual data for the event, such as the quote reference. In the second part of the [series](TODO), we designed our domain events to be self-contained and to be made up from metadata about the event and the event data itself. We are taking advantage of the consistency here to output an easily searchable entry.
+We have flattened the metadata about the event, such as the correlation id and event type, and also included the actual data for the event, such as the quote reference. In the second part of the [series](https://aws.hashnode.com/enterprise-integration-patterns-domain-event-design), we designed our domain events to be self-contained and to be made up from metadata about the event and the event data itself. We are taking advantage of the consistency here to output an easily searchable entry.
 
 We also made another choice when designing out domain events. That was to pass large or sensitive data as time-limited [presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html). This choice means that we are free to log the events without the risk of logging sensitive information by accident.
 
@@ -310,8 +308,4 @@ By hooking this Lambda function up to the `quoteProcessed` event, it will start 
 
 ## Summary
 
-In this post, we have seen how we can add business-level observability to our event-driven application. We were able to do this without touching the core application code at all, by taking advantage of the decoupled nature of an event-driven architecture.
-
-## Links
-
-TODO
+In this post, we have seen how we can add business-level observability to our event-driven application. By taking advantage of the decoupled nature of an event-driven architecture, we were able to do this without touching the core application code at all.
