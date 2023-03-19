@@ -1,0 +1,11 @@
+{
+  "name": "typescript-method-overloading",
+  "version": "1.0.0",
+  "description": "Code accompanying a blog post on TypeScript method overloading",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "Andy Blackledge",
+  "license": "ISC"
+}
