@@ -1,1 +1,52 @@
-console.log(JSON.stringify({ hello: 'Dolly' }, null, 2));
+import { handleTimingEvent } from './example';
+import QueryBuilder, { SortKeyOperator } from './QueryBuilder';
+
+const queryBuilder = new QueryBuilder();
+
+const partitionKeyValue = 'PK';
+const sortKeyValue = 'SK';
+const sortKeyValue1 = 'SK1';
+const sortKeyValue2 = 'SK2';
+
+queryBuilder.buildWithComparison(
+  partitionKeyValue,
+  SortKeyOperator.GREATER_THAN,
+  sortKeyValue
+);
+
+queryBuilder.buildWithOptionals({
+  partitionKeyValue,
+  sortKeyComparison: {
+    operator: SortKeyOperator.GREATER_THAN,
+    value: sortKeyValue,
+  },
+});
+
+queryBuilder.buildNaively({
+  partitionKeyValue,
+  sortKeyCriteria: {
+    value: '',
+    range: {
+      fromValue: sortKeyValue1,
+      toValue: sortKeyValue2,
+    },
+    comparison: {
+      operator: SortKeyOperator.GREATER_THAN,
+      value: sortKeyValue,
+    },
+  },
+});
+
+queryBuilder.build({
+  partitionKeyValue,
+  sortKeyCriteria: {
+    type: 'range',
+    fromValue: sortKeyValue1,
+    toValue: sortKeyValue2,
+  },
+});
+
+handleTimingEvent({
+  name: 'start',
+  userStarted: true,
+});

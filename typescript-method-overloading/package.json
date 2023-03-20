@@ -4,7 +4,9 @@
   "description": "Code accompanying a blog post on TypeScript method overloading",
   "main": "index.js",
   "scripts": {
-    "test": "test"
+    "start": "node out/index.js",
+    "prestart": "npm run build",
+    "build": "tsc"
   },
   "author": "Andy Blackledge",
   "license": "ISC"
