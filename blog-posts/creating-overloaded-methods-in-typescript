@@ -1,2 +1,241 @@
 # Creating Overloaded Methods in TypeScript
 
+For the majority of my journey in software development, I have used languages that have supported method overloading. That is, where a method can be declared multiple times with different parameters. I have found this functionality to be useful, so I have been wondering how to implement something similar in TypeScript, which does not support method overloading in the same way.
+
+## The Problem
+
+I wanted to create a class to build queries for [DynamoDB](https://). DynamoDB is a NoSQL database that indexes each item by two keys. A partition key and a sort key. When querying a DynamoDB table you always supply a partition key, and you optionally supply a sort key along with an operator such as 'greater than'. Another option is to supply two sort key values to provide a range.
+
+## The C# Solution
+
+In [C#](TODO), we could define as follows:
+
+```c#
+enum SortKeyOperator
+{
+    EQUALS,
+    LESS_THAN,
+    LESS_THAN_OR_EQUAL,
+    GREATER_THAN_OR_EQUAL,
+    GREATER_THAN,
+    BEGINS_WITH,
+}
+
+class QueryBuilder
+{
+    public void Build(string partitionKeyValue)
+    {
+    }
+
+    public void Build(
+        string partitionKeyValue, 
+        string sortKeyValue)
+    {
+    }
+
+    public void Build(
+        string partitionKeyValue, 
+        SortKeyOperator sortKeyOperator, 
+        string sortKeyValue)
+    {
+    }
+
+    public void Build(
+        string partitionKeyValue, 
+        string sortKeyFromValue, 
+        string sortKeyToValue)
+    {
+    }
+}
+```
+
+This is allowed, as the combination of parameters means that each method signature is unique, even though the name of the method is not. When using an [IDE](TODO) that supports intellisense, you get prompted with a list as follows:
+
+TODO: Image of dropdown list
+
+By adding documentation to the methods, you can clearly communication the intended use of each overload.
+
+## TypeScript Attempt No.1 - Separate Methods
+
+The simplest way I could think of to try to replicate method overloading is to have separate methods that share a common prefix. In this case, `buildWith`. The result is as follows:
+
+```typescript
+class QueryBuilder {
+  buildWithPartitionKeyOnly(partitionKeyValue: string) {}
+
+  buildWithSortKey(partitionKeyValue: string, sortKeyValue: string) {}
+
+  buildWithComparison(
+    partitionKeyValue: string,
+    sortKeyOperator: SortKeyOperator,
+    sortKeyValue: string
+  ) {}
+
+  buildWithRange(
+    partitionKeyValue: string,
+    sortKeyFromValue: string,
+    sortKeyToValue: string
+  ) {}
+}
+```
+
+This would result in the following prompt when using VS Code:
+
+TODO: Example UI
+
+I actually think this approach has some merit. The explicit naming provides some level of self-documentation. A downside is that the underlying implementation might need either some duplication in the separate methods, or some common code outside them.
+
+## TypeScript Attempt No.2 - Optional Parameters
+
+Another approach is to use optional parameters and [deconstructed parameters](TODO). We can define a single method with a single object parameter, and we can make the sort key parameters all optional. The result is as follows:
+
+```typescript
+build({
+  partitionKeyValue,
+  sortKeyValue,
+  sortKeyComparison,
+  sortKeyRange,
+}: {
+  partitionKeyValue: string;
+  sortKeyValue?: string;
+  sortKeyComparison?: {
+    operator: SortKeyOperator;
+    value: string;
+  };
+  sortKeyRange?: {
+    fromValue: string;
+    toValue: string;
+  };
+}) {
+  if (sortKeyValue) {
+    // Handle case where we match by value equality
+  } else if (sortKeyComparison) {
+    // Handle case where we match by comparison
+  } else if (sortKeyRange) {
+    // Handle case where we match by range
+  } else {
+    // Handle case where we match just by primary key
+  }
+}
+```
+
+Whilst this works, it isn't obvious to the caller what combination of parameters should be used to get the various outcomes. For example, can `sortKeyRange` be used with `sortKeyValue`? The only way to know this, is to look inside the method. Not ideal. Can we do better?
+
+## TypeScript Attempt No.3 - Naive Discriminated Types
+
+TypeScript allows you to define that a value can be one of a set of types, for example:
+
+```typescript
+var v: number | string;
+```
+
+Can we take advantage of this to give the callers of the method a set of exclusive choices, so that they do not need to look inside the method to work out how to use it?
+
+Below was my first effort:
+
+```typescript
+build({
+  partitionKeyValue,
+  sortKeyCriteria,
+}: {
+  partitionKeyValue: string;
+  sortKeyCriteria?:
+    | {
+        value: string;
+      }
+    | {
+        comparison: {
+          operator: SortKeyOperator;
+          value: string;
+        };
+      }
+    | {
+        range: {
+          fromValue: string;
+          toValue: string;
+        };
+      };
+}) {
+  if (sortKeyCriteria) {
+    if ('value' in sortKeyCriteria) {
+      // Handle case where we match by value equality
+    } else if ('comparison' in sortKeyCriteria) {
+      // Handle case where we match by comparison
+    } else if ('range' in sortKeyCriteria) {
+      // Handle case where we match by range
+    } else {
+    }
+  } else {
+    // Handle case where we match just by primary key
+  }
+}
+```
+
+Here we use the `in` operator to work out which of the types has been specified. This all seemed to be working as I expected until I tried the following:
+
+```typescript
+queryBuilder.build({
+  partitionKeyValue: 'pk',
+  sortKeyCriteria: {
+    value: 'sortKeyValue',
+    range: {
+      fromValue: 'sortKeyValue1',
+      toValue: 'sortKeyValue2',
+    },
+    comparison: {
+      operator: SortKeyOperator.GREATER_THAN,
+      value: 'sortKeyValue',
+    },
+  },
+});
+```
+
+I was expecting a compiler error, as I had specified all three options. However, clearly TypeScript does not work that way. What I had I done wrong?
+
+## TypeScript Attempt No.4 - Discriminated Types Done Properly
+
+The solution came from an [example in the TypeScript playground](https://www.typescriptlang.org/play#example/discriminate-types). What I needed to do was define a value that would discriminate the types. The result is as follows:
+
+```typescript
+build({
+  partitionKeyValue,
+  sortKeyCriteria,
+}: {
+  partitionKeyValue: string;
+  sortKeyCriteria?:
+    | {
+        type: 'value';
+        value: string;
+      }
+    | {
+        type: 'comparison';
+        operator: SortKeyOperator;
+        value: string;
+      }
+    | {
+        type: 'range';
+        fromValue: string;
+        toValue: string;
+      };
+}) {
+  if (sortKeyCriteria?.type === 'value') {
+    // Handle case where we match by value equality
+  } else if (sortKeyCriteria?.type === 'comparison') {
+    // Handle case where we match by comparison
+  } else if (sortKeyCriteria?.type === 'range') {
+    // Handle case where we match by range
+  } else {
+    // Handle case where we match just by primary key
+  }
+}
+```
+
+Now when using the class in VS Code, when you select the `type` you get the corresponding options. TODO: Examples
+
+Now we have a single method that presents a set of mutually exclusive choices. The caller cannot get the parameters wrong and doesn't need to look inside the method.
+
+## Documentation
+
+One downside to using deconstructed parameters, is that I could not find a way to document them well using [JSDoc](TODO). I may have been missing something, but for this reason I found myself quite liking the solution with separate methods. That approach was easy to document and also somewhat documented itself with the verbose names.
+
+## Summary

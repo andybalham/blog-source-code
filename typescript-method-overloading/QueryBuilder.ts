@@ -6,8 +6,17 @@ export enum SortKeyOperator {
   BEGINS_WITH = 'BEGINS_WITH',
 }
 
+/**
+ * Query input
+ */
 export interface QueryInput {
+  /**
+   * Partition key value
+   */
   partitionKeyValue: string;
+  /**
+   * sort Key Criteria
+   */
   sortKeyCriteria?:
     | {
         value: string;
@@ -27,6 +36,10 @@ export interface QueryInput {
 }
 
 export default class QueryBuilder {
+  /**
+   * build With No Sort Key
+   * @param partitionKeyValue partition Key Value
+   */
   buildWithNoSortKey(partitionKeyValue: string) {}
 
   buildWithSortKey(partitionKeyValue: string, sortKeyValue: string) {}
@@ -109,11 +122,21 @@ export default class QueryBuilder {
     }
   }
 
+  /**
+   * Builds a query input
+   * @param param0 Key values
+   */
   build({
     partitionKeyValue,
     sortKeyCriteria,
   }: {
+    /**
+     * partition Key Value
+     */
     partitionKeyValue: string;
+    /**
+     * sort Key Value
+     */
     sortKeyCriteria?:
       | {
           type: 'value';

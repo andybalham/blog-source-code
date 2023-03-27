@@ -8,6 +8,8 @@ const sortKeyValue = 'SK';
 const sortKeyValue1 = 'SK1';
 const sortKeyValue2 = 'SK2';
 
+queryBuilder.buildWithNoSortKey(partitionKeyValue);
+
 queryBuilder.buildWithComparison(
   partitionKeyValue,
   SortKeyOperator.GREATER_THAN,
@@ -23,16 +25,16 @@ queryBuilder.buildWithOptionals({
 });
 
 queryBuilder.buildNaively({
-  partitionKeyValue,
+  partitionKeyValue: 'pk',
   sortKeyCriteria: {
-    value: '',
+    value: 'sortKeyValue',
     range: {
-      fromValue: sortKeyValue1,
-      toValue: sortKeyValue2,
+      fromValue: 'sortKeyValue1',
+      toValue: 'sortKeyValue2',
     },
     comparison: {
       operator: SortKeyOperator.GREATER_THAN,
-      value: sortKeyValue,
+      value: 'sortKeyValue',
     },
   },
 });
