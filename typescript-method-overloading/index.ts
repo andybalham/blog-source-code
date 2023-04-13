@@ -8,6 +8,10 @@ const sortKeyValue = 'SK';
 const sortKeyValue1 = 'SK1';
 const sortKeyValue2 = 'SK2';
 
+
+
+
+
 queryBuilder.buildWithNoSortKey(partitionKeyValue);
 
 queryBuilder.buildWithComparison(
@@ -39,6 +43,15 @@ queryBuilder.buildNaively({
   },
 });
 
+
+
+
+
+
+
+
+
+
 queryBuilder.build({
   partitionKeyValue,
   sortKeyCriteria: {
@@ -47,6 +60,10 @@ queryBuilder.build({
     toValue: sortKeyValue2,
   },
 });
+
+
+
+
 
 handleTimingEvent({
   name: 'start',

@@ -35,13 +35,43 @@ export interface QueryInput {
       };
 }
 
+type KeyCriteria = {
+  /**
+   * partition Key Value
+   */
+  partitionKeyValue: string;
+  /**
+   * sort Key Value
+   */
+  sortKeyCriteria?:
+    | {
+        type: 'value';
+        value: string;
+      }
+    | {
+        type: 'comparison';
+        operator: SortKeyOperator;
+        value: string;
+      }
+    | {
+        type: 'range';
+        fromValue: string;
+        toValue: string;
+      };
+};
+
 export default class QueryBuilder {
   /**
-   * build With No Sort Key
-   * @param partitionKeyValue partition Key Value
+   * Builds a query based on a partition key value alone.
+   * @param partitionKeyValue The partition key value
    */
   buildWithNoSortKey(partitionKeyValue: string) {}
 
+  /**
+   * Builds a query based on a combination of a partition key and sort key values.
+   * @param partitionKeyValue The partition key value
+   * @param sortKeyValue The sort key value
+   */
   buildWithSortKey(partitionKeyValue: string, sortKeyValue: string) {}
 
   buildWithComparison(
@@ -123,36 +153,10 @@ export default class QueryBuilder {
   }
 
   /**
-   * Builds a query input
-   * @param param0 Key values
+   * Builds a query based on the key criteria supplied.
+   * @param param0 Key criteria
    */
-  build({
-    partitionKeyValue,
-    sortKeyCriteria,
-  }: {
-    /**
-     * partition Key Value
-     */
-    partitionKeyValue: string;
-    /**
-     * sort Key Value
-     */
-    sortKeyCriteria?:
-      | {
-          type: 'value';
-          value: string;
-        }
-      | {
-          type: 'comparison';
-          operator: SortKeyOperator;
-          value: string;
-        }
-      | {
-          type: 'range';
-          fromValue: string;
-          toValue: string;
-        };
-  }) {
+  build({ partitionKeyValue, sortKeyCriteria }: KeyCriteria) {
     if (sortKeyCriteria?.type === 'value') {
       // Handle case where we match by value equality
     } else if (sortKeyCriteria?.type === 'comparison') {
