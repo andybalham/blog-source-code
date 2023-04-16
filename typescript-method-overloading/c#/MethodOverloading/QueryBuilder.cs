@@ -21,16 +21,24 @@ namespace MethodOverloading
         /// <summary>
         /// Builds a query based on a partition key value alone.
         /// </summary>
-        /// <param name="partitionKeyValue">The partion key value</param>
-        public void Build(string partitionKeyValue)
+        /// <param name="partitionKeyValue">The partition key value</param>
+        public void _Build(string partitionKeyValue)
         {
         }
 
         /// <summary>
         /// Builds a query based on a combination of a partition key and sort key values.
         /// </summary>
-        /// <param name="partitionKeyValue">The partion key value</param>
+        /// <param name="partitionKeyValue">The partition key value</param>
         /// <param name="sortKeyValue">The sort key value</param>
+        public void _Build(string partitionKeyValue, string sortKeyValue)
+        {
+        }
+
+        public void Build(string partitionKeyValue)
+        {
+        }
+
         public void Build(string partitionKeyValue, string sortKeyValue)
         {
         }

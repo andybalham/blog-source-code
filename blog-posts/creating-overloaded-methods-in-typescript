@@ -1,14 +1,14 @@
 # Creating Overloaded Methods in TypeScript
 
-For the majority of my journey in software development, I have used languages that have supported method overloading. That is, where a method can be declared multiple times with different parameters. I have found this functionality to be useful, so I have been wondering how to implement something similar in TypeScript, which does not support method overloading in the same way.
+For the majority of my journey in software development, I have used languages that have supported method overloading. That is, where a method can be declared multiple times with different parameters. I have found this functionality to be useful, so I have been wondering how to implement something similar in [TypeScript](https://www.typescriptlang.org/), a language which does not support method overloading in the same way.
 
 ## The Problem
 
-I wanted to create a class to build queries for [DynamoDB](https://). DynamoDB is a NoSQL database that indexes each item by two keys. A partition key and a sort key. When querying a DynamoDB table you always supply a partition key, and you optionally supply a sort key along with an operator such as 'greater than'. Another option is to supply two sort key values to provide a range.
+I wanted to create a class to build queries for [DynamoDB](https://aws.amazon.com/dynamodb/). DynamoDB is a NoSQL database that indexes each item by two keys. A partition key and a sort key. When querying a DynamoDB table you always supply a partition key, and you optionally supply a sort key along with an operator such as 'greater than'. Another option is to supply two sort key values to provide a range.
 
 ## The C# Solution
 
-In [C#](TODO), we could define as follows:
+In [C#](https://dotnet.microsoft.com/en-us/languages/csharp), we could define as follows:
 
 ```c#
 enum SortKeyOperator
@@ -49,9 +49,13 @@ class QueryBuilder
 }
 ```
 
-This is allowed, as the combination of parameters means that each method signature is unique, even though the name of the method is not. When using an [IDE](TODO) that supports intellisense, you get prompted with a list as follows:
+This is allowed, as the combination of parameters means that each method signature is unique, even though the name of the method is not. When using the Visual Studio [IDE](https://www.freecodecamp.org/news/what-is-an-ide-in-programming-an-ide-definition-for-developers/) the intellisense prompts as follows.
 
-TODO: Image of dropdown list
+![An example of how overloaded methods appear in Visual Studio](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/csharp-overload-dropdown-1.png?raw=true)
+
+This allows the user to scroll through the various overloaded versions of the method.
+
+![An example of how overloaded methods appear in Visual Studio](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/csharp-overload-dropdown-2.png?raw=true)
 
 By adding documentation to the methods, you can clearly communication the intended use of each overload.
 
@@ -61,27 +65,27 @@ The simplest way I could think of to try to replicate method overloading is to h
 
 ```typescript
 class QueryBuilder {
-  buildWithPartitionKeyOnly(partitionKeyValue: string) {}
+  buildWithPartitionKeyOnly(partitionKeyValue: string) {...}
 
-  buildWithSortKey(partitionKeyValue: string, sortKeyValue: string) {}
+  buildWithSortKey(partitionKeyValue: string, sortKeyValue: string) {...}
 
   buildWithComparison(
     partitionKeyValue: string,
     sortKeyOperator: SortKeyOperator,
     sortKeyValue: string
-  ) {}
+  ) {...}
 
   buildWithRange(
     partitionKeyValue: string,
     sortKeyFromValue: string,
     sortKeyToValue: string
-  ) {}
+  ) {...}
 }
 ```
 
 This would result in the following prompt when using VS Code:
 
-TODO: Example UI
+![An example of how a named method appears in VS Code](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/typescript-overload-1.png?raw=true)
 
 I actually think this approach has some merit. The explicit naming provides some level of self-documentation. A downside is that the underlying implementation might need either some duplication in the separate methods, or some common code outside them.
 

@@ -65,13 +65,17 @@ export default class QueryBuilder {
    * Builds a query based on a partition key value alone.
    * @param partitionKeyValue The partition key value
    */
-  buildWithNoSortKey(partitionKeyValue: string) {}
+  // _buildWithNoSortKey(partitionKeyValue: string) {}
 
   /**
    * Builds a query based on a combination of a partition key and sort key values.
    * @param partitionKeyValue The partition key value
    * @param sortKeyValue The sort key value
    */
+  // _buildWithSortKey(partitionKeyValue: string, sortKeyValue: string) {}
+
+  buildWithNoSortKey(partitionKeyValue: string) {}
+
   buildWithSortKey(partitionKeyValue: string, sortKeyValue: string) {}
 
   buildWithComparison(
