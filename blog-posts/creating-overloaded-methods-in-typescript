@@ -1,6 +1,8 @@
 # Creating Overloaded Methods in TypeScript
 
-For the majority of my journey in software development, I have used languages that have supported method overloading. That is, where a method can be declared multiple times with different parameters. I have found this functionality to be useful, so I have been wondering how to implement something similar in [TypeScript](https://www.typescriptlang.org/), a language which does not support method overloading in the same way.
+For the majority of my journey in software development, I have used languages that have supported method overloading. I have found this to be useful, so I have been wondering how to implement something similar in [TypeScript](https://www.typescriptlang.org/). How can we have a method can be declared multiple times with different parameters in a language which does not support method overloading in the traditional way?
+
+> TODO: Point out the update
 
 ## The Problem
 
@@ -28,21 +30,21 @@ class QueryBuilder
     }
 
     public void Build(
-        string partitionKeyValue, 
+        string partitionKeyValue,
         string sortKeyValue)
     {
     }
 
     public void Build(
-        string partitionKeyValue, 
-        SortKeyOperator sortKeyOperator, 
+        string partitionKeyValue,
+        SortKeyOperator sortKeyOperator,
         string sortKeyValue)
     {
     }
 
     public void Build(
-        string partitionKeyValue, 
-        string sortKeyFromValue, 
+        string partitionKeyValue,
+        string sortKeyFromValue,
         string sortKeyToValue)
     {
     }
@@ -51,11 +53,11 @@ class QueryBuilder
 
 This is allowed, as the combination of parameters means that each method signature is unique, even though the name of the method is not. When using the Visual Studio [IDE](https://www.freecodecamp.org/news/what-is-an-ide-in-programming-an-ide-definition-for-developers/) the intellisense prompts as follows.
 
-![An example of how overloaded methods appear in Visual Studio](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/csharp-overload-dropdown-1.png?raw=true)
+![An example of how overloaded methods appear in Visual Studio](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/csharp-basic-overload-dropdown-1.png?raw=true)
 
 This allows the user to scroll through the various overloaded versions of the method.
 
-![An example of how overloaded methods appear in Visual Studio](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/csharp-overload-dropdown-2.png?raw=true)
+![An example of how overloaded methods appear in Visual Studio](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/csharp-basic-overload-dropdown-2.png?raw=true)
 
 By adding documentation to the methods, you can clearly communication the intended use of each overload.
 
@@ -85,13 +87,13 @@ class QueryBuilder {
 
 This would result in the following prompt when using VS Code:
 
-![An example of how a named method appears in VS Code](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/typescript-overload-1.png?raw=true)
+![An example of how a named method appears in VS Code](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/typescript-basic-overload-1.png?raw=true)
 
 I actually think this approach has some merit. The explicit naming provides some level of self-documentation. A downside is that the underlying implementation might need either some duplication in the separate methods, or some common code outside them.
 
 ## TypeScript Attempt No.2 - Optional Parameters
 
-Another approach is to use optional parameters and [deconstructed parameters](TODO). We can define a single method with a single object parameter, and we can make the sort key parameters all optional. The result is as follows:
+Another approach is to use optional parameters and [deconstructed parameters](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment). We can define a single method with a single object parameter, and we can make the sort key parameters all optional. The result is as follows:
 
 ```typescript
 build({
@@ -179,16 +181,16 @@ Here we use the `in` operator to work out which of the types has been specified.
 
 ```typescript
 queryBuilder.build({
-  partitionKeyValue: 'pk',
+  partitionKeyValue: "pk",
   sortKeyCriteria: {
-    value: 'sortKeyValue',
+    value: "sortKeyValue",
     range: {
-      fromValue: 'sortKeyValue1',
-      toValue: 'sortKeyValue2',
+      fromValue: "sortKeyValue1",
+      toValue: "sortKeyValue2",
     },
     comparison: {
       operator: SortKeyOperator.GREATER_THAN,
-      value: 'sortKeyValue',
+      value: "sortKeyValue",
     },
   },
 });
@@ -234,12 +236,128 @@ build({
 }
 ```
 
-Now when using the class in VS Code, when you select the `type` you get the corresponding options. TODO: Examples
+Now when using the class in VS Code, when you select the `type` you get the corresponding options. For example, when using `range` you get prompted for the relevant `fromValue` and `toValue` values.
+
+![An example showing how using the type filters the options shown](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/typescript-discriminated-type-prompt.png?raw=true)
 
 Now we have a single method that presents a set of mutually exclusive choices. The caller cannot get the parameters wrong and doesn't need to look inside the method.
 
 ## Documentation
 
-One downside to using deconstructed parameters, is that I could not find a way to document them well using [JSDoc](TODO). I may have been missing something, but for this reason I found myself quite liking the solution with separate methods. That approach was easy to document and also somewhat documented itself with the verbose names.
+One downside to using deconstructed parameters is that I could not find a way to document them well using [JSDoc](https://en.wikipedia.org/wiki/JSDoc). The best I could come up with was the following.
+
+```TypeScript
+/**
+ * Builds a query based on the key criteria supplied.
+ * @param param0 Key criteria
+ */
+build({ partitionKeyValue, sortKeyCriteria }: {...}) {...}
+```
+
+This resulted in the following prompt in VS Code, which does give some indication of the options via the `type` values.
+
+![An example showing basic documentation of the method with deconstructed parameters](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/typescript-deconstructed-jsdoc.png?raw=true)
+
+I may have been missing something, but for this reason I found myself quite liking the solution with separate methods. That approach was easy to document and also somewhat documented itself with the verbose names.
+
+![An example of how a named method appears in VS Code](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/typescript-overload-1.png?raw=true)
+
+Here we can see that the individual parameters can be documented in the same way that they can be in the C# example, as shown below.
+
+![An example of how overloaded methods appear in Visual Studio](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/csharp-overload-dropdown-2.png?raw=true)
 
 ## Summary
+
+In this post we looked at various ways that we can implement some form of method overloading in TypeScript and compared these with an equivalent in C#. My feeling is that for internal libraries, I would favour the discriminated type approach. However, for external libraries, I feel that the ability to fully document means that the simple, multi-named approach would be better. Behind the scenes, these methods may map onto a single discriminated type method, in order to keep functionality together.
+
+## Update
+
+After posting this, it was pointed out to me that there is another way that we can implement method overloading in TypeScript.
+
+TODO
+
+```TypeScript
+build(
+  ...args:
+    | [partitionKeyValue: string]
+    | [partitionKeyValue: string, sortKeyValue: string]
+    | [
+        partitionKeyValue: string,
+        sortKeyOperator: NumericSortKeyOperator,
+        sortKeyValue: string
+      ]
+    | [
+        partitionKeyValue: string,
+        sortKeyFromValue: string,
+        sortKeyToValue: string
+      ]
+) {...}
+```
+
+TODO: Show the VS Code experience
+
+TODO: Mention how the implementation is a bit messy (note the enum)
+
+```TypeScript
+if (args.length === 1) {
+  // Handle case where we match by partition key only
+} else if (args.length === 2) {
+  // Handle case where we match by compound key
+} else if (args.length === 3) {
+  if (typeof args[1] === 'number') {
+    // Handle case where we match by comparison
+    console.log(`Handle case where we match by comparison`);
+  } else {
+    // Handle case where we match by range
+    console.log(`Handle case where we match by range`);
+  }
+} else {
+  throw new Error(`Unhandled args`);
+}
+```
+
+TODO: Talk through object equivalent below
+
+```TypeScript
+build(
+  ...args:
+    | [partitionKeyOnly: { partitionKeyValue: string }]
+    | [compoundKey: { partitionKeyValue: string; sortKeyValue: string }]
+    | [
+        sortKeyComparison: {
+          partitionKeyValue: string;
+          sortKeyOperator: SortKeyOperator;
+          sortKeyValue: string;
+        }
+      ]
+    | [
+        sortKeyRange: {
+          partitionKeyValue: string;
+          sortKeyFromValue: string;
+          sortKeyToValue: string;
+        }
+      ]
+) {
+  if ('sortKeyFromValue' in args[0]) {
+    // Handle case where we match by range
+  } else if ('sortKeyOperator' in args[0]) {
+    // Handle case where we match by comparison
+  } else if ('sortKeyValue' in args[0]) {
+    // Handle case where we match by compound key
+  } else {
+    // Handle case where we match by partition key only
+  }
+}
+```
+
+TODO: Show the VS Code experience
+
+TODO: Mention the documentation issue, but then the typing issue.
+
+![An image showing that there is no type-checking on an argument list](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/arg-list-type-checking-1.png?raw=true)
+
+![An image showing that there is no type-checking on an object argument list](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/arg-list-type-checking-2.png?raw=true)
+
+![An image showing that there is type-checking on a discriminated type](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/discriminated-type-checking.png?raw=true)
+
+TODO: Summary that the preference would be to have the type-checking over the list

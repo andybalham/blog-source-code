@@ -8,7 +8,8 @@
     "Nextable",
     "powertools",
     "stepfunctions",
-    "TIBCO"
+    "TIBCO",
+    "typeof"
   ],
   "workbench.colorCustomizations": {
     "[Default Dark+]": {

@@ -6,6 +6,14 @@ export enum SortKeyOperator {
   BEGINS_WITH = 'BEGINS_WITH',
 }
 
+export enum NumericSortKeyOperator {
+  LESS_THAN = 0, //'<',
+  LESS_THAN_OR_EQUAL = 1, //'<=',
+  GREATER_THAN_OR_EQUAL = 2, //'>=',
+  GREATER_THAN = 3, //'>',
+  BEGINS_WITH = 4, //'BEGINS_WITH',
+}
+
 /**
  * Query input
  */
@@ -62,21 +70,91 @@ type KeyCriteria = {
 
 export default class QueryBuilder {
   /**
+   * Builds a query based on the criteria supplied.
+   * @param args Query criteria
+   */
+  build_ArgObjectArray(
+    ...args:
+      | [partitionKeyOnly: { partitionKeyValue: string }]
+      | [compoundKey: { partitionKeyValue: string; sortKeyValue: string }]
+      | [
+          sortKeyComparison: {
+            partitionKeyValue: string;
+            sortKeyOperator: SortKeyOperator;
+            sortKeyValue: string;
+          }
+        ]
+      | [
+          sortKeyRange: {
+            partitionKeyValue: string;
+            sortKeyFromValue: string;
+            sortKeyToValue: string;
+          }
+        ]
+  ) {
+    if ('sortKeyFromValue' in args[0]) {
+      // Handle case where we match by range
+    } else if ('sortKeyOperator' in args[0]) {
+      // Handle case where we match by comparison
+    } else if ('sortKeyValue' in args[0]) {
+      // Handle case where we match by compound key
+    } else {
+      // Handle case where we match by partition key only
+    }
+  }
+
+  /**
+   * Builds a query based on the criteria supplied.
+   * @param args Query criteria
+   */
+  build_ArgArray(
+    ...args:
+      | [partitionKeyValue: string]
+      | [partitionKeyValue: string, sortKeyValue: string]
+      | [
+          partitionKeyValue: string,
+          sortKeyOperator: NumericSortKeyOperator,
+          sortKeyValue: string
+        ]
+      | [
+          partitionKeyValue: string,
+          sortKeyFromValue: string,
+          sortKeyToValue: string
+        ]
+  ) {
+    if (args.length === 1) {
+      // Handle case where we match by partition key only
+    } else if (args.length === 2) {
+      // Handle case where we match by compound key
+    } else if (args.length === 3) {
+      if (typeof args[1] === 'number') {
+        // Handle case where we match by comparison
+        console.log(`Handle case where we match by comparison`);
+      } else {
+        // Handle case where we match by range
+        console.log(`Handle case where we match by range`);
+      }
+    } else {
+      throw new Error(`Unhandled args`);
+    }
+  }
+
+  /**
    * Builds a query based on a partition key value alone.
    * @param partitionKeyValue The partition key value
    */
-  // _buildWithNoSortKey(partitionKeyValue: string) {}
+  buildWithNoSortKey(partitionKeyValue: string) {}
 
   /**
    * Builds a query based on a combination of a partition key and sort key values.
    * @param partitionKeyValue The partition key value
    * @param sortKeyValue The sort key value
    */
-  // _buildWithSortKey(partitionKeyValue: string, sortKeyValue: string) {}
-
-  buildWithNoSortKey(partitionKeyValue: string) {}
-
   buildWithSortKey(partitionKeyValue: string, sortKeyValue: string) {}
+
+  // buildWithNoSortKey(partitionKeyValue: string) {}
+
+  // buildWithSortKey(partitionKeyValue: string, sortKeyValue: string) {}
 
   buildWithComparison(
     partitionKeyValue: string,
@@ -160,7 +238,43 @@ export default class QueryBuilder {
    * Builds a query based on the key criteria supplied.
    * @param param0 Key criteria
    */
-  build({ partitionKeyValue, sortKeyCriteria }: KeyCriteria) {
+  build({
+    partitionKeyValue,
+    sortKeyCriteria,
+  }: {
+    partitionKeyValue: string;
+    sortKeyCriteria?:
+      | {
+          type: 'value';
+          value: string;
+        }
+      | {
+          type: 'comparison';
+          operator: SortKeyOperator;
+          value: string;
+        }
+      | {
+          type: 'range';
+          fromValue: string;
+          toValue: string;
+        };
+  }) {
+    if (sortKeyCriteria?.type === 'value') {
+      // Handle case where we match by value equality
+    } else if (sortKeyCriteria?.type === 'comparison') {
+      // Handle case where we match by comparison
+    } else if (sortKeyCriteria?.type === 'range') {
+      // Handle case where we match by range
+    } else {
+      // Handle case where we match just by primary key
+    }
+  }
+
+  /**
+   * Builds a query based on the key criteria supplied.
+   * @param param0 Key criteria
+   */
+  buildWithKeyCriteria({ partitionKeyValue, sortKeyCriteria }: KeyCriteria) {
     if (sortKeyCriteria?.type === 'value') {
       // Handle case where we match by value equality
     } else if (sortKeyCriteria?.type === 'comparison') {

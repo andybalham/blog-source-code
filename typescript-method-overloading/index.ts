@@ -8,10 +8,6 @@ const sortKeyValue = 'SK';
 const sortKeyValue1 = 'SK1';
 const sortKeyValue2 = 'SK2';
 
-
-
-
-
 queryBuilder.buildWithNoSortKey(partitionKeyValue);
 
 queryBuilder.buildWithComparison(
@@ -43,11 +39,33 @@ queryBuilder.buildNaively({
   },
 });
 
+// queryBuilder.buildWith
+
+queryBuilder.build_ArgObjectArray({
+  partitionKeyValue: 'pk',
+  sortKeyFromValue: 'sortKeyValue1',
+  sortKeyToValue: 'sortKeyValue2',
+});
+
+queryBuilder.build_ArgObjectArray({
+  partitionKeyValue: 'pk',
+  // sortKeyOperator: SortKeyOperator.BEGINS_WITH,
+  sortKeyValue: 'sortKeyValue',
+});
+
+queryBuilder.build_ArgArray(partitionKeyValue, sortKeyValue1, sortKeyValue2);
+
+queryBuilder.build_ArgArray(
+  'pk',
+  // SortKeyOperator.BEGINS_WITH,
+  'sortKeyValue'
+);
 
 
 
 
-queryBuilder.buildWith
+
+
 
 
 
@@ -58,15 +76,20 @@ queryBuilder.buildWith
 queryBuilder.build({
   partitionKeyValue,
   sortKeyCriteria: {
+    type: 'comparison',
+    // operator: SortKeyOperator.BEGINS_WITH,
+    value: 'sortKeyValue',
+  },
+});
+
+queryBuilder.build({
+  partitionKeyValue,
+  sortKeyCriteria: {
     type: 'range',
     fromValue: sortKeyValue1,
     toValue: sortKeyValue2,
   },
 });
-
-
-
-
 
 handleTimingEvent({
   name: 'start',
