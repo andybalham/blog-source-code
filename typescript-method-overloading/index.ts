@@ -1,5 +1,8 @@
 import { handleTimingEvent } from './example';
-import QueryBuilder, { SortKeyOperator } from './QueryBuilder';
+import QueryBuilder, {
+  NumericSortKeyOperator,
+  SortKeyOperator,
+} from './QueryBuilder';
 
 const queryBuilder = new QueryBuilder();
 
@@ -53,36 +56,28 @@ queryBuilder.build_ArgObjectArray({
   sortKeyValue: 'sortKeyValue',
 });
 
-queryBuilder.build_ArgArray(partitionKeyValue, sortKeyValue1, sortKeyValue2);
-
-queryBuilder.build_ArgArray(
-  'pk',
-  // SortKeyOperator.BEGINS_WITH,
-  'sortKeyValue'
-);
 
 
 
 
+// queryBuilder.build();
 
+queryBuilder.build('pk');
 
+queryBuilder.build('pk', 'sortKeyValue1', 'sortKeyValue2');
 
+queryBuilder.build('pk', NumericSortKeyOperator.BEGINS_WITH, 'sortKeyValue');
 
-
-
-
-
-
-queryBuilder.build({
+queryBuilder.build_DiscriminatedTypes({
   partitionKeyValue,
   sortKeyCriteria: {
     type: 'comparison',
-    // operator: SortKeyOperator.BEGINS_WITH,
+    operator: SortKeyOperator.BEGINS_WITH,
     value: 'sortKeyValue',
   },
 });
 
-queryBuilder.build({
+queryBuilder.build_DiscriminatedTypes({
   partitionKeyValue,
   sortKeyCriteria: {
     type: 'range',

@@ -2,7 +2,7 @@
 
 For the majority of my journey in software development, I have used languages that have supported method overloading. I have found this to be useful, so I have been wondering how to implement something similar in [TypeScript](https://www.typescriptlang.org/). How can we have a method can be declared multiple times with different parameters in a language which does not support method overloading in the traditional way?
 
-> TODO: Point out the update
+> After posting, it was brought to my attention that there is another way. I have added an update at the end to cover this approach.
 
 ## The Problem
 
@@ -274,7 +274,7 @@ In this post we looked at various ways that we can implement some form of method
 
 After posting this, it was pointed out to me that there is another way that we can implement method overloading in TypeScript.
 
-TODO
+The way we can do it is by defining an `args` parameter with the [JavaScript spread syntax](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax) and a list of possible parameters. In our example this would be the following:
 
 ```TypeScript
 build(
@@ -294,70 +294,51 @@ build(
 ) {...}
 ```
 
-TODO: Show the VS Code experience
+In VS Code, this gives an experience very similar to that we had for C#:
 
-TODO: Mention how the implementation is a bit messy (note the enum)
+![VS Code showing the list of overloaded methods](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/arg-list-overload-dropdown.png?raw=true)
 
-```TypeScript
-if (args.length === 1) {
-  // Handle case where we match by partition key only
-} else if (args.length === 2) {
-  // Handle case where we match by compound key
-} else if (args.length === 3) {
-  if (typeof args[1] === 'number') {
-    // Handle case where we match by comparison
-    console.log(`Handle case where we match by comparison`);
-  } else {
-    // Handle case where we match by range
-    console.log(`Handle case where we match by range`);
-  }
-} else {
-  throw new Error(`Unhandled args`);
-}
-```
-
-TODO: Talk through object equivalent below
+We still have the problem of how to know which overload is being called. I solved this by building up a signature string from the arguments types and switching on the result.
 
 ```TypeScript
-build(
-  ...args:
-    | [partitionKeyOnly: { partitionKeyValue: string }]
-    | [compoundKey: { partitionKeyValue: string; sortKeyValue: string }]
-    | [
-        sortKeyComparison: {
-          partitionKeyValue: string;
-          sortKeyOperator: SortKeyOperator;
-          sortKeyValue: string;
-        }
-      ]
-    | [
-        sortKeyRange: {
-          partitionKeyValue: string;
-          sortKeyFromValue: string;
-          sortKeyToValue: string;
-        }
-      ]
-) {
-  if ('sortKeyFromValue' in args[0]) {
-    // Handle case where we match by range
-  } else if ('sortKeyOperator' in args[0]) {
-    // Handle case where we match by comparison
-  } else if ('sortKeyValue' in args[0]) {
-    // Handle case where we match by compound key
-  } else {
+const signature = args
+  .map((arg) => typeof arg)
+  .reduce((accumulator, argType) => `${accumulator}${argType}|`, '|');
+
+switch (signature) {
+  case '|string|':
     // Handle case where we match by partition key only
-  }
+    break;
+  case '|string|string|':
+    // Handle case where we match by compound key
+    break;
+  case '|string|string|string|':
+    // Handle case where we match by range
+    break;
+  case '|string|number|string|':
+    // Handle case where we match by comparison
+    break;
+  default:
+    throw new Error(`Unhandled signature`);
 }
 ```
 
-TODO: Show the VS Code experience
+One thing I did have to change was the type of `enum`. Originally, it was a set of strings, but this would cause a clash of signatures. I changed it for a set of integers and this avoided the issue.
 
-TODO: Mention the documentation issue, but then the typing issue.
+I used array destructuring to access the values as follows:
 
-![An image showing that there is no type-checking on an argument list](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/arg-list-type-checking-1.png?raw=true)
+```TypeScript
+case '|string|number|string|':
+  // Handle case where we match by comparison
+  {
+    const [partitionKeyValue, sortKeyOperator, sortKeyValue] = args;
+    // Call the method implementation
+  }
+  break;
+```
 
-![An image showing that there is no type-checking on an object argument list](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/arg-list-type-checking-2.png?raw=true)
+Whilst TypeScript does infer the types, it does not discriminate. So it can only assert that some values are one of a set:
 
-![An image showing that there is type-checking on a discriminated type](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/discriminated-type-checking.png?raw=true)
+![VS Code showing the inferred types](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/arg-list-inferred-typing.png?raw=true)
 
-TODO: Summary that the preference would be to have the type-checking over the list
+This approach does also suffer from the documentation issue. My feeling overall is that, although it gives a similar intellisense experience, it falls down when implementing the underlying functionality.

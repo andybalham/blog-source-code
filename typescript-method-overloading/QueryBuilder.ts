@@ -103,11 +103,12 @@ export default class QueryBuilder {
     }
   }
 
+  
   /**
    * Builds a query based on the criteria supplied.
    * @param args Query criteria
    */
-  build_ArgArray(
+  build(
     ...args:
       | [partitionKeyValue: string]
       | [partitionKeyValue: string, sortKeyValue: string]
@@ -122,20 +123,49 @@ export default class QueryBuilder {
           sortKeyToValue: string
         ]
   ) {
-    if (args.length === 1) {
-      // Handle case where we match by partition key only
-    } else if (args.length === 2) {
-      // Handle case where we match by compound key
-    } else if (args.length === 3) {
-      if (typeof args[1] === 'number') {
-        // Handle case where we match by comparison
-        console.log(`Handle case where we match by comparison`);
-      } else {
+    const signature = args
+      .map((arg) => typeof arg)
+      .reduce((accumulator, argType) => `${accumulator}${argType}|`, '|');
+
+    switch (signature) {
+      case '|string|':
+        // Handle case where we match by partition key only
+        {
+          const [partitionKeyValue] = args;
+          console.log(JSON.stringify({ partitionKeyValue }));
+        }
+        break;
+      case '|string|string|':
+        // Handle case where we match by compound key
+        {
+          const [partitionKeyValue, sortKeyValue] = args;
+          console.log(JSON.stringify({ partitionKeyValue, sortKeyValue }));
+        }
+        break;
+      case '|string|string|string|':
         // Handle case where we match by range
-        console.log(`Handle case where we match by range`);
-      }
-    } else {
-      throw new Error(`Unhandled args`);
+        {
+          const [partitionKeyValue, sortKeyFromValue, sortKeyToValue] = args;
+          console.log(
+            JSON.stringify({
+              partitionKeyValue,
+              sortKeyFromValue,
+              sortKeyToValue,
+            })
+          );
+        }
+        break;
+      case '|string|number|string|':
+        // Handle case where we match by comparison
+        {
+          const [partitionKeyValue, sortKeyOperator, sortKeyValue] = args;
+          console.log(
+            JSON.stringify({ partitionKeyValue, sortKeyOperator, sortKeyValue })
+          );
+        }
+        break;
+      default:
+        throw new Error(`Unhandled signature`);
     }
   }
 
@@ -238,7 +268,7 @@ export default class QueryBuilder {
    * Builds a query based on the key criteria supplied.
    * @param param0 Key criteria
    */
-  build({
+  build_DiscriminatedTypes({
     partitionKeyValue,
     sortKeyCriteria,
   }: {
