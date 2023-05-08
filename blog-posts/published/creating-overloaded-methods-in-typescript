@@ -341,4 +341,4 @@ Whilst TypeScript does infer the types, it does not discriminate. So it can only
 
 ![VS Code showing the inferred types](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/creating-overloaded-methods-in-typescript/arg-list-inferred-typing.png?raw=true)
 
-This approach does also suffer from the documentation issue. My feeling overall is that, although it gives a similar intellisense experience, it falls down when implementing the underlying functionality.
+This approach suffers from the documentation issue that other advanced approaches do. My feeling overall is that, although it gives a similar intellisense experience, it falls down when implementing the underlying functionality and I would still be tempted to go down the explicit naming route with discriminated types underneath.
