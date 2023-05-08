@@ -1,4 +1,4 @@
-# Upgrading to AWS JavaScript SDK v3 - Part 1
+# Moving to Node.js 18 and AWS JavaScript SDK v3 - Part 1
 
 With the announcement of the [Node.js 18.x runtime being available in AWS Lambda](https://aws.amazon.com/blogs/compute/node-js-18-x-runtime-now-available-in-aws-lambda/), AWS also changed the included version of the [AWS SDK for JavaScript](https://aws.amazon.com/sdk-for-javascript/).
 
@@ -23,14 +23,24 @@ The announcement and the nag sufficiently motivated myself to look at my [CDK Cl
 
 ## Upgrade approach
 
-My first thought was how to approach the process. Should I uninstall the `aws-sdk` package, see what breaks, then fix it all up? Or should I take a more piecemeal approach? Ultimately, I will need to uninstall the `aws-sdk` package to be sure, but to keep things manageable I decided to tackle the functionality Lambda function by Lambda function.
+My first thought was to question how should I approach the process of upgrading. Should I uninstall the `aws-sdk` package, see what breaks, then fix it all up? Or should I take a more step-by-step approach? Ultimately, I will need to uninstall the `aws-sdk` package to be sure I have amended all references, but to keep things manageable I decided to tackle the functionality service by service.
 
-TODO: Continue from here
+When identifying what needed to change, I noted that my codebase was not consistently explicit in the Node.js version being used. The reason for this was that the code used the `NodejsFunction` [CDK construct](TODO) and the default value for `runtime` is `NODEJS_14_X`.
 
-TODO - Big bang versus tackling one service at a time
-TODO - Mention `NodejsFunctionProps` default
+```TypeScript
+export interface NodejsFunctionProps extends FunctionOptions {
+    /**
+     * @default Runtime.NODEJS_14_X
+     */
+    readonly runtime?: lambda.Runtime;
+}
+```
+
+With hindsight, in future I would favour being explicit with the runtime version. I think defaults have their place, but I feel such a key dependency deserves to have full visibility.
 
 ## SNS first
+
+TODO: Continue from here
 
 TODO - Elaborate on the following
 
@@ -96,6 +106,10 @@ spec.js:54
 TODO - Mention `aws-sdk-js-codemod` is referenced from the documentation
 
 Insert images here
+
+![codemod import updates](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/upgrade-to-sdk-v3/codemod-sqs-upgrade-1.png?raw=true)
+
+![codemode code updates](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/upgrade-to-sdk-v3/codemod-sqs-upgrade-2.png?raw=true)
 
 Need to install the package:
 
