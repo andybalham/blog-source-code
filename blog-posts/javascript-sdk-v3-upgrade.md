@@ -169,7 +169,9 @@ So, which to use?
 
 [v2 compatible style](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-sqs/#v2-compatible-style)
 
-> The client can also send requests using v2 compatible style. However, it results in a bigger bundle size and may be dropped in next major version. More details in the blog post on [modular packages in AWS SDK for JavaScript](Modular packages in AWS SDK for JavaScript)
+> The client can also send requests using v2 compatible style. However, it results in a bigger bundle size and may be dropped in next major version. More details in the blog post on [modular packages in AWS SDK for JavaScript](https://aws.amazon.com/blogs/developer/modular-packages-in-aws-sdk-for-javascript/)
+
+> The bare-bones clients are more modular. They reduce bundle size and improve loading performance over full clients as explained in blog post on modular packages in AWS SDK for JavaScript.
 
 ## Summary
 
@@ -180,12 +182,36 @@ TODO
 - Mention the advantage of abstractions and common libraries
 - Does the change in SDK have a major impact on local testing?
 
+Going forward:
+
+- [DynamoDB marshalling](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/modules/_aws_sdk_util_dynamodb.html)
+  - `const { marshall, unmarshall } = require("@aws-sdk/util-dynamodb");`
+- [@aws-sdk/lib-dynamodb package](https://www.npmjs.com/package/@aws-sdk/lib-dynamodb)
+
 ## Notes
 
 [AWS SDK for JavaScript v3](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/index.html)
 [AWS SDK for JavaScript - Developer Preview](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/preview/)
 [Migrating your code to SDK for JavaScript V3](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/migrating-to-v3.html)
 Try [aws-sdk-js-codemod](https://www.npmjs.com/package/aws-sdk-js-codemod)
+
+The output is linked to the input via the type declaration:
+
+```TypeScript
+export declare class ListExecutionsCommand extends $Command<ListExecutionsCommandInput, ListExecutionsCommandOutput, SFNClientResolvedConfig> {
+```
+
+Q. Why does `$Command` start with a `$`?
+
+You do need to go through a few hoops to get to the actual output.
+
+The lists returned all can be `undefined`, which is a bit of a pain.
+
+```TypeScript
+const names = (events ?? []).map((event) => getEventName(event)).filter((name) => !!name);
+```
+
+-------------------------------------------------
 
 Use of `NodejsFunction` that has the default of:
 
