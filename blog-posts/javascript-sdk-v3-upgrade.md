@@ -211,7 +211,59 @@ The lists returned all can be `undefined`, which is a bit of a pain.
 const names = (events ?? []).map((event) => getEventName(event)).filter((name) => !!name);
 ```
 
--------------------------------------------------
+Pre-signing URLs has changed a bit
+
+Needed to encode when invoking a Lambda function to get an `Uint8Array`:
+
+```TypeScript
+    const encoder = new TextEncoder();
+    const lambdaPayload = request ? { Payload: encoder.encode(JSON.stringify(request)) } : {};
+```
+
+From ChatGPT:
+
+Yes, if you are using the `query` method of the `DynamoDBClient` object to query a DynamoDB table in JavaScript, you will need to unmarshall the output to convert the raw DynamoDB item format into a more usable JavaScript format.
+
+The output of the `query` method is returned in the native DynamoDB item format, which is a complex JSON structure that includes data types and other metadata. To work with the data in a more convenient way, you will need to unmarshall the output using the `unmarshall` function provided by the `@aws-sdk/util-dynamodb` module.
+
+Here's an updated version of the example code snippet I provided earlier that includes unmarshalling of the query results:
+
+```javascript
+// Import the required modules from the AWS SDK for JavaScript v3
+import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
+import { unmarshall } from "@aws-sdk/util-dynamodb";
+
+// Set the AWS region and create a new DynamoDB client object
+const REGION = "us-east-1";
+const dynamodbClient = new DynamoDBClient({ region: REGION });
+
+// Set the parameters for the query
+const params = {
+  TableName: "my-table",
+  KeyConditionExpression: "partitionKey = :pk",
+  ExpressionAttributeValues: {
+    ":pk": { S: "my-partition-key" },
+  },
+};
+
+// Create a new QueryCommand object and execute the query
+const command = new QueryCommand(params);
+const response = await dynamodbClient.send(command);
+
+// Unmarshall the results
+const items = response.Items.map((item) => unmarshall(item));
+
+// Output the results to the console
+console.log(items);
+```
+
+In this updated example, we first import the `unmarshall` function from the `@aws-sdk/util-dynamodb` module.
+
+After executing the query, we use the `map` method of the `Items` array to apply the `unmarshall` function to each item in the array. This converts each item from the raw DynamoDB item format into a plain JavaScript object that is easier to work with.
+
+Finally, we output the unmarshalled results to the console for testing and debugging purposes.
+
+---
 
 Use of `NodejsFunction` that has the default of:
 
