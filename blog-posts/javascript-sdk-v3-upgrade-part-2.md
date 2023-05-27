@@ -1,182 +1,3 @@
-# Moving to Node.js 18 and AWS JavaScript SDK v3 - Part 1
-
-With the announcement of the [Node.js 18.x runtime being available in AWS Lambda](https://aws.amazon.com/blogs/compute/node-js-18-x-runtime-now-available-in-aws-lambda/), AWS also changed the included version of the [AWS SDK for JavaScript](https://aws.amazon.com/sdk-for-javascript/).
-
-> Up until Node.js 16, Lambda’s Node.js runtimes have included the AWS SDK for JavaScript version 2. This has since been superseded by the AWS SDK for JavaScript version 3, which was released in December 2020. With this release, Lambda has upgraded the version of the AWS SDK for JavaScript included with the runtime from v2 to v3.
-
-I also noted that when doing development, I was being nagged as follows.
-
-```text
-(node:16616) NOTE: We are formalizing our plans to enter AWS SDK for JavaScript (v2) into maintenance mode in 2023.
-
-Please migrate your code to use AWS SDK for JavaScript (v3).
-For more information, check the migration guide at https://a.co/7PzMCcy
-```
-
-The announcement and the nag sufficiently motivated myself to look at my [CDK Cloud Test Kit](https://github.com/andybalham/cdk-cloud-test-kit) and make the leap from SDK v2 to v3, whilst documenting my experience along the way.
-
-## TL;DR
-
-- Use the service clients
-- `aws-sdk-js-codemod` works OK, but the result may be deprecated
-- CDK `hotswap` doesn't update the Node.js version
-
-## Upgrade approach
-
-My first thought was to question how should I approach the process of upgrading. Should I uninstall the `aws-sdk` package, see what breaks, then fix it all up? Or should I take a more step-by-step approach? Ultimately, I will need to uninstall the `aws-sdk` package to be sure I have amended all references, but to keep things manageable I decided to tackle the functionality service by service.
-
-When identifying what needed to change, I noted that my codebase was not consistently explicit in the Node.js version being used. The reason for this was that the code used the `NodejsFunction` [CDK construct](TODO) and the default value for `runtime` is `NODEJS_14_X`.
-
-```TypeScript
-export interface NodejsFunctionProps extends FunctionOptions {
-    /**
-     * @default Runtime.NODEJS_14_X
-     */
-    readonly runtime?: lambda.Runtime;
-}
-```
-
-With hindsight, in future I would favour being explicit with the runtime version. I think defaults have their place, but I feel such a key dependency deserves to have full visibility.
-
-## SNS first
-
-TODO: Continue from here
-
-TODO - Elaborate on the following
-
-CodeWhisperer came up with the following:
-
-```TypeScript
-// Publish a message to the selected output topic using the javascript sdk v3
-const command = new PublishCommand({
-    TopicArn: outputTopicArn,
-    Message: JSON.stringify(numbersEvent),
-}
-);
-
-const result = await sns.send(command);
-
-console.log(JSON.stringify({ result }, null, 2));
-```
-
-Tests failed:
-
-```text
-  SimpleEventRouter Test Suite
-spec.js:54
-    1) Routes positive sums
-    <snip>
-  0 passing (1m)
-base.js:379
-  5 failing
-```
-
-```text
-2023-05-07T07:23:27.329Z  undefined ERROR Uncaught Exception
-{
-    "errorType": "Runtime.ImportModuleError",
-    "errorMessage": "Error: Cannot find module '@aws-sdk/client-sns'\nRequire stack:\n- /var/task/index.js\n- /var/runtime/UserFunction.js\n- /var/runtime/Runtime.js\n- /var/runtime/index.js",
-    "stack": [
-        "Runtime.ImportModuleError: Error: Cannot find module '@aws-sdk/client-sns'",
-        "Require stack:",
-        <snip>
-    ]
-}
-```
-
-Hotswap not updating the runtime:
-
-```text
-Runtime
-Node.js 14.x
-```
-
-Success!
-
-```text
-  SimpleEventRouter Test Suite
-spec.js:54
-    √ Routes positive sums (4175ms)
-    <snip>
-  5 passing (13s)
-```
-
-## SQS next with `aws-sdk-js-codemod`
-
-TODO - Mention `aws-sdk-js-codemod` is referenced from the documentation
-
-Insert images here
-
-![codemod import updates](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/upgrade-to-sdk-v3/codemod-sqs-upgrade-1.png?raw=true)
-
-![codemode code updates](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/upgrade-to-sdk-v3/codemod-sqs-upgrade-2.png?raw=true)
-
-Need to install the package:
-
-```text
-npm i -D @aws-sdk/client-sqs
-```
-
-Needed to add empty configuration to `const sqs = new SQS();` -> ``const sqs = new SQS({});`
-
-```text
-  SimpleMessageRouter Test Suite
-spec.js:54
-    √ Routes as expected: {"values":[],"isExpectedPositive":true} (4178ms)
-    <snip>
-  6 passing (28s)
-```
-
-So success, but the style looks a little different from the SNS.
-
-## Why does `codemod` SQS code differ from the SNS code?
-
-CodeWhisperer came up with an alternative:
-
-```TypeScript
-// Send an SQS message using v3 sdk
-const sendMessageRequest: AWS_SQS.SendMessageRequest = {
-    QueueUrl: outputQueueUrl,
-    MessageBody: JSON.stringify(numbersMessage),
-};
-await sqs.sendMessage(sendMessageRequest);
-```
-
-[The documentation](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/preview/client/sqs/command/SendMessageCommand/) points you down the SQS client route:
-
-```javascript
-import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs"; // ES Modules import
-const client = new SQSClient(config);
-const input = {
-  // SendMessageRequest
-  QueueUrl: "STRING_VALUE", // required
-  MessageBody: "STRING_VALUE", // required
-};
-const command = new SendMessageCommand(input);
-const response = await client.send(command);
-```
-
-This approach worked as well, so we have three possible ways:
-
-- Use `SQS.sendMessage()`
-  - With `SendMessageCommandInput`
-  - With `SendMessageRequest`
-- Use `SQSClient.send()` with `SendMessageCommand`
-
-[This](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-sqs/modules/sendmessagerequest.html) shows that `SendMessageCommandInput` is a subclass of `SendMessageRequest`.
-
-So, which to use?
-
-[v2 compatible style](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-sqs/#v2-compatible-style)
-
-> The client can also send requests using v2 compatible style. However, it results in a bigger bundle size and may be dropped in next major version. More details in the blog post on [modular packages in AWS SDK for JavaScript](https://aws.amazon.com/blogs/developer/modular-packages-in-aws-sdk-for-javascript/)
-
-> The bare-bones clients are more modular. They reduce bundle size and improve loading performance over full clients as explained in blog post on modular packages in AWS SDK for JavaScript.
-
-## Summary
-
-TODO
-
 ## Thoughts
 
 - Mention the advantage of abstractions and common libraries
@@ -213,11 +34,16 @@ const names = (events ?? []).map((event) => getEventName(event)).filter((name) =
 
 Pre-signing URLs has changed a bit
 
-Needed to encode when invoking a Lambda function to get an `Uint8Array`:
+Needed to encode/decode when invoking a Lambda function as it uses an `Uint8Array`:
 
 ```TypeScript
     const encoder = new TextEncoder();
     const lambdaPayload = request ? { Payload: encoder.encode(JSON.stringify(request)) } : {};
+
+    if (Payload) {
+      const decoder = new TextDecoder();
+      return JSON.parse(decoder.decode(Payload));
+    }
 ```
 
 From ChatGPT:
@@ -270,7 +96,26 @@ const ddbDocClient = DynamoDBDocumentClient.from(client); // client is DynamoDB 
 
 Not all commands on the doc client. Also commands don't have 'Item' in them too.
 
----
+[What's the AWS SDK for JavaScript?](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/welcome.html) mentions the middleware approach.
+
+Stream attribute value is no longer type compatible:
+
+```TypeScript
+import { AttributeValue, DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { AttributeValue as StreamAttributeValue } from 'aws-lambda/trigger/dynamodb-stream';
+
+// Override: Type 'AWSLambda.AttributeValue' is not assignable to type 'DynamoDB.AttributeValue'
+const key = unmarshall(eventKey as Record<string, AttributeValue>);
+```
+
+Build failed in GitHub action:
+
+```text
+ build: node_modules/@aws-sdk/lib-dynamodb/dist-types/commands/BatchExecuteStatementCommand.d.ts#L37
+Property 'clientCommand' in type 'BatchExecuteStatementCommand' is not assignable to the same property in base type 'DynamoDBDocumentClientCommand<BatchExecuteStatementCommandInput, BatchExecuteStatementCommandOutput, BatchExecuteStatementCommandInput, BatchExecuteStatementCommandOutput, DynamoDBDocumentClientResolvedConfig>'.
+```
+
+--------------------------------------------------------------------
 
 Use of `NodejsFunction` that has the default of:
 
