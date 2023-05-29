@@ -1,3 +1,37 @@
+# Part 2
+
+The following didn't work: `npx aws-sdk-js-codemod -t v2-to-v3 D:\Users\andyb\Documents\github\blog-enterprise-integration\@andybalham\aws-client-wrappers\DynamoDBTableClient.ts`
+
+`Key` has become `Record<string, any>`
+
+[Reusing connections with keep-alive in Node.js](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/node-reusing-connections.html):
+
+```TypeScript
+const dynamodbClient = new DynamoDBClient({
+    requestHandler: new NodeHttpHandler({
+        httpAgent: new Agent({keepAlive: false})
+    })
+});
+```
+
+More difficult to find options via `F12`:
+
+```TypeScript
+export type DynamoDBClientConfigType = Partial<__SmithyConfiguration<__HttpHandlerOptions>> & ClientDefaults & RegionInputConfig & EndpointInputConfig<EndpointParameters> & RetryInputConfig & HostHeaderInputConfig & AwsAuthInputConfig & UserAgentInputConfig & EndpointDiscoveryInputConfig & ClientInputEndpointParameters;
+```
+
+```text
+[WARNING] aws-cdk-lib.aws_stepfunctions.TaskStateBaseProps#timeout is deprecated.
+  use `taskTimeout`
+  This API will be removed in the next major release.
+[WARNING] aws-cdk-lib.aws_stepfunctions.TaskStateBaseProps#timeout is deprecated.
+  use `taskTimeout`
+  This API will be removed in the next major release.
+[WARNING] aws-cdk-lib.aws_stepfunctions.TaskStateBaseProps#timeout is deprecated.
+  use `taskTimeout`
+  This API will be removed in the next major release.
+```
+
 ## Thoughts
 
 - Mention the advantage of abstractions and common libraries
@@ -115,7 +149,7 @@ Build failed in GitHub action:
 Property 'clientCommand' in type 'BatchExecuteStatementCommand' is not assignable to the same property in base type 'DynamoDBDocumentClientCommand<BatchExecuteStatementCommandInput, BatchExecuteStatementCommandOutput, BatchExecuteStatementCommandInput, BatchExecuteStatementCommandOutput, DynamoDBDocumentClientResolvedConfig>'.
 ```
 
---------------------------------------------------------------------
+---
 
 Use of `NodejsFunction` that has the default of:
 

@@ -25,7 +25,7 @@ The announcement and the nag sufficiently motivated myself to look at my [CDK Cl
 
 My first thought was to question how should I approach the process of upgrading. Should I uninstall the `aws-sdk` package, see what breaks, then fix it all up? Or should I take a more step-by-step approach? Ultimately, I will need to uninstall the `aws-sdk` package to be sure I have amended all references, but to keep things manageable I decided to tackle the functionality service by service.
 
-When identifying what needed to change, I noted that my codebase was not consistently explicit in the Node.js version being used. The reason for this was that the code used the `NodejsFunction` [CDK construct](TODO) and the default value for `runtime` is `NODEJS_14_X`.
+When identifying what needed to change, I noted that my codebase was not consistently explicit in the Node.js version being used. The reason for this was that the code used the `NodejsFunction` [CDK construct](https://docs.aws.amazon.com/cdk/v2/guide/constructs.html) and the default value for `runtime` is `NODEJS_14_X`.
 
 ```TypeScript
 export interface NodejsFunctionProps extends FunctionOptions {
@@ -40,7 +40,7 @@ With hindsight, in future I would favour being explicit with the runtime version
 
 ## SNS first
 
-As [CodeWhisperer](TODO) has just been released for personal use, I decided to give it a try with the prompt 'Publish a message to the selected output topic using the javascript sdk v3' and got the following result.
+As [CodeWhisperer](https://aws.amazon.com/codewhisperer/) has just been released for personal use, I decided to give it a try with the prompt 'Publish a message to the selected output topic using the javascript sdk v3' and got the following result.
 
 ```TypeScript
 // Publish a message to the selected output topic using the javascript sdk v3
@@ -82,7 +82,7 @@ Looking in CloudWatch, I could see that the `@aws-sdk/client-sns` package could 
 }
 ```
 
-The reason for this turned out to be that I was using the [`--hotswap`](TODO) option with `cdk deploy`. This updates the Lambda function code, but not the runtime. As `@aws-sdk/client-sns` is not bundled with the Node.js 14 runtime, we get the error above.
+The reason for this turned out to be that I was using the [`--hotswap`](https://docs.aws.amazon.com/cdk/v2/guide/cli.html) option with `cdk deploy`. This updates the Lambda function code, but not the runtime. As `@aws-sdk/client-sns` is not bundled with the Node.js 14 runtime, we get the error above.
 
 When a full deployment was done, we got the happy sight of all the tests passing. As these are cloud-based, I have a high-confidence in a successful migration.
 
@@ -96,7 +96,7 @@ spec.js:54
 
 ## SQS next with `aws-sdk-js-codemod`
 
-The [AWS documentation](TODO) on upgrading mentions a package called [aws-sdk-js-codemod](https://www.npmjs.com/package/aws-sdk-js-codemod). To quote the README, 'This repository contains a collection of codemod scripts for use with JSCodeshift that help update AWS SDK for JavaScript APIs.' This sounded promising, so I decided to give it a go.
+The [AWS documentation](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/migrating-to-v3.html) on upgrading mentions a package called [aws-sdk-js-codemod](https://www.npmjs.com/package/aws-sdk-js-codemod). To quote the README, 'This repository contains a collection of codemod scripts for use with JSCodeshift that help update AWS SDK for JavaScript APIs.' This sounded promising, so I decided to give it a go.
 
 I followed the instructions and ran the following, pointing at TypeScript file with SQS references.
 
@@ -171,4 +171,4 @@ The key takeaway for me here is that if you take the easiest approach now with y
 
 So far, the process of updating has been pretty painless. Admittedly, I have been tackling a small codebase and only two AWS services. On a larger codebase that has not wrapped the AWS services in more domain-level abstractions, then this could be quite a task. Especially if it is not easy to exercise the code thoroughly in the cloud.
 
-In the next post, I will move on to updating the rest of the AWS services being used including DynamoDB.
+In the next post, I will move on to updating the rest of the AWS services being used, including DynamoDB and the marshalling challenge.
