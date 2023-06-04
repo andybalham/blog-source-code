@@ -1,5 +1,251 @@
 # Part 2
 
+In this series, we continue looking at upgrading a TypeScript codebase from AWS SDK v2 to AWS SDK v3. Here we concentrate on DynamoDB and also look at S3, Step Functions, and Lambda functions.
+
+Links to pull requests:
+
+- <https://github.com/andybalham/cdk-cloud-test-kit/pull/17/files#diff-7dffb5ee14c2cb1f7def89e1049402f101dd809ba41a6d02a840a5b66a2ec5fd>
+- <https://github.com/andybalham/blog-enterprise-integration/pull/1/files#diff-0a8a7b936c26ea7c6aaf8da7a20ae1a1afedc69710972a49314a20339c4653c5>
+
+## DynamoDB clients
+
+As we saw in the [first part of this series](TODO), converting from v2 to v3 can be as straightforward as changing the type of service client, then using that client to send a command rather than invoking a method.
+
+So the following:
+
+```TypeScript
+readonly sns: AWS.SNS;
+...
+const publishInput: PublishInput = {
+  Message: JSON.stringify(message),
+  TopicArn: this.topicArn,
+  MessageAttributes: messageAttributes,
+};
+
+await this.sns.publish(publishInput).promise();
+```
+
+Becomes:
+
+```TypeScript
+readonly sns: SNSClient;
+...
+const publishInput: PublishInput = {
+  Message: JSON.stringify(message),
+  TopicArn: this.topicArn,
+  MessageAttributes: messageAttributes,
+};
+
+await this.sns.send(new PublishCommand(publishInput));
+```
+
+The same applies for DynamoDB, there is a `DynamoDBClient` class in the `@aws-sdk/client-dynamodb` package. As expected, this can be used to send commands to put and get items. However, unlike the `AWS.DynamoDB.DocumentClient` class in the v2 SDK, the `DynamoDBClient` class only deals with objects in the low-level [DynamoDB format](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Programming.LowLevelAPI.html). As you can see from the example below, this is a JSON format that uses typed objects for properties:
+
+```json
+{
+  "Item": {
+    "Age": { "N": "8" },
+    "Name": { "S": "Rover" },
+    "Breed": { "S": "Beagle" },
+    "AnimalType": { "S": "Dog" }
+  }
+}
+```
+
+I decided to do the modern thing and ask ChatGPT if there was a way to convert the output of `DynamoDBClient`. To its credit it did point me in (one of) the right direction(s).
+
+> If you are using the `query` method of the `DynamoDBClient` object to query a DynamoDB table in JavaScript, you will need to unmarshall the output to convert the raw DynamoDB item format into a more usable JavaScript format.
+> The output of the `query` method is returned in the native DynamoDB item format, which is a complex JSON structure that includes data types and other metadata. To work with the data in a more convenient way, you will need to unmarshall the output using the `unmarshall` function provided by the `@aws-sdk/util-dynamodb` module.
+> Here's an example code snippet that includes unmarshalling of the query results:
+
+```javascript
+// Import the required modules from the AWS SDK for JavaScript v3
+import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
+import { unmarshall } from "@aws-sdk/util-dynamodb";
+
+// Set the AWS region and create a new DynamoDB client object
+const REGION = "us-east-1";
+const dynamodbClient = new DynamoDBClient({ region: REGION });
+
+// Set the parameters for the query
+const params = {
+  TableName: "my-table",
+  KeyConditionExpression: "partitionKey = :pk",
+  ExpressionAttributeValues: {
+    ":pk": { S: "my-partition-key" },
+  },
+};
+
+// Create a new QueryCommand object and execute the query
+const command = new QueryCommand(params);
+const response = await dynamodbClient.send(command);
+
+// Unmarshall the results
+const items = response.Items.map((item) => unmarshall(item));
+
+// Output the results to the console
+console.log(items);
+```
+
+Although this is correct, and the `unmarshall` function will come in useful later, this isn't the route I ended up taking. The v3 SDK uses a middleware-based approach and the `DynamoDBClient` can be wrapped with middleware to do the marshalling as part of the pipeline.
+
+This approach is explained in [Using the DynamoDB Document Client](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/dynamodb-example-dynamodb-utilities.html). This shows how the [`@aws-sdk/lib-dynamodb` package](https://www.npmjs.com/package/@aws-sdk/lib-dynamodb) can be used as follows.
+
+```TypeScript
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+...
+// Wrap a DynamoDBClient instance
+const documentClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region }));
+...
+const queryOutput = await this.documentClient.send(
+  new QueryCommand(queryParams)
+);
+
+// Return unmarshalled objects
+return queryOutput.Items;
+```
+
+One thing to be aware of is that `DynamoDBDocumentClient` does not support all the same commands as `DynamoDBClient`. So you might need to have an instance of the latter available as well as the wrapped version.
+
+In part of the codebase, a DynamoDB stream event is used to retrieve the corresponding item from the table. One thing I found was that the stream `AttributeValue` appears to no longer be compatible with DynamoDB version. To get round this, I had to add an explicit cast. It was here that the `unmarshall` function came in useful, as the key is returned in the low-level JSON format.
+
+```TypeScript
+import { AttributeValue, DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { AttributeValue as StreamAttributeValue } from 'aws-lambda/trigger/dynamodb-stream';
+
+async getItemByEventKeyAsync<T>(
+    eventKey: { [key: string]: StreamAttributeValue } | undefined
+  ): Promise<T | undefined> {
+    //
+    if (eventKey === undefined) {
+      return undefined;
+    }
+
+    // Cast to prevent: 'AWSLambda.AttributeValue' is not assignable to type 'DynamoDB.AttributeValue'
+    const key = unmarshall(eventKey as Record<string, AttributeValue>);
+
+    return getItem(this.region, this.tableName, key) as unknown as T;
+  }
+```
+
+### Discoverability
+
+TODO: Start from here
+
+Talk about difficulty in discovery of options when converting:
+
+```TypeScript
+const documentClient = new DocumentClient({
+  httpOptions: {
+    agent,
+  },
+});
+```
+
+To:
+
+```TypeScript
+const documentClient = DynamoDBDocumentClient.from(
+  new DynamoDBClient({
+    requestHandler: new NodeHttpHandler({
+      httpAgent: agent,
+    }),
+  })
+);
+```
+
+Searched for 'aws sdk v3 keep-alive':
+
+[Reusing connections with keep-alive in Node.js](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/node-reusing-connections.html)
+
+```TypeScript
+constructor(configuration: DynamoDBClientConfig);
+
+export interface DynamoDBClientConfig extends DynamoDBClientConfigType {
+}
+
+type DynamoDBClientConfigType = Partial<__SmithyConfiguration<__HttpHandlerOptions>> & ClientDefaults & RegionInputConfig & EndpointInputConfig<EndpointParameters> & RetryInputConfig & HostHeaderInputConfig & AwsAuthInputConfig & UserAgentInputConfig & EndpointDiscoveryInputConfig & ClientInputEndpointParameters;
+
+export interface ClientDefaults extends Partial<__SmithyResolvedConfiguration<__HttpHandlerOptions>> {
+    /**
+     * The HTTP handler to use. Fetch in browser and Https in Nodejs.
+     */
+    requestHandler?: __HttpHandler;
+}
+
+export type HttpHandler = RequestHandler<HttpRequest, HttpResponse, HttpHandlerOptions>;
+```
+
+However, it is not needed any more:
+
+[HTTP keep-alive is on by default in modular AWS SDK for JavaScript](https://aws.amazon.com/blogs/developer/http-keep-alive-is-on-by-default-in-modular-aws-sdk-for-javascript/)
+
+### Middleware-based approach
+
+[What's the AWS SDK for JavaScript?](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/welcome.html) mentions the middleware approach.
+
+````TypeScript
+dbClient.middlewareStack.add(
+  (next, context) => args => {
+    args.request.headers["Custom-Header"] = "value";
+    return next(args);
+  },
+  {
+    step: "build"
+  }
+);
+
+dbClient.send(new PutObjectCommand(params));
+```
+
+### S3
+
+Pre-signing URLs has changed.
+
+### Step Functions
+
+The lists returned all can be `undefined`, which is a bit of a pain.
+
+```TypeScript
+const names = (events ?? []).map((event) => getEventName(event)).filter((name) => !!name);
+````
+
+### Navigating the definitions
+
+The output is linked to the input via the type declaration:
+
+```TypeScript
+export declare class ListExecutionsCommand extends $Command<ListExecutionsCommandInput, ListExecutionsCommandOutput, SFNClientResolvedConfig> {
+```
+
+Q. Why does `$Command` start with a `$`?
+
+You do need to go through a few hoops to get to the actual output.
+
+### Invoking Lambda functions
+
+Needed to encode/decode when invoking a Lambda function as it uses an `Uint8Array`:
+
+```TypeScript
+    const encoder = new TextEncoder();
+    const lambdaPayload = request ? { Payload: encoder.encode(JSON.stringify(request)) } : {};
+
+    if (Payload) {
+      const decoder = new TextDecoder();
+      return JSON.parse(decoder.decode(Payload));
+    }
+```
+
+### Experience with `aws-sdk-js-codemod`
+
+### TODO
+
+- Mention [AWS SDK for JavaScript - Developer Preview](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/preview/)
+- Reference [Migrating your code to SDK for JavaScript V3](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/migrating-to-v3.html)
+
+## -------------------------------------------------
+
 The following didn't work: `npx aws-sdk-js-codemod -t v2-to-v3 D:\Users\andyb\Documents\github\blog-enterprise-integration\@andybalham\aws-client-wrappers\DynamoDBTableClient.ts`
 
 `Key` has become `Record<string, any>`
@@ -18,18 +264,6 @@ More difficult to find options via `F12`:
 
 ```TypeScript
 export type DynamoDBClientConfigType = Partial<__SmithyConfiguration<__HttpHandlerOptions>> & ClientDefaults & RegionInputConfig & EndpointInputConfig<EndpointParameters> & RetryInputConfig & HostHeaderInputConfig & AwsAuthInputConfig & UserAgentInputConfig & EndpointDiscoveryInputConfig & ClientInputEndpointParameters;
-```
-
-```text
-[WARNING] aws-cdk-lib.aws_stepfunctions.TaskStateBaseProps#timeout is deprecated.
-  use `taskTimeout`
-  This API will be removed in the next major release.
-[WARNING] aws-cdk-lib.aws_stepfunctions.TaskStateBaseProps#timeout is deprecated.
-  use `taskTimeout`
-  This API will be removed in the next major release.
-[WARNING] aws-cdk-lib.aws_stepfunctions.TaskStateBaseProps#timeout is deprecated.
-  use `taskTimeout`
-  This API will be removed in the next major release.
 ```
 
 ## Thoughts
