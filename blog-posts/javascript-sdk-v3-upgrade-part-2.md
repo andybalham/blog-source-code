@@ -129,11 +129,63 @@ async getItemByEventKeyAsync<T>(
   }
 ```
 
-### Discoverability
+### S3
 
-TODO: Start from here
+One of the examples in the codebase being converted used [pre-signed URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html) to pass data. It turns out that pre-signing has changed with the v3 SDK. There is now a separate package (`s3-request-presigner`) that you need to reference to produce a URL for a v3 command.
 
-Talk about difficulty in discovery of options when converting:
+```TypeScript
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+...
+const s3Params = {
+  Bucket: bucketName,
+  Key: key,
+};
+...
+const signedCommand = new GetObjectCommand(s3Params);
+const signedUrl = await getSignedUrl(s3, signedCommand, {
+  expiresIn: expirySeconds ?? 60,
+});
+```
+
+### Lists now can return `undefined`
+
+Another thing that I noticed as part of the conversion process was that lists returned by the APIs can now be `undefined`. Below is an example where step function executions are being listed.
+
+```TypeScript
+const { executions } = await stepFunctions.listExecutions(opts).promise();
+if (executions.length > 0) {
+  const newestRunning = executions[0];
+```
+
+When converting, I had to add an extra test to cater for the possibility of `undefined`.
+
+```TypeScript
+const { executions } = await sfnClient.send(new ListExecutionsCommand(opts)); // Can be undefined
+if (executions && executions.length > 0) {
+  const newestRunning = executions[0];
+```
+
+### Invoking Lambda functions
+
+Another small quirk that emerged from my conversion was that I needed to encode/decode the payloads when invoking a Lambda function. The `Payload` is now returned as a `Uint8Array`, so we need to use a `TextEncoder` to convert from and to JSON objects.
+
+Here we encode the stringify-ed JSON object:
+
+```TypeScript
+const encoder = new TextEncoder();
+const lambdaPayload = request ? { Payload: encoder.encode(JSON.stringify(request)) } : {};
+```
+
+And here we decode it before parsing:
+
+```TypeScript
+const decoder = new TextDecoder();
+return JSON.parse(decoder.decode(Payload));
+```
+
+### Discoverability thoughts
+
+As part of the conversion process, I encountered the following code that I had in place to reuse connections in Node.js.
 
 ```TypeScript
 const documentClient = new DocumentClient({
@@ -143,7 +195,28 @@ const documentClient = new DocumentClient({
 });
 ```
 
-To:
+My thought was to navigate to the definition of the new options and look for something similar. However, I quickly found myself lost.
+
+```TypeScript
+constructor(configuration: DynamoDBClientConfig);
+```
+
+Led to...
+
+```TypeScript
+export interface DynamoDBClientConfig extends DynamoDBClientConfigType {
+}
+```
+
+Which led to...
+
+```TypeScript
+type DynamoDBClientConfigType = Partial<__SmithyConfiguration<__HttpHandlerOptions>> & ClientDefaults & RegionInputConfig & EndpointInputConfig<EndpointParameters> & RetryInputConfig & HostHeaderInputConfig & AwsAuthInputConfig & UserAgentInputConfig & EndpointDiscoveryInputConfig & ClientInputEndpointParameters;
+```
+
+At which point I stopped and searched for 'aws sdk v3 keep-alive' and found [Reusing connections with keep-alive in Node.js](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/node-reusing-connections.html)
+
+This allowed me to rewrite the original as follows:
 
 ```TypeScript
 const documentClient = DynamoDBDocumentClient.from(
@@ -155,37 +228,15 @@ const documentClient = DynamoDBDocumentClient.from(
 );
 ```
 
-Searched for 'aws sdk v3 keep-alive':
+I appreciate there is a good reason for how the options are now defined, but I do feel it has affected discoverability via the definition. I just need to remember to fall back on search and AI chatbots.
 
-[Reusing connections with keep-alive in Node.js](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/node-reusing-connections.html)
-
-```TypeScript
-constructor(configuration: DynamoDBClientConfig);
-
-export interface DynamoDBClientConfig extends DynamoDBClientConfigType {
-}
-
-type DynamoDBClientConfigType = Partial<__SmithyConfiguration<__HttpHandlerOptions>> & ClientDefaults & RegionInputConfig & EndpointInputConfig<EndpointParameters> & RetryInputConfig & HostHeaderInputConfig & AwsAuthInputConfig & UserAgentInputConfig & EndpointDiscoveryInputConfig & ClientInputEndpointParameters;
-
-export interface ClientDefaults extends Partial<__SmithyResolvedConfiguration<__HttpHandlerOptions>> {
-    /**
-     * The HTTP handler to use. Fetch in browser and Https in Nodejs.
-     */
-    requestHandler?: __HttpHandler;
-}
-
-export type HttpHandler = RequestHandler<HttpRequest, HttpResponse, HttpHandlerOptions>;
-```
-
-However, it is not needed any more:
-
-[HTTP keep-alive is on by default in modular AWS SDK for JavaScript](https://aws.amazon.com/blogs/developer/http-keep-alive-is-on-by-default-in-modular-aws-sdk-for-javascript/)
+> Note, as it turns out, this 'keep alive' code is not needed any more. See [HTTP keep-alive is on by default in modular AWS SDK for JavaScript](https://aws.amazon.com/blogs/developer/http-keep-alive-is-on-by-default-in-modular-aws-sdk-for-javascript/)
 
 ### Middleware-based approach
 
 [What's the AWS SDK for JavaScript?](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/welcome.html) mentions the middleware approach.
 
-````TypeScript
+```TypeScript
 dbClient.middlewareStack.add(
   (next, context) => args => {
     args.request.headers["Custom-Header"] = "value";
@@ -199,56 +250,16 @@ dbClient.middlewareStack.add(
 dbClient.send(new PutObjectCommand(params));
 ```
 
-### S3
-
-Pre-signing URLs has changed.
-
-### Step Functions
-
-The lists returned all can be `undefined`, which is a bit of a pain.
-
-```TypeScript
-const names = (events ?? []).map((event) => getEventName(event)).filter((name) => !!name);
-````
-
-### Navigating the definitions
-
-The output is linked to the input via the type declaration:
-
-```TypeScript
-export declare class ListExecutionsCommand extends $Command<ListExecutionsCommandInput, ListExecutionsCommandOutput, SFNClientResolvedConfig> {
-```
-
-Q. Why does `$Command` start with a `$`?
-
-You do need to go through a few hoops to get to the actual output.
-
-### Invoking Lambda functions
-
-Needed to encode/decode when invoking a Lambda function as it uses an `Uint8Array`:
-
-```TypeScript
-    const encoder = new TextEncoder();
-    const lambdaPayload = request ? { Payload: encoder.encode(JSON.stringify(request)) } : {};
-
-    if (Payload) {
-      const decoder = new TextDecoder();
-      return JSON.parse(decoder.decode(Payload));
-    }
-```
-
 ### Experience with `aws-sdk-js-codemod`
 
-### TODO
+The following didn't work: `npx aws-sdk-js-codemod -t v2-to-v3 D:\Users\andyb\Documents\github\blog-enterprise-integration\@andybalham\aws-client-wrappers\DynamoDBTableClient.ts`
+
+### Summary
 
 - Mention [AWS SDK for JavaScript - Developer Preview](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/preview/)
 - Reference [Migrating your code to SDK for JavaScript V3](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/migrating-to-v3.html)
 
 ## -------------------------------------------------
-
-The following didn't work: `npx aws-sdk-js-codemod -t v2-to-v3 D:\Users\andyb\Documents\github\blog-enterprise-integration\@andybalham\aws-client-wrappers\DynamoDBTableClient.ts`
-
-`Key` has become `Record<string, any>`
 
 [Reusing connections with keep-alive in Node.js](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/node-reusing-connections.html):
 
