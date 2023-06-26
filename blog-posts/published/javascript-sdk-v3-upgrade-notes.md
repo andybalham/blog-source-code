@@ -232,9 +232,19 @@ I appreciate there is a good reason for how the options are now defined, but I d
 
 > Note, as it turns out, this 'keep alive' code is not needed any more. See [HTTP keep-alive is on by default in modular AWS SDK for JavaScript](https://aws.amazon.com/blogs/developer/http-keep-alive-is-on-by-default-in-modular-aws-sdk-for-javascript/)
 
-### Middleware-based approach
+### Looking at the middleware-based approach
 
-[What's the AWS SDK for JavaScript?](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/welcome.html) mentions the middleware approach.
+As touched on in the DynamoDB section, the v3 SDK uses a middleware-based approach. We saw it when we wrapped a `DynamoDBClient` instance in a `DynamoDBDocumentClient` instance.
+
+```TypeScript
+const documentClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region }));
+```
+
+The article [What's the AWS SDK for JavaScript?](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/welcome.html) explains how you can create your own customisations.
+
+> In V3, you can use a new middleware stack to control the lifecycle of an operation call. Each middleware stage in the stack calls the next middleware stage after making any changes to the request object.
+
+It goes on to give the following example of adding a custom header to a Amazon DynamoDB client.
 
 ```TypeScript
 dbClient.middlewareStack.add(
@@ -250,14 +260,22 @@ dbClient.middlewareStack.add(
 dbClient.send(new PutObjectCommand(params));
 ```
 
-### Experience with `aws-sdk-js-codemod`
-
-The following didn't work: `npx aws-sdk-js-codemod -t v2-to-v3 D:\Users\andyb\Documents\github\blog-enterprise-integration\@andybalham\aws-client-wrappers\DynamoDBTableClient.ts`
+This approach, coupled with the ability to have a smaller bundle size, helped me understand the change in approach in the v3 SDK. On the surface, the changes looked a bit like unnecessary complication.
 
 ### Summary
 
 - Mention [AWS SDK for JavaScript - Developer Preview](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/preview/)
-- Reference [Migrating your code to SDK for JavaScript V3](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/migrating-to-v3.html)
+
+### Links
+
+- [AWS SDK for JavaScript v3](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/index.html)
+- [AWS SDK for JavaScript - Developer Preview](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/preview/)
+- [Migrating your code to SDK for JavaScript V3](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/migrating-to-v3.html)
+- [aws-sdk-js-codemod](https://www.npmjs.com/package/aws-sdk-js-codemod)
+- [Setting up the SDK for JavaScript](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/setting-up.html)
+- [DynamoDB marshalling](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/modules/_aws_sdk_util_dynamodb.html)
+  - `const { marshall, unmarshall } = require("@aws-sdk/util-dynamodb");`
+- [@aws-sdk/lib-dynamodb package](https://www.npmjs.com/package/@aws-sdk/lib-dynamodb)
 
 ## -------------------------------------------------
 
