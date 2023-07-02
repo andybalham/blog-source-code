@@ -1,13 +1,13 @@
 # Encapsulation Not Always Desirable
 
-From my earliest experience with [object-oriented programming](TODO), I learnt that one of the biggest benefits of the paradigm was the concept of encapsulation. Lately, my experience with developing in JavaScript and creating libraries have led me to come to the conclusion that it is not always desirable.
+From my earliest experience with [object-oriented programming](https://en.wikipedia.org/wiki/Object-oriented_programming), I learnt that one of the biggest benefits of the paradigm was the concept of encapsulation. Lately, my experience with developing in JavaScript and creating libraries have led me to come to the conclusion that it is not always desirable.
 
 ## What is encapsulation
 
 The following links provide an admirable overview of the concept:
 
 - [Stackify: What is Encapsulation](https://stackify.com/oop-concept-for-beginners-what-is-encapsulation/)
-- [Wikipedia: Encapsulation](https://en.wikipedia.org/wiki/Encapsulation_(computer_programming)#An_information-hiding_mechanism)
+- [Wikipedia: Encapsulation](<https://en.wikipedia.org/wiki/Encapsulation_(computer_programming)#An_information-hiding_mechanism>)
 
 The following in particular sums up the idea:
 
@@ -21,17 +21,17 @@ When I encountered TypeScript, I was surprised to find that the opposite was tru
 
 ## When encapsulation gets in the way
 
-This subtle change made me question my default thinking. This was couple with my experience of using a third-party component in a way similar to the following hypothetical code:
+This subtle change made me question my default thinking. This was coupled with my experience of using a third-party component in a way similar to the following hypothetical code:
 
 ```TypeScript
 const myClient = new ServiceClient({ region: 'eu-west-2'});
 
 // ...
 
-myClient.region; // Not accessible, but it was provided earlier
+myClient.region; // Not accessible now, although it was provided earlier
 ```
 
-The component was hiding information that I had provided. What was the point of doing this? How was I going to misuse this information? Now I had to pass around the information that lurked inside another parameter that was passed with it.
+The component was hiding information that I had provided. What was the point of doing this? How was I going to misuse this information? Now I had to pass around the information that existed inside another parameter that was passed with it.
 
 I also had the experience of trying to subclass a class I had published as part of an `npm` package. I had diligently hidden everything deemed 'not essential', but now had cut off the ability to extend it.
 
@@ -39,9 +39,9 @@ All this caused me to further question how I thought about member visibility.
 
 ## Don't throw the baby out with the bathwater
 
-Should we just make everything public? Of course not. Anything public forms part of the contract of your class and you should be committed to honouring that as best you can. Once you have published, then breaking that contract could result in very unhappy clients. If you are using [Domain-driven Design](TODO), then you will also need to implement some business rules to keep your domain objects consistent. Again, encapsulation plays a role here.
+Should we just make everything public? Of course not. Anything public forms part of the contract of your class and you should be committed to honouring that as best you can. Once you have published, then breaking that contract could result in very unhappy clients. If you are using [Domain-driven Design](https://en.wikipedia.org/wiki/Domain-driven_design), then you will also need to implement some business rules to keep your domain objects consistent. Again, encapsulation plays a vary valuable role here.
 
-What I am thinking about here are primarily read-only properties that have been hidden without thought. Because the language made that the default.
+What I am thinking about here are primarily read-only properties that have been hidden without thought. Perhaps because the language made that the default.
 
 ## Sometimes privacy is just a facade
 
@@ -59,28 +59,29 @@ class MyEncapsulatedClass
 }
 ```
 
-However, using [reflection](TODO) you can still access the supposedly-private value.
+However, using [reflection](https://www.howtogeek.com/devops/what-is-reflection-in-programming/) you can still access the supposedly-private value.
 
 ```c#
 var myEncapsulatedInstance = new MyEncapsulatedClass(666);
 
 var myEncapsulatedClass = typeof(MyEncapsulatedClass);
-var privateProperty = 
+var privateProperty =
     myEncapsulatedClass.GetProperty(
         "PrivateProperty", BindingFlags.NonPublic | BindingFlags.Instance);
-var privatePropertyValue = 
+var privatePropertyValue =
     privateProperty.GetValue(myEncapsulatedInstance, null);
 
-Console.WriteLine($"privatePropertyValue={privatePropertyValue}");
+Console.WriteLine("privatePropertyValue=" + privatePropertyValue);
 ```
 
 I concede that you have to do some work here to get the value. The point I am trying to make is that you might want to check your language before relying on encapsulation for anything security-related.
 
 ## Summary
 
-TODO
+My experience with TypeScript's public-by-default approach led me to question my default position of hiding everything possible in a class. This was combined with my experience of being frustrated with using libraries that hid information unnecessarily.
 
-Talk about how:
+Now for utility libraries or packages, I try to keep things as open as possible. Where properties are passed in on construction, I try to make them public and read-only. Internal structures are made private by conscious choice, only if exposing them would make for a fragile contract.
 
-- For utility libraries, I try to keep things as open as possible
-- For enforcing business rules, I keep the innards hidden from view
+When implementing [Domain-driven Design](https://en.wikipedia.org/wiki/Domain-driven_design) business rules, encapsulation becomes necessary in order to enforce those rules and keep the domain model consistent. Again, this is a conscious choice.
+
+What I also learned, is that trying different programming languages can make you think differently and challenge your own assumptions and habits. This can only be a good thing.
