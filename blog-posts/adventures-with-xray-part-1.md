@@ -136,21 +136,48 @@ Now when we run the tests, we see the following in X-Ray.
 
 The interesting thing here is that the view includes metrics along with the service map. Two of the circles indicate that error metrics were recorded. Now if we select them, we get the option to view filtered traces.
 
-![X-Ray service map showing metrics](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/message-router-with-error-selected.png?raw=true)
+![X-Ray service map option to view filtered traces](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/message-router-with-error-selected.png?raw=true)
 
 Clicking on this we get a list of traces where errors occurred.
 
-![X-Ray service map showing metrics](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/message-router-with-error-traces.png?raw=true)
+![X-Ray trace list](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/message-router-with-error-traces.png?raw=true)
 
 Selecting one, we go straight to the logs and we can see the error.
 
-![X-Ray service map showing metrics](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/message-router-with-error-log-entries.png?raw=true)
+![CloudWatch error logs](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/message-router-with-error-log-entries.png?raw=true)
 
 Hopefully, this gives you some idea of how X-Ray can help bring together traces, metrics, and logs. Allowing you to identify errors and get to the relevant logs, in order to debug issues quickly.
 
 ## Step Function example
 
-TODO?
+The final example that we will instrument with X-Ray is one that contains a step function. The step function implements a process that obtains a credit rating and then decides whether to accept or decline a loan. Where errors occur, a message is placed on an SQS queue.
+
+![The step function definition](https://raw.githubusercontent.com/andybalham/cdk-cloud-test-kit/main/examples/loan-processor-state-machine/images/loan-processor-test-stack.jpg)
+
+The step function definition is shown below. We can see that it includes integrations with SNS and SQS.
+
+![The step function definition](https://raw.githubusercontent.com/andybalham/cdk-cloud-test-kit/main/examples/loan-processor-state-machine/images/loan-processor-step-function.png)
+
+As well as setting the appropriate property on each Lambda function, we also need to set the `tracingEnabled` property to `true` on our step function.
+
+```TypeScript
+export interface StateMachineProps {
+    // <snip>
+    /**
+     * Specifies whether Amazon X-Ray tracing is enabled for this state machine.
+     *
+     * @default false
+     */
+    readonly tracingEnabled?: boolean;
+    // <snip>
+}
+```
+
+With this in place, we can deploy the updated example and run our test that exercise all the routes through the step function. The result in X-Ray is shown below.
+
+![X-Ray showing step function trace](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/step-function-service-map.png?raw=true)
+
+Here we can see the step function integrations with Lambda, SNS, SQS, and DynamoDB. We can see the traces go through Lambda, SNS, and SQS, but stop at DynamoDB. Although our example observes DynamoDB events, and we can see the Lambda function elsewhere in the service map, the context is lost as soon as the record is written.
 
 ## Summary
 
