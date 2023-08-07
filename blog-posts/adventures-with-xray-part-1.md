@@ -78,9 +78,7 @@ We can see API Gateway invoking the associated Lambda function, and we can also 
 
 ### Adding X-Ray to our Lambda code
 
-TODO
-
-`RequestApi.EventPublisher` function:
+To get our trace linked up, we need to wrap the `EventBridgeClient` instance with the appropriate middleware to inject the context into the calls to publish events. This is done in the `RequestApi.EventPublisher` function as follows:
 
 ```TypeScript
 import * as AWSXRay from 'aws-xray-sdk';
@@ -88,109 +86,72 @@ import * as AWSXRay from 'aws-xray-sdk';
 const eventBridgeClient = AWSXRay.captureAWSv3Client(new EventBridgeClient({}));
 ```
 
-TODO: Show the service map
+Now when we view X-Ray, we can see the trace from API Gateway to the handle Lambda function, through EventBridge, and finally to our observer Lambda function.
 
-![X-Ray service map showing no EventBridge](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/request-api-with-sdk.png?raw=true)
+![X-Ray service map showing EventBridge calls](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/request-api-with-sdk.png?raw=true)
 
-TODO: Explain the 'two' Lambda function instances
+You may notice that there are two circles in the map for each Lambda function. In the video [How to do Distributed tracing in AWS? | AWS X-ray and Cloudwatch Service Lens](https://www.youtube.com/watch?v=OOScvywKj9s), Marcia Villalba explains that there is one for the Lambda runtime and one for the handler code.
 
 ### Viewing the traces
 
-TODO: Show the cold and warm traces
+Now we have everything joined up, we can start looking at some traces to give ourself an idea of what X-Ray can do for us. Looking at the trace list, one entry jumps out as being considerably slower than the rest.
 
 ![X-Ray trace list](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/request-api-trace-list.png?raw=true)
 
+Clicking on this, we can see the following trace. We can also see the reason for why it is slower, as what we can see is a cold start in action.
+
 ![X-Ray trace showing a cold start](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/request-api-trace-cold.png?raw=true)
+
+If we look at a quicker trace, we can see a warmed-up Lambda function.
 
 ![X-Ray trace showing warm start](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/request-api-trace-warm.png?raw=true)
 
+This small example gives a flavour of the insight that these traces can provide.
+
 ## SNS and SQS examples
 
-TODO
+The [CDK Cloud Test Kit](TODO) also contains a couple of examples using SNS and SQS. This gives us a chance to add X-Ray to those and see what happens.
+
+For the SNS example, we wrap the `SNSClient` in the X-Ray middleware.
+
+```TypeScript
+const sns = AWSXRay.captureAWSv3Client(new SNSClient({}));
+```
+
+Running the tests, we see the following service map. This clearly shows the structure of the application, where one Lambda function publishes events to one of two topics and two Lambda functions subscribe as observers.
+
+![X-Ray service map showing relative sizes](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/event-router-relative-size.png?raw=true)
+
+What I also noted, was that the relative sizes indicates the weight of traffic through the system. This could be useful to see if the flow within your application is as your would expect.
+
+For SQS, we again wrap the client as we have done before.
+
+```TypeScript
+const sqs = AWSXRay.captureAWSv3Client(new SQSClient({}));
+```
+
+Now when we run the tests, we see the following in X-Ray.
+
+![X-Ray service map showing metrics](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/message-router-with-errors.png?raw=true)
+
+The interesting thing here is that the view includes metrics along with the service map. Two of the circles indicate that error metrics were recorded. Now if we select them, we get the option to view filtered traces.
+
+![X-Ray service map showing metrics](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/message-router-with-error-selected.png?raw=true)
+
+Clicking on this we get a list of traces where errors occurred.
+
+![X-Ray service map showing metrics](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/message-router-with-error-traces.png?raw=true)
+
+Selecting one, we go straight to the logs and we can see the error.
+
+![X-Ray service map showing metrics](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/message-router-with-error-log-entries.png?raw=true)
+
+Hopefully, this gives you some idea of how X-Ray can help bring together traces, metrics, and logs. Allowing you to identify errors and get to the relevant logs, in order to debug issues quickly.
 
 ## Step Function example
 
 TODO?
 
-## Notes
+## Summary
 
-Links:
-
-- [Integrating AWS X-Ray with other AWS services](https://docs.aws.amazon.com/xray/latest/devguide/xray-services.html)
-  - List of supported services
-- [How to do Distributed tracing in AWS? | AWS X-ray and Cloudwatch Service Lens](https://www.youtube.com/watch?v=OOScvywKj9s)
-- [aws-cdk-lib.aws_xray module](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_xray-readme.html)
-- [Tracing AWS SDK calls with the X-Ray SDK for Node.js](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-nodejs-awssdkclients.html)
-- [How to do Distributed tracing in AWS? | AWS X-ray and Cloudwatch Service Lens](https://www.youtube.com/watch?v=OOScvywKj9s)
-- For Lambda
-  - [Using AWS Lambda with AWS X-Ray](https://docs.aws.amazon.com/lambda/latest/dg/services-xray.html)
-  - [X-Ray Tracing Modes](https://docs.aws.amazon.com/lambda/latest/dg/API_TracingConfig.html)
-- For API Gateway
-  - [Setting up AWS X-Ray with API Gateway REST APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-enabling-xray.html)
-  - [aws-cdk-lib.aws_apigateway module](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway-readme.html)
-  - [class Stage (construct)](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.Stage.html)
-    - Tracing is enabled at a `Stage` level
-  - [Deploying your CDK app to different stages and environments](https://taimos.de/blog/deploying-your-cdk-app-to-different-stages-and-environments) - Not really useful
-  - [Deploy multiple API Gateway stages with AWS CDK](https://stackoverflow.com/questions/62449187/deploy-multiple-api-gateway-stages-with-aws-cdk)
-
-Active vs passive. Passive seems not to log.
-
-```TypeScript
-export declare enum Tracing {
-    /**
-     * Lambda will respect any tracing header it receives from an upstream service.
-     * If no tracing header is received, Lambda will sample the request based on a fixed rate. Please see the [Using AWS Lambda with AWS X-Ray](https://docs.aws.amazon.com/lambda/latest/dg/services-xray.html) documentation for details on this sampling behaviour.
-     */
-    ACTIVE = "Active",
-    /**
-     * Lambda will only trace the request from an upstream service
-     * if it contains a tracing header with "sampled=1"
-     */
-    PASS_THROUGH = "PassThrough",
-    /**
-     * Lambda will not trace any request.
-     */
-    DISABLED = "Disabled"
-}
-```
-
-[What is `Active tracing` mean in lambda with Xray?](https://stackoverflow.com/questions/64800794/what-is-active-tracing-mean-in-lambda-with-xray):
-
-> AWS Lambda supports both active and passive instrumentation. So basically you use passive instrumentation if your function handles requests that have been sampled by some other service (e.g. API gateway). In contrast, if your function gets "raw" un-sampled requests, you should use active instrumentation, so that the sampling takes place.
-
-Do we want an active observer or a passive one? We want an active one for observers as they are triggered by events.
-
-Why do you see two Lambda functions? I think the answer was in the video.
-
-Even without SNS client, it was able to show the Lambda functions being invoked. You couldn't see the SNS queue in the middle though.
-
-Wrapping the test clients with `AWSXRay.captureAWSv3Client` didn't seem to have any effect. They complain with the following:
-
-```text
-2023-07-26 19:15:40.467 +01:00 [ERROR] Error: Failed to get the current sub/segment from the context.
-    at Object.contextMissingLogError [as contextMissing] (D:\Users\andyb\Documents\github\cdk-cloud-test-kit\node_modules\aws-xray-sdk-core\dist\lib\context_utils.js:22:27)
-```
-
-[Developer Guide](https://docs.aws.amazon.com/pdfs/xray/latest/devguide/xray-guide.pdf)
-
-[Configuring the X-Ray SDK for Node.js](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-nodejs-configuration.html)
-
-Tried the following:
-
-```TypeScript
-AWSXRay.enableManualMode();
-
-const testClient = new IntegrationTestClient({
-  testStackId: SimpleEventRouterTestStack.Id,
-  clientOverrides: {
-    snsClient: AWSXRay.captureAWSv3Client(
-      new SNSClient({ region: IntegrationTestClient.getRegion() }),
-      new AWSXRay.Segment('SimpleEventRouterTest')
-    ),
-  },
-});
-```
-
-Even manually overriding the middleware didn't improve the trace
-
-TODO: Perhaps try the following: <https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-nodejs-subsegments.html>. What is the advantage of actually doing this?
+TODO
