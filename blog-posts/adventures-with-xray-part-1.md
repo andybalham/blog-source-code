@@ -90,7 +90,19 @@ const eventBridgeClient = AWSXRay.captureAWSv3Client(new EventBridgeClient({}));
 
 TODO: Show the service map
 
+![X-Ray service map showing no EventBridge](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/request-api-with-sdk.png?raw=true)
+
+TODO: Explain the 'two' Lambda function instances
+
+### Viewing the traces
+
 TODO: Show the cold and warm traces
+
+![X-Ray trace list](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/request-api-trace-list.png?raw=true)
+
+![X-Ray trace showing a cold start](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/request-api-trace-cold.png?raw=true)
+
+![X-Ray trace showing warm start](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/request-api-trace-warm.png?raw=true)
 
 ## SNS and SQS examples
 
