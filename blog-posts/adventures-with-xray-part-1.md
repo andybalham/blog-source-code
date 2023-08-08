@@ -1,15 +1,17 @@
 # Adventures with X-Ray Part 1
 
-## Overview
+One of the big challenges of distributed systems, such as serverless, is observability. In previous posts, I had a look at [structured logging](https://www.10printiamcool.com/custom-metric-properties-and-cloudwatch-insights), [metrics](https://www.10printiamcool.com/adding-lambda-custom-metrics-the-easy-way), and [alarms](https://www.10printiamcool.com/creating-custom-metric-alarms-with-cdk). All these play an important part in building a maintainable system. One thing that I haven't covered is distributed tracing, as I had had no experience with it. So this is a record of my first steps using [X-Ray](https://aws.amazon.com/xray/), the AWS offering you get included with your AWS account.
 
-TODO
+Please be aware there are numerous excellent third-party offerings, such as the following:
 
-- Importance of observability
-- Mention logging and metrics (with links to posts), but not dipped toe into tracing
-- Mention multiple tracing providers
-- Brief mention of the CDK Cloud Test Kit
+- [New Relic](https://newrelic.com/)
+- [Datadog](https://www.datadoghq.com/)
+- [Lumigo](https://lumigo.io/)
+- [Thundra](https://www.thundra.io/)
 
-## Request API
+In order to dip my toe into the world of X-Ray, I decided to instrument the examples I created for my [CDK Cloud Test Kit](https://www.npmjs.com/package/@andybalham/cdk-cloud-test-kit) `npm` package. These example use a variety of services, e.g. SNS, SQS, EventBridge, etc, so provide a good starting point to learn.
+
+## API Gateway, Lambda, and EventBridge
 
 This example consists of an API Gateway backed by a Lambda function. The Lambda function does the following:
 
@@ -108,9 +110,9 @@ If we look at a quicker trace, we can see a warmed-up Lambda function.
 
 This small example gives a flavour of the insight that these traces can provide.
 
-## SNS and SQS examples
+## SNS and SQS
 
-The [CDK Cloud Test Kit](TODO) also contains a couple of examples using SNS and SQS. This gives us a chance to add X-Ray to those and see what happens.
+The [CDK Cloud Test Kit](https://github.com/andybalham/cdk-cloud-test-kit) also contains a couple of examples using SNS and SQS. This gives us a chance to add X-Ray to those and see what happens.
 
 For the SNS example, we wrap the `SNSClient` in the X-Ray middleware.
 
@@ -148,13 +150,9 @@ Selecting one, we go straight to the logs and we can see the error.
 
 Hopefully, this gives you some idea of how X-Ray can help bring together traces, metrics, and logs. Allowing you to identify errors and get to the relevant logs, in order to debug issues quickly.
 
-## Step Function example
+## Step Functions
 
-The final example that we will instrument with X-Ray is one that contains a step function. The step function implements a process that obtains a credit rating and then decides whether to accept or decline a loan. Where errors occur, a message is placed on an SQS queue.
-
-![The step function definition](https://raw.githubusercontent.com/andybalham/cdk-cloud-test-kit/main/examples/loan-processor-state-machine/images/loan-processor-test-stack.jpg)
-
-The step function definition is shown below. We can see that it includes integrations with SNS and SQS.
+The final example that we will instrument with X-Ray is one that contains a step function. The step function implements a process that obtains a credit rating and then decides whether to accept or decline a loan. Where errors occur, a message is placed on an SQS queue. The step function definition is shown below. We can see that it includes integrations with SNS and SQS.
 
 ![The step function definition](https://raw.githubusercontent.com/andybalham/cdk-cloud-test-kit/main/examples/loan-processor-state-machine/images/loan-processor-step-function.png)
 
@@ -173,12 +171,20 @@ export interface StateMachineProps {
 }
 ```
 
-With this in place, we can deploy the updated example and run our test that exercise all the routes through the step function. The result in X-Ray is shown below.
+With this in place, we can deploy the updated example and run our tests that exercise all the routes through the step function. The result in X-Ray is shown below.
 
-![X-Ray showing step function trace](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/step-function-service-map.png?raw=true)
+![X-Ray showing step function service map](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/step-function-service-map.png?raw=true)
 
 Here we can see the step function integrations with Lambda, SNS, SQS, and DynamoDB. We can see the traces go through Lambda, SNS, and SQS, but stop at DynamoDB. Although our example observes DynamoDB events, and we can see the Lambda function elsewhere in the service map, the context is lost as soon as the record is written.
 
+Again, we can see the metrics overlaid on the service map. The tests include some error scenarios, and the resulting metrics are reflected in the highlighting of the services. Drilling into the step function service, we can view the error trace and we see the following.
+
+![X-Ray showing step function error trace](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-1/step-function-error-trace.png?raw=true)
+
+Here we can clearly see the retry behaviour occurring, before the step function errors.
+
 ## Summary
 
-TODO
+In this post, we looked at how we can use X-Ray to instrument a variety of services. Whilst it was simple to do, it was invasive. As in, we had to change both the CDK code and the Lambda function code. Although I haven't tried them, I believe that some of the third-party offerings avoid such changes. We also need to be aware of the cost of using X-Ray, the pricing of which can be found at [AWS X-Ray pricing](https://aws.amazon.com/xray/pricing/).
+
+Although I feel I have only just scratched the surface, I can see how powerful X-Ray can be in the way it combines the service map, traces, metrics, alarms, and logs. In the second part of the series, I will take what I have found so far and try instrumenting my [Loan Broker example application](https://www.10printiamcool.com/series/enterprise-patterns-cdk).
