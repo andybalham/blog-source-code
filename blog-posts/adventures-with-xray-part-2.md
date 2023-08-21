@@ -51,8 +51,39 @@ export declare class EventBridgePutEvents extends sfn.TaskStateBase {
 }
 ```
 
-Q. Does this add X-Ray tracing?
-A. Yes
+I was asking myself if this call would be traced by X-Ray. To test if this is the case, I decided to run one of the the unit tests that executes the step function. This unit test differs from a more traditional unit test in that it exercises the step function in the cloud as part of a test-specific CDK stack.
+
+The test waits for an event being published that indicates success. However, I found that the test failed. So I looked at the service map:
+
+![Description](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-with-failures-map.png?raw=true)
+
+I could see that there were failures in three places. The step function was failing, along with two Lambda functions.
+
+Looking at the trace for the step function, I could see that the 'RequestCreditReport' task was timing out (the timeout was set to 6 seconds).
+
+![Description](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-step-function-failures-trace.png?raw=true)
+
+I could also see that the Lambda function that providing mock credit bureau was failing.
+
+![Description](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-mock-bureau-failures-trace.png?raw=true)
+
+The invocation duration of 2.99s looked a bit like a timeout. The console allowed me to quickly dive into the logs and see that this is the case.
+
+![Description](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-mock-bureau-timeout-log.png?raw=true)
+
+Looking at the trace for the other failure, I could see that three attempts were made to the Lambda function that handles callbacks to the step function.
+
+![Description](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-callback-retries-trace.png?raw=true)
+
+Again, I was easily able to navigate to the logs and see the reason.
+
+![Description](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-callback-retry-log.png?raw=true)
+
+I could see that the Lambda function is being invoked as the result of an EventBridge rule, but the step function to be restarted has already finished due to the task timeout.
+
+This short exercise shows quite neatly how you can use the service map and traces to see where issues are, and then how the integration with the logs allows you to drill down and see the reasons.
+
+------------------------------------------------------------
 
 Mention `AWS_XRAY_CONTEXT_MISSING=IGNORE_ERROR` in `.env`? Does it work? Yes, it prevented:
 
@@ -60,25 +91,9 @@ Mention `AWS_XRAY_CONTEXT_MISSING=IGNORE_ERROR` in `.env`? Does it work? Yes, it
 console.error
   2023-08-19 14:28:41.709 +01:00 [ERROR] Error: Failed to get the current sub/segment from the context.
       at Object.contextMissingLogError [as contextMissing] (D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\aws-xray-sdk-core\dist\lib\context_utils.js:22:27)
-      at Object.getSegment (D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\aws-xray-sdk-core\dist\lib\context_utils.js:89:53)
-      at Object.resolveSegment (D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\aws-xray-sdk-core\dist\lib\context_utils.js:71:25)
-      at D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\aws-xray-sdk-core\dist\lib\patchers\aws3_p.js:61:67
-      at D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\@aws-sdk\middleware-content-length\dist-cjs\index.js:26:16
-      at D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\@aws-sdk\middleware-serde\dist-cjs\serializerMiddleware.js:13:12
-      at processTicksAndRejections (node:internal/process/task_queues:95:5)
-      at D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\@aws-sdk\middleware-logger\dist-cjs\loggerMiddleware.js:7:26
+      <snip>
       at Object.<anonymous> (D:\Users\andyb\Documents\github\blog-enterprise-integration\tests\loan-broker\loan-broker.test.ts:178:5)
 ```
-
-Running the step function test we can see the following trace:
-
-TODO: Map showing errors
-
-TODO: We can see errors, so look further...
-
-TODO: Trace showing errors
-
-TODO: Go into logs / metrics
 
 ## Notes
 
