@@ -1,4 +1,84 @@
-# Adventures with X-Ray Part 1
+# Adventures with X-Ray Part 2
+
+## Story
+
+1. Enable tracing in CDK
+    - Lambda functions - done
+    - Step functions - done
+1. Wrap SDK clients
+    - EventBridge - done (Is it worth mentioning simplicity working in our favour here?)
+
+Simple with `NODE_DEFAULT_PROPS`:
+
+```TypeScript
+export const NODE_DEFAULT_PROPS = {
+  // <snip>
+  tracing: Tracing.ACTIVE,
+};
+```
+
+Use `Tracing.PASS_THROUGH` for the API handler.
+
+All Lambda functions use the following, so only one place to wrap the client:
+
+```TypeScript
+export const putDomainEventAsync = async <T extends Record<string, any>>({
+  eventBusName,
+  domainEvent,
+}: {
+  eventBusName?: string;
+  domainEvent: DomainEvent<T>;
+}): Promise<AWS_EventBridge.PutEventsCommandOutput> => {
+  // <snip>
+};
+```
+
+```TypeScript
+this.stateMachine = new StateMachine(this, 'StateMachine', {
+  tracingEnabled: true,
+  // <snip>
+});
+```
+
+In the step function we use `EventBridgePutEvents`:
+
+```TypeScript
+/**
+ * A StepFunctions Task to send events to an EventBridge event bus
+ */
+export declare class EventBridgePutEvents extends sfn.TaskStateBase {
+    constructor(scope: Construct, id: string, props: EventBridgePutEventsProps);
+}
+```
+
+Q. Does this add X-Ray tracing?
+A. Yes
+
+Mention `AWS_XRAY_CONTEXT_MISSING=IGNORE_ERROR` in `.env`? Does it work? Yes, it prevented:
+
+```text
+console.error
+  2023-08-19 14:28:41.709 +01:00 [ERROR] Error: Failed to get the current sub/segment from the context.
+      at Object.contextMissingLogError [as contextMissing] (D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\aws-xray-sdk-core\dist\lib\context_utils.js:22:27)
+      at Object.getSegment (D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\aws-xray-sdk-core\dist\lib\context_utils.js:89:53)
+      at Object.resolveSegment (D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\aws-xray-sdk-core\dist\lib\context_utils.js:71:25)
+      at D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\aws-xray-sdk-core\dist\lib\patchers\aws3_p.js:61:67
+      at D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\@aws-sdk\middleware-content-length\dist-cjs\index.js:26:16
+      at D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\@aws-sdk\middleware-serde\dist-cjs\serializerMiddleware.js:13:12
+      at processTicksAndRejections (node:internal/process/task_queues:95:5)
+      at D:\Users\andyb\Documents\github\blog-enterprise-integration\node_modules\@aws-sdk\middleware-logger\dist-cjs\loggerMiddleware.js:7:26
+      at Object.<anonymous> (D:\Users\andyb\Documents\github\blog-enterprise-integration\tests\loan-broker\loan-broker.test.ts:178:5)
+```
+
+Running the step function test we can see the following trace:
+
+TODO: Map showing errors
+
+TODO: We can see errors, so look further...
+
+TODO: Trace showing errors
+
+TODO: Go into logs / metrics
 
 ## Notes
 
