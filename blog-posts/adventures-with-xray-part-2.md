@@ -1,14 +1,30 @@
 # Adventures with X-Ray Part 2
 
-## Story
+Debugging an asynchronous step function
 
-1. Enable tracing in CDK
-    - Lambda functions - done
-    - Step functions - done
+## Overview
+
+In the [first part](TODO) of this series, I added [AWS X-Ray](TODO) to a set of examples for my [CDK Cloud Test Kit](TODO). In this part, I look at adding it to an example application I put together for my series on [implementing Enterprise Integration patterns](TODO). Let's see what adventures I have.
+
+## The example application
+
+The case study we looked at in the series is an application that acts as a loan broker. The application receives a request containing the details of the loan required via an API, and then returns the best rate to a [webhook](https://www.getvero.com/resources/webhooks/).
+
+The following diagram shows how we use a central [EventBridge](https://aws.amazon.com/eventbridge/) event bus to implement this.
+
+![Architecture diagram using EventBridge](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/case-study-eventbridge.png?raw=true)
+
+## Adding X-Ray
+
+Adding X-Ray to our application involves the following steps.
+
+1. Enable tracing via CDK
+    - Lambda functions
+    - Step functions
 1. Wrap SDK clients
     - EventBridge - done (Is it worth mentioning simplicity working in our favour here?)
 
-Simple with `NODE_DEFAULT_PROPS`:
+Enabling tracing on the Lambda functions is as straightforward as adding the following line to the default properties for all Lambda functions in the application.
 
 ```TypeScript
 export const NODE_DEFAULT_PROPS = {
@@ -17,9 +33,20 @@ export const NODE_DEFAULT_PROPS = {
 };
 ```
 
-Use `Tracing.PASS_THROUGH` for the API handler.
+The only place I we override this in the API handler. Here we use `Tracing.PASS_THROUGH`, so that it adheres to the upstream sampling set in the API.
 
-All Lambda functions use the following, so only one place to wrap the client:
+The application only uses one step function and so we can amend it as follows.
+
+```TypeScript
+this.stateMachine = new StateMachine(this, 'StateMachine', {
+  tracingEnabled: true,
+  // <snip>
+});
+```
+
+The final step is to wrap all the SDK clients, such as EventBridge or SQS.
+
+As shown in the diagram above, all communication in the application is done through EventBridge and all Lambda functions use the following method to send domain events.
 
 ```TypeScript
 export const putDomainEventAsync = async <T extends Record<string, any>>({
@@ -33,12 +60,19 @@ export const putDomainEventAsync = async <T extends Record<string, any>>({
 };
 ```
 
+The upshot of this is that there is only one place to wrap the client:
+
 ```TypeScript
-this.stateMachine = new StateMachine(this, 'StateMachine', {
-  tracingEnabled: true,
-  // <snip>
-});
+const eventBridge = AWSXRay.captureAWSv3Client(new EventBridge({}));
 ```
+
+And with this, we have added X-Ray to the whole application.
+
+## Step Functions and `EventBridgePutEvents`
+
+TODO
+
+TODO: Diagram
 
 In the step function we use `EventBridgePutEvents`:
 
@@ -55,29 +89,29 @@ I was asking myself if this call would be traced by X-Ray. To test if this is th
 
 The test waits for an event being published that indicates success. However, I found that the test failed. So I looked at the service map:
 
-![Description](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-with-failures-map.png?raw=true)
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-with-failures-map.png?raw=true)
 
 I could see that there were failures in three places. The step function was failing, along with two Lambda functions.
 
 Looking at the trace for the step function, I could see that the 'RequestCreditReport' task was timing out (the timeout was set to 6 seconds).
 
-![Description](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-step-function-failures-trace.png?raw=true)
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-step-function-failures-trace.png?raw=true)
 
 I could also see that the Lambda function that providing mock credit bureau was failing.
 
-![Description](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-mock-bureau-failures-trace.png?raw=true)
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-mock-bureau-failures-trace.png?raw=true)
 
 The invocation duration of 2.99s looked a bit like a timeout. The console allowed me to quickly dive into the logs and see that this is the case.
 
-![Description](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-mock-bureau-timeout-log.png?raw=true)
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-mock-bureau-timeout-log.png?raw=true)
 
 Looking at the trace for the other failure, I could see that three attempts were made to the Lambda function that handles callbacks to the step function.
 
-![Description](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-callback-retries-trace.png?raw=true)
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-callback-retries-trace.png?raw=true)
 
 Again, I was easily able to navigate to the logs and see the reason.
 
-![Description](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-callback-retry-log.png?raw=true)
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-callback-retry-log.png?raw=true)
 
 I could see that the Lambda function is being invoked as the result of an EventBridge rule, but the step function to be restarted has already finished due to the task timeout.
 
