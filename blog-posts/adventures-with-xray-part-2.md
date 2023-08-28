@@ -16,15 +16,15 @@ The following diagram shows how we use a central [EventBridge](https://aws.amazo
 
 ## Adding X-Ray
 
-Adding X-Ray to our application involves the following steps.
+Adding X-Ray to the application involved the following steps.
 
 1. Enable tracing via CDK
     - Lambda functions
     - Step functions
 1. Wrap SDK clients
-    - EventBridge - done (Is it worth mentioning simplicity working in our favour here?)
+    - EventBridge
 
-Enabling tracing on the Lambda functions is as straightforward as adding the following line to the default properties for all Lambda functions in the application.
+Enabling tracing on the Lambda functions was as straightforward as adding the following line to the default properties for all Lambda functions in the application.
 
 ```TypeScript
 export const NODE_DEFAULT_PROPS = {
@@ -33,9 +33,9 @@ export const NODE_DEFAULT_PROPS = {
 };
 ```
 
-The only place I we override this in the API handler. Here we use `Tracing.PASS_THROUGH`, so that it adheres to the upstream sampling set in the API.
+The only place I chose to override this default behaviour was in the API handler. Here I used `Tracing.PASS_THROUGH`, so that it would adhere to the upstream sampling set in the API.
 
-The application only uses one step function and so we can amend it as follows.
+The application only uses one step function and so it was amended directly as follows.
 
 ```TypeScript
 this.stateMachine = new StateMachine(this, 'StateMachine', {
@@ -44,9 +44,9 @@ this.stateMachine = new StateMachine(this, 'StateMachine', {
 });
 ```
 
-The final step is to wrap all the SDK clients, such as EventBridge or SQS.
+The final step was to wrap all the SDK clients, such as EventBridge or SQS.
 
-As shown in the diagram above, all communication in the application is done through EventBridge and all Lambda functions use the following method to send domain events.
+As was shown in the diagram above, all communication in the application is done through EventBridge. In fact, all Lambda functions use the same `putDomainEventAsync` method to send domain events.
 
 ```TypeScript
 export const putDomainEventAsync = async <T extends Record<string, any>>({
@@ -60,21 +60,25 @@ export const putDomainEventAsync = async <T extends Record<string, any>>({
 };
 ```
 
-The upshot of this is that there is only one place to wrap the client:
+The upshot of this is that there was only one place to wrap the EventBridge SDK client:
 
 ```TypeScript
 const eventBridge = AWSXRay.captureAWSv3Client(new EventBridge({}));
 ```
 
-And with this, we have added X-Ray to the whole application.
+And with this, I had added X-Ray to the whole application.
 
 ## Step Functions and `EventBridgePutEvents`
+
+One thing that I was aware of, was that the step function uses `EventBridgePutEvents` direct integration, as shown below.
+
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/example-application-step-function.png?raw=true)
 
 TODO
 
 TODO: Diagram
 
-In the step function we use `EventBridgePutEvents`:
+
 
 ```TypeScript
 /**
