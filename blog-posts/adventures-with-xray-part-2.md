@@ -4,7 +4,7 @@ Debugging an asynchronous step function
 
 ## Overview
 
-In the [first part](TODO) of this series, I added [AWS X-Ray](TODO) to a set of examples for my [CDK Cloud Test Kit](TODO). In this part, I look at adding it to an example application I put together for my series on [implementing Enterprise Integration patterns](TODO). Let's see what adventures I have.
+In the [first part](https://www.10printiamcool.com/adventures-with-aws-x-ray-and-cdk-part-1) of this series, I added [AWS X-Ray](https://aws.amazon.com/xray/) to a set of examples for my [CDK Cloud Test Kit](https://www.npmjs.com/package/@andybalham/cdk-cloud-test-kit). In this part, I look at adding it to an example application I put together for my series on [implementing Enterprise Integration patterns](https://www.10printiamcool.com/series/enterprise-patterns-cdk). Let's see what adventures I have.
 
 ## The example application
 
@@ -72,7 +72,7 @@ And with this, I had added X-Ray to the whole application.
 
 One thing that I was aware of, was that the step function uses `EventBridgePutEvents` direct integration, as highlighted below.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/example-application-step-function-put-events.png?raw=true)
+![Step function diagram highlighting the put events tasks](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/example-application-step-function-put-events.png?raw=true)
 
 I was asking myself if this call would be traced by X-Ray. To test if this is the case, I decided to run one of the the unit tests that executes the step function.
 
@@ -110,29 +110,29 @@ However, when I ran the test, I found that it was timing out waiting for the exp
 
 As I was now using X-Ray, I had a look at the service map.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-with-failures-map.png?raw=true)
+![A service map showing services with errors](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-with-failures-map.png?raw=true)
 
 On the plus side, I could see that the `EventBridgePutEvents` task does allow events to be traced through EventBridge. On the down side, I could see that there were failures in three places, the step function along with two Lambda functions.
 
 Looking at the trace for the step function, I could see that the 'RequestCreditReport' task was failing just after 6 seconds. The timeout for this task is set to 6 seconds, so this looked like the task was timing out. This would explain why the expected event was not being published.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-step-function-failures-trace.png?raw=true)
+![X-Ray trace shown step function failures](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-step-function-failures-trace.png?raw=true)
 
 I could also see that the mock Lambda function that provides credit references was failing. This would explain why the step function task was timing out.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-mock-bureau-failures-trace.png?raw=true)
+![X-Ray trace showing errors in a Lambda function](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-mock-bureau-failures-trace.png?raw=true)
 
 The invocation duration of 2.99s also looked like a timeout, as the default timeout for Lambda functions is 3 seconds. The console allowed me to quickly dive into the logs and see that this is the case.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-mock-bureau-timeout-log.png?raw=true)
+![A CloudWatch log showing errors in a Lambda function](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-mock-bureau-timeout-log.png?raw=true)
 
 Looking at the trace for the other failure, I could see that three attempts were made to the Lambda function that handles callbacks to the step function.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-callback-retries-trace.png?raw=true)
+![X-Ray trace showing multiple retries failing](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-callback-retries-trace.png?raw=true)
 
 Again, I was easily able to navigate to the logs and see the reason.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-callback-retry-log.png?raw=true)
+![A CloudWatch log showing the details of retry failures](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-callback-retry-log.png?raw=true)
 
 I could see that the Lambda function is being invoked as the result of an EventBridge rule, but the step function to be restarted has already finished due to the task timeout.
 
@@ -140,11 +140,11 @@ I could see that the Lambda function is being invoked as the result of an EventB
 
 The solution to the timeouts was quite simply to double the memory of the Lambda functions to 256mb and double the timeout to 6 seconds. With these changes in place and deployed, the unit test ran successfully and the resulting service map reflect the clean run.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-map.png?raw=true)
+![A service map showing no errors](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-map.png?raw=true)
 
 This clearly shows how EventBridge is at the heart of our application. When I selected a successful trace, I could see all the relevant logs in one place.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-log.png?raw=true)
+![A CloudWatch log showing all log entries for the X-Ray trace](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-log.png?raw=true)
 
 ## Summary
 
