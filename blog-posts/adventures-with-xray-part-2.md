@@ -4,11 +4,11 @@ Debugging an asynchronous step function
 
 ## Overview
 
-In the [first part](https://www.10printiamcool.com/adventures-with-aws-x-ray-and-cdk-part-1) of this series, I added [AWS X-Ray](https://aws.amazon.com/xray/) to a set of examples for my [CDK Cloud Test Kit](https://www.npmjs.com/package/@andybalham/cdk-cloud-test-kit). In this part, I look at adding it to an example application I put together for my series on [implementing Enterprise Integration patterns](https://www.10printiamcool.com/series/enterprise-patterns-cdk). Let's see what adventures I have.
+In the [first part](https://www.10printiamcool.com/adventures-with-aws-x-ray-and-cdk-part-1) of this series, I added [AWS X-Ray](https://aws.amazon.com/xray/) to a set of examples for my [CDK Cloud Test Kit](https://www.npmjs.com/package/@andybalham/cdk-cloud-test-kit). In this part, I look at adding it to an example application that I put together for my series on [implementing Enterprise Integration patterns](https://www.10printiamcool.com/series/enterprise-patterns-cdk). Let's see what adventures I have.
 
 ## The example application
 
-The case study we looked at in the series is an application that acts as a loan broker. The application receives a request containing the details of the loan required via an API, and then returns the best rate to a [webhook](https://www.getvero.com/resources/webhooks/).
+The case study we looked at in the series on [implementing Enterprise Integration patterns](https://www.10printiamcool.com/series/enterprise-patterns-cdk) is an application that acts as a loan broker. The application in question receives a request containing the details of the loan required via an API, and then returns the best rate to a [webhook](https://www.getvero.com/resources/webhooks/).
 
 The following diagram shows how we use a central [EventBridge](https://aws.amazon.com/eventbridge/) event bus to implement this.
 
@@ -33,7 +33,7 @@ export const NODE_DEFAULT_PROPS = {
 };
 ```
 
-The only place I chose to override this default behaviour was in the API handler. Here I used `Tracing.PASS_THROUGH`, so that it would adhere to the upstream sampling set in the API.
+The only place I chose to override this default behaviour was in the API handler. Here I used `Tracing.PASS_THROUGH`, so that it would adhere to the upstream sampling set in the API. See the following StackOverflow post [What is `Active tracing` mean in lambda with Xray?](https://stackoverflow.com/questions/64800794/what-is-active-tracing-mean-in-lambda-with-xray) for a good explanation on what the tracing levels mean.
 
 The application only uses one step function and so it was amended directly as follows.
 
@@ -44,7 +44,7 @@ this.stateMachine = new StateMachine(this, 'StateMachine', {
 });
 ```
 
-The final step was to wrap all the SDK clients, such as EventBridge or SQS.
+The final step was to wrap all the SDK clients that make requests via passive services, such as EventBridge or SQS.
 
 As was shown in the diagram above, all communication in the application is done through EventBridge. In fact, all Lambda functions use the same `putDomainEventAsync` method to send domain events.
 
@@ -68,7 +68,7 @@ const eventBridge = AWSXRay.captureAWSv3Client(new EventBridge({}));
 
 And with this, I had added X-Ray to the whole application.
 
-## Step Functions and `EventBridgePutEvents`
+## Step Functions and EventBridge
 
 One thing that I was aware of, was that the step function uses `EventBridgePutEvents` direct integration, as highlighted below.
 
@@ -80,7 +80,7 @@ I was asking myself if this call would be traced by X-Ray. To test if this is th
 
 The unit test differs from a more traditional unit test in that it exercises the step function in the cloud as part of an ephemeral, test-specific CDK stack. This approach allows the Lambda functions used by the step function to be swapped for test-specific implementations. This allows us to script responses for those function and so test all the routes through the step function. For an in-depth look at the approach, please see my post [Step Function integration testing with CDK](https://www.10printiamcool.com/step-function-integration-testing-with-cdk).
 
-The first test I tried initiates the step function by publishing a `quoteSubmitted` event. It then wait for an observer Lambda function to receive a `quoteProcessedEvent`.
+The first test I tried initiates the step function by publishing a `quoteSubmitted` event. It then waits for a Lambda function, acting as a test observer, to receive a `quoteProcessedEvent`.
 
 ```TypeScript
 // Act
@@ -112,17 +112,17 @@ As I was now using X-Ray, I had a look at the service map.
 
 ![A service map showing services with errors](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-with-failures-map.png?raw=true)
 
-On the plus side, I could see that the `EventBridgePutEvents` task does allow events to be traced through EventBridge. On the down side, I could see that there were failures in three places, the step function along with two Lambda functions.
+On the up side, I could see that the `EventBridgePutEvents` step function task does allow events to be traced through EventBridge. On the down side, I could see that there were failures in three places, the step function and two Lambda functions.
 
-Looking at the trace for the step function, I could see that the 'RequestCreditReport' task was failing just after 6 seconds. The timeout for this task is set to 6 seconds, so this looked like the task was timing out. This would explain why the expected event was not being published.
+Looking at the trace for the step function, I could see that the 'RequestCreditReport' task was failing just after 6 seconds. The timeout for this task was set to 6 seconds, so this looked like the task was probably timing out. That would certainly explain why the expected event was not being published.
 
 ![X-Ray trace shown step function failures](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-step-function-failures-trace.png?raw=true)
 
-I could also see that the mock Lambda function that provides credit references was failing. This would explain why the step function task was timing out.
+I could also see that the Lambda function that provides mock credit references was failing. This would explain why the step function task was timing out, as the step function task was never receiving an event back.
 
 ![X-Ray trace showing errors in a Lambda function](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-mock-bureau-failures-trace.png?raw=true)
 
-The invocation duration of 2.99s also looked like a timeout, as the default timeout for Lambda functions is 3 seconds. The console allowed me to quickly dive into the logs and see that this is the case.
+The invocation duration of 2.99s also looked like a timeout, as the timeout for Lambda functions was set to the default of 3 seconds. The console allowed me to quickly dive into the logs and confirm that that was the case.
 
 ![A CloudWatch log showing errors in a Lambda function](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-mock-bureau-timeout-log.png?raw=true)
 
@@ -134,15 +134,15 @@ Again, I was easily able to navigate to the logs and see the reason.
 
 ![A CloudWatch log showing the details of retry failures](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-callback-retry-log.png?raw=true)
 
-I could see that the Lambda function is being invoked as the result of an EventBridge rule, but the step function to be restarted has already finished due to the task timeout.
+I could see that the Lambda function is being invoked as the result of an EventBridge rule. The Lambda function is then trying to restart the step function, but the step function to be restarted has already finished due to the task timeout. The result is an error, which then causes EventBridge to retry.
 
 ## The solution
 
-The solution to the timeouts was quite simply to double the memory of the Lambda functions to 256mb and double the timeout to 6 seconds. With these changes in place and deployed, the unit test ran successfully and the resulting service map reflect the clean run.
+The solution to the timeouts was quite simply to double the memory of the highlighted Lambda functions to 256mb and double the timeout to 6 seconds. With these changes in place and deployed, the unit test ran successfully and the resulting service map reflect the clean run.
 
 ![A service map showing no errors](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-map.png?raw=true)
 
-This clearly shows how EventBridge is at the heart of our application. When I selected a successful trace, I could see all the relevant logs in one place.
+This service map clearly shows how EventBridge is at the heart of our application. When I selected a successful trace, I could see all the relevant logs in one place.
 
 ![A CloudWatch log showing all log entries for the X-Ray trace](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-2/test-success-log.png?raw=true)
 
@@ -150,13 +150,13 @@ This clearly shows how EventBridge is at the heart of our application. When I se
 
 Although I started this post with the intention of diving into the traces of a full application, that will have to wait until the next post.
 
-This short exercise with the unit test shows quite neatly how you can use the service map and traces to see where issues are. The integration with the logs then allows you to drill down and see the underlying reasons.
+This short exercise with the unit test shows how you can use the service map and traces to see where issues are. The integration with the logs then allows you to drill down and see the underlying reasons. In particular, X-Ray gave visibility to the asynchronous event-driven behaviour and the behaviour under failure conditions.
 
 I am looking forward to seeing what tracing through the application will bring.
 
 ## Addendum
 
-The unit test used a wrapped SDK client to publish events. This cause the following error to appear in the console.
+The unit tests used a wrapped SDK client to publish events. This cause the following error to appear in the console.
 
 ```text
 console.error
