@@ -1,6 +1,114 @@
 # Adventures with X-Ray Part 3
 
+## Play with Filter Expressions and Queries
 
+TODO
+
+## Removed observability from tracing
+
+TODO: Show trace and mention log being clogged.
+
+Mention `isTestMode`.
+
+```TypeScript
+const loggerFunction = new NodejsFunction(
+  this,
+  'Logger',
+  getNodejsFunctionProps({
+    // We don't want the observing in the trace for production
+    tracing: props.isTestMode ? Tracing.ACTIVE : Tracing.DISABLED,
+    logRetention: RetentionDays.ONE_WEEK,
+    environment: {
+      [ENV_REQUEST_EVENT_TABLE_NAME]: requestEventTable.tableName,
+    },
+  })
+);
+```
+
+## Add custom segments
+
+What can we add a segment around? Artificially create a delay.
+
+[Generating custom subsegments with the X-Ray SDK for Node.js](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-nodejs-subsegments.html)
+
+From ChatGPT:
+
+```TypeScript
+import * as AWSXRay from 'aws-xray-sdk-core';
+
+const handler = async (event: any, context: any) => {
+  const segment = AWSXRay.getSegment();
+
+  const subsegment = segment.addNewSubsegment('my-custom-work');
+  try {
+    // Your custom logic here
+    // For instance, you might want to call another service or some computation.
+
+    // If you're working with AWS SDK, make sure to capture those calls too.
+    // AWSXRay.captureAWSClient(someAwsServiceClient);
+
+    subsegment.addMetadata('key', 'value');
+    subsegment.addAnnotation('key', 'value');
+  } catch (error) {
+    subsegment.addError(error);
+    throw error;
+  } finally {
+    subsegment.close();
+  }
+};
+```
+
+Note that annotations are key-value pairs with simple data (strings, numbers, or booleans) that are indexed for use with filter expressions. Metadata, on the other hand, can be any related data you'd like to store that's not indexed.
+
+Show how error details show up.
+
+## Use Lambda layer
+
+Look at using the Lambda layer: <https://docs.aws.amazon.com/lambda/latest/dg/nodejs-tracing.html>
+
+The current package size is 2.7mb for each Lambda function.
+
+```yaml
+Resources:
+  function:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: function/.
+      Tracing: Active
+      Layers:
+        - !Ref libs
+      ...
+  libs:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: blank-nodejs-lib
+      Description: Dependencies for the blank sample app.
+      ContentUri: lib/.
+      CompatibleRuntimes:
+        - nodejs16.x
+```
+
+```TypeScript
+import { Stack, App } from '@aws-cdk/core';
+import { NodejsFunction } from '@aws-cdk/aws-lambda-nodejs';
+
+class MyStack extends Stack {
+  constructor(scope: App, id: string) {
+    super(scope, id);
+
+    new NodejsFunction(this, 'MyFunction', {
+      entry: 'src/myFunction.ts',
+      handler: 'handler',
+      bundling: {
+        externalModules: ['aws-xray-sdk-core'],
+      },
+    });
+  }
+}
+
+const app = new App();
+new MyStack(app, 'MyStack');
+```
 
 ## Notes
 
