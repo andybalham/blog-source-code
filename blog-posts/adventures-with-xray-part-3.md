@@ -1,14 +1,18 @@
 # Adventures with X-Ray Part 3
 
-## Play with Filter Expressions and Queries
+## The service map
 
-TODO
+TODO: Service map
+
+TODO: Show events at the heart
 
 ## Removed observability from tracing
 
 TODO: Show trace and mention log being clogged.
 
-Mention `isTestMode`.
+TODO: Show observability listeners in log.
+
+TODO: Talk about `isTestMode` to enable testing, but keep production clean.
 
 ```TypeScript
 const loggerFunction = new NodejsFunction(
@@ -60,55 +64,13 @@ const handler = async (event: any, context: any) => {
 
 Note that annotations are key-value pairs with simple data (strings, numbers, or booleans) that are indexed for use with filter expressions. Metadata, on the other hand, can be any related data you'd like to store that's not indexed.
 
+## Forcing some errors
+
 Show how error details show up.
 
-## Use Lambda layer
+## Play with Filter Expressions and Queries
 
-Look at using the Lambda layer: <https://docs.aws.amazon.com/lambda/latest/dg/nodejs-tracing.html>
-
-The current package size is 2.7mb for each Lambda function.
-
-```yaml
-Resources:
-  function:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: function/.
-      Tracing: Active
-      Layers:
-        - !Ref libs
-      ...
-  libs:
-    Type: AWS::Serverless::LayerVersion
-    Properties:
-      LayerName: blank-nodejs-lib
-      Description: Dependencies for the blank sample app.
-      ContentUri: lib/.
-      CompatibleRuntimes:
-        - nodejs16.x
-```
-
-```TypeScript
-import { Stack, App } from '@aws-cdk/core';
-import { NodejsFunction } from '@aws-cdk/aws-lambda-nodejs';
-
-class MyStack extends Stack {
-  constructor(scope: App, id: string) {
-    super(scope, id);
-
-    new NodejsFunction(this, 'MyFunction', {
-      entry: 'src/myFunction.ts',
-      handler: 'handler',
-      bundling: {
-        externalModules: ['aws-xray-sdk-core'],
-      },
-    });
-  }
-}
-
-const app = new App();
-new MyStack(app, 'MyStack');
-```
+TODO
 
 ## Notes
 
