@@ -4,13 +4,27 @@
 
 TODO: Service map
 
+![Service map showing end-to-end application](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/service-map-overview.png?raw=true)
+
 TODO: Show events at the heart
+
+![Focus on events at the heart of the service map](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/service-map-events-and-callback.png?raw=true)
+
+![Service map showing how to view traces from the client](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/service-map-request-trace.png?raw=true)
 
 ## Removed observability from tracing
 
+TODO: Talk about observability listeners
+
 TODO: Show trace and mention log being clogged.
 
+![Trace showing how observability is being noisy](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/observability-trace.png?raw=true)
+
+![Architecture diagram showing the observability Lambda function](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/observer.png?raw=true)
+
 TODO: Show observability listeners in log.
+
+![Log showing how observability is being noisy](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/trace-log-with-observers.png?raw=true)
 
 TODO: Talk about `isTestMode` to enable testing, but keep production clean.
 
@@ -64,9 +78,23 @@ const handler = async (event: any, context: any) => {
 
 Note that annotations are key-value pairs with simple data (strings, numbers, or booleans) that are indexed for use with filter expressions. Metadata, on the other hand, can be any related data you'd like to store that's not indexed.
 
+![Trace showing custom segment](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/custom-segment-traces.png?raw=true)
+
+![Trace showing custom segment annotations](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/custom-segment-annotations.png?raw=true)
+
+![Trace showing custom segment metadata](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/custom-segment-metadata.png?raw=true)
+
 ## Forcing some errors
 
 Show how error details show up.
+
+![Service map showing Lambda function error](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/error-service-map.png?raw=true)
+
+![Trace showing the step function timeout](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/error-step-function-timeout.png?raw=true)
+
+![Trace showing custom segment failure](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/error-segment-trace.png?raw=true)
+
+![Trace showing custom segment exception](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/error-segment-exception.png?raw=true)
 
 ## Play with Filter Expressions and Queries
 
