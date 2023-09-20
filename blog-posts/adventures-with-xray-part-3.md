@@ -100,6 +100,8 @@ Show how error details show up.
 
 TODO
 
+Putting through multiple requests trips, show errors and unexpected causes.
+
 ## Notes
 
 Links:
