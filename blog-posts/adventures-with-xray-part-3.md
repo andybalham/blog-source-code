@@ -1,32 +1,48 @@
 # Adventures with X-Ray Part 3
 
-## The service map
+## Instrumenting a whole application
 
-TODO: Service map
+In this post I continue my [adventures with X-Ray](TODO) and try my hand at observing a whole application. In the previous posts in the [series](TODO), I looked at using X-Ray in a small context. Here we will see what happens when an end-to-end process is traced and logged.
+
+## The example application
+
+The case study we looked at in the series on [implementing Enterprise Integration patterns](https://www.10printiamcool.com/series/enterprise-patterns-cdk) is an application that acts as a loan broker. The application in question receives a request containing the details of the loan required via an API, and then returns the best rate to a [webhook](https://www.getvero.com/resources/webhooks/).
+
+The following diagram shows how we use a central [EventBridge](https://aws.amazon.com/eventbridge/) event bus to implement this.
+
+![Architecture diagram using EventBridge](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/ent-int-patterns-with-serverless-and-cdk/case-study-eventbridge.png?raw=true)
+
+## View the service map
+
+In the [last post](TODO), I walked through how I added X-Ray to the whole application. Now when I run some requests through the API, we see the following service map.
 
 ![Service map showing end-to-end application](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/service-map-overview.png?raw=true)
 
-TODO: Show events at the heart
+What is quite clear from this picture, is that events are at the heart of this application.
 
 ![Focus on events at the heart of the service map](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/service-map-events-and-callback.png?raw=true)
 
+Now, by clicking on the client, we can trace a request all the way through the application and out to the webhook.
+
 ![Service map showing how to view traces from the client](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/service-map-request-trace.png?raw=true)
 
-## Removed observability from tracing
+However, when I tried this, I found something that was hindering the observability. Ironically, it was observability that I added in the post on [Domain Observability](https://www.10printiamcool.com/enterprise-integration-patterns-domain-observability).
 
-TODO: Talk about observability listeners
+## Removing observability from tracing
 
-TODO: Show trace and mention log being clogged.
-
-![Trace showing how observability is being noisy](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/observability-trace.png?raw=true)
+In that [post](https://www.10printiamcool.com/enterprise-integration-patterns-domain-observability), I added business-level observability by hooking a Lambda function up to the domain events being raised.
 
 ![Architecture diagram showing the observability Lambda function](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/observer.png?raw=true)
 
-TODO: Show observability listeners in log.
+However, as I had enabled tracing for this Lambda function, the trace included numerous entries for the observers which clouded the picture of the process.
+
+![Trace showing how observability is being noisy](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/observability-trace.png?raw=true)
+
+When viewing the log, this was further apparent.
 
 ![Log showing how observability is being noisy](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/trace-log-with-observers.png?raw=true)
 
-TODO: Talk about `isTestMode` to enable testing, but keep production clean.
+The solution is to specify `Tracing.DISABLED` for the observability Lambda functions. However, as I still wanted the traces when testing the Lambda functions, I added a `isTestMode` property the observability [CDK](https://aws.amazon.com/cdk/) stack as follows.
 
 ```TypeScript
 const loggerFunction = new NodejsFunction(
@@ -35,58 +51,93 @@ const loggerFunction = new NodejsFunction(
   getNodejsFunctionProps({
     // We don't want the observing in the trace for production
     tracing: props.isTestMode ? Tracing.ACTIVE : Tracing.DISABLED,
-    logRetention: RetentionDays.ONE_WEEK,
-    environment: {
-      [ENV_REQUEST_EVENT_TABLE_NAME]: requestEventTable.tableName,
-    },
+    // <snip>
   })
 );
 ```
 
-## Add custom segments
+Now production traces are clean, but we can also take advantage of X-Ray when testing the functionality.
 
-What can we add a segment around? Artificially create a delay.
+## Adding custom subsegments
 
-[Generating custom subsegments with the X-Ray SDK for Node.js](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-nodejs-subsegments.html)
+The article [Generating custom subsegments with the X-Ray SDK for Node.js](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-nodejs-subsegments.html) describes subsegments as follows.
 
-From ChatGPT:
+> Subsegments extend a trace's segment with details about work done in order to serve a request. Each time you make a call with an instrumented client, the X-Ray SDK records the information generated in a subsegment. You can create additional subsegments to group other subsegments, to measure the performance of a section of code, or to record annotations and metadata.
+
+In our application, we have Lambda functions that simulate response from lender systems. At the moment, this is just an algorithm, but in practise would be a call that would take time and be prone to error. This would be an ideal call to surround with a custom subsegment.
+
+With this in mind, I added the following code to allow the lender configuration to control the delay in responding and whether an error occurred.
 
 ```TypeScript
-import * as AWSXRay from 'aws-xray-sdk-core';
+const simulateExternalCallAsync = async (
+  lenderConfig: LenderConfig
+): Promise<void> => {
+  const randomPercentage = randomInt(100);
+  const errorPercentage = lenderConfig.errorPercentage ?? 0;
+  const throwError = randomPercentage <= errorPercentage;
 
-const handler = async (event: any, context: any) => {
-  const segment = AWSXRay.getSegment();
+  const delayMillis = lenderConfig.minDelayMillis ?? 1000 + randomInt(1000);
+  await new Promise((resolve) => setTimeout(resolve, delayMillis));
 
-  const subsegment = segment.addNewSubsegment('my-custom-work');
-  try {
-    // Your custom logic here
-    // For instance, you might want to call another service or some computation.
-
-    // If you're working with AWS SDK, make sure to capture those calls too.
-    // AWSXRay.captureAWSClient(someAwsServiceClient);
-
-    subsegment.addMetadata('key', 'value');
-    subsegment.addAnnotation('key', 'value');
-  } catch (error) {
-    subsegment.addError(error);
-    throw error;
-  } finally {
-    subsegment.close();
+  if (throwError) {
+    const errorMessage = `Simulated error (${randomPercentage} <= ${errorPercentage})`;
+    throw new Error(errorMessage);
   }
 };
 ```
 
-Note that annotations are key-value pairs with simple data (strings, numbers, or booleans) that are indexed for use with filter expressions. Metadata, on the other hand, can be any related data you'd like to store that's not indexed.
+With this in place, I added the code below around the call to `simulateExternalCallAsync` to add and close the subsegment.
+
+```TypeScript
+import * as AWSXRay from 'aws-xray-sdk';
+
+// <snip>
+
+const segment = AWSXRay.getSegment();
+const subsegment = segment?.addNewSubsegment('External Call');
+
+try {
+  // Simple values that are indexed for filter expressions
+  subsegment?.addAnnotation('callType', 'Lender');
+  subsegment?.addAnnotation('lenderId', lenderConfig.lenderId);
+  // Related data for debugging purposes
+  subsegment?.addMetadata('lenderDetails', {
+    lenderId: lenderConfig.lenderId,
+    lenderName: lenderConfig.lenderName,
+    lenderUrl: `https://${lenderConfig.lenderId}.com`,
+  });
+
+  await simulateExternalCallAsync(lenderConfig);
+
+} catch (error) {
+  if (error instanceof Error) {
+    // Add error to the subsegment
+    subsegment?.addError(error);
+  }
+  throw error;
+} finally {
+  // Ensure the subsegment is closed
+  subsegment?.close();
+}
+```
+
+I redeployed the lenders, with the configuration set to introduce delays but not throw any errors. After running a request, I could see the following in the trace.
 
 ![Trace showing custom segment](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/custom-segment-traces.png?raw=true)
 
+So we can now see the time taken for our 'external call'. What we can also see is the annotation and metadata that we added to the subsegment. Annotations are key-value pairs with simple data (strings, numbers, or booleans) that are indexed for use with filter expressions, whilst metadata can be any related data you'd like to store that's not indexed.
+
+Clicking on the 'Annotations' tab of the segment details, we can see what type of call it was and which lender was called.
+
 ![Trace showing custom segment annotations](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/custom-segment-annotations.png?raw=true)
+
+For more data, clicking on 'Metadata' shows the lender name and the URL being 'called'.
 
 ![Trace showing custom segment metadata](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/custom-segment-metadata.png?raw=true)
 
 ## Forcing some errors
 
-Show how error details show up.
+TODO: Show how error details show up.
 
 ![Service map showing Lambda function error](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/error-service-map.png?raw=true)
 
@@ -96,15 +147,21 @@ Show how error details show up.
 
 ![Trace showing custom segment exception](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/error-segment-exception.png?raw=true)
 
-## Play with Filter Expressions and Queries
+## Running a workload
+
+TODO: Putting through multiple requests trips, show errors and unexpected causes.
+
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/running-system-service-map.png?raw=true)
+
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/running-system-bad-logic.png?raw=true)
+
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/running-system-rate-exceeded.png?raw=true)
+
+## Summary
 
 TODO
 
-Putting through multiple requests trips, show errors and unexpected causes.
-
-## Notes
-
-Links:
+## Links
 
 - [Integrating AWS X-Ray with other AWS services](https://docs.aws.amazon.com/xray/latest/devguide/xray-services.html)
   - List of supported services
