@@ -137,23 +137,39 @@ For more data, clicking on 'Metadata' shows the lender name and the URL being 'c
 
 ## Forcing some errors
 
-TODO: Show how error details show up.
+After having a look at what a happy system looks like, I decided to introduce some errors. I updated the configuration for one of the lenders so that it would always throw an error and redeployed.
+
+After running a request through the system, the service map clearly showed that the Lambda function for the lender has errors.
 
 ![Service map showing Lambda function error](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/error-service-map.png?raw=true)
 
+Looking at the trace, I could see that the asynchronous request from the step function had timed out, as the timeout was set to 12 seconds.
+
 ![Trace showing the step function timeout](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/error-step-function-timeout.png?raw=true)
+
+The trace also contained the custom subsegment, which clearly shows that there was an error making the external call.
 
 ![Trace showing custom segment failure](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/error-segment-trace.png?raw=true)
 
+As before, the 'Annotations' and 'Metadata' tabs showed the call details. However, as we added the error to the subsegment, the 'Exceptions' tab also shows us the error details, including the stack trace.
+
 ![Trace showing custom segment exception](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/error-segment-exception.png?raw=true)
+
+This shows the power of using subsegments to instrument key parts of the application.
 
 ## Running a workload
 
-TODO: Putting through multiple requests trips, show errors and unexpected causes.
+The final part of my adventure with X-Ray involved configuring the Lambda functions for the lenders to randomly error and then to put multiple requests through the application.
+
+Looking at the resulting service map, I could see some errors I was expecting and some I didn't.
 
 ![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/running-system-service-map.png?raw=true)
 
+In particular, the step function was showing that it had errored. So I selected it and filtered the traces to see what was going on. On inspection, the Lambda function that sends the response to the webhook was erroring. Clicking on the 'Exceptions' tab clearly indicated to me that the issue was that there was no response to send in this case, but the code didn't cater for it.
+
 ![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/running-system-bad-logic.png?raw=true)
+
+Looking at another error, I saw that the Lambda function that looks up the lenders from the [parameter store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) is throwing an error. Again, the 'Exceptions' tab shows the underlying reason. In this case, there is a rate limit on accessing the parameters in the parameter store. This indicates to me that perhaps we need the application to implement some sort of cache in front of the raw access.
 
 ![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/running-system-rate-exceeded.png?raw=true)
 
@@ -177,67 +193,4 @@ TODO
   - [aws-cdk-lib.aws_apigateway module](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway-readme.html)
   - [class Stage (construct)](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.Stage.html)
     - Tracing is enabled at a `Stage` level
-  - [Deploying your CDK app to different stages and environments](https://taimos.de/blog/deploying-your-cdk-app-to-different-stages-and-environments) - Not really useful
-  - [Deploy multiple API Gateway stages with AWS CDK](https://stackoverflow.com/questions/62449187/deploy-multiple-api-gateway-stages-with-aws-cdk)
-
-Active vs passive. Passive seems not to log.
-
-```TypeScript
-export declare enum Tracing {
-    /**
-     * Lambda will respect any tracing header it receives from an upstream service.
-     * If no tracing header is received, Lambda will sample the request based on a fixed rate. Please see the [Using AWS Lambda with AWS X-Ray](https://docs.aws.amazon.com/lambda/latest/dg/services-xray.html) documentation for details on this sampling behaviour.
-     */
-    ACTIVE = "Active",
-    /**
-     * Lambda will only trace the request from an upstream service
-     * if it contains a tracing header with "sampled=1"
-     */
-    PASS_THROUGH = "PassThrough",
-    /**
-     * Lambda will not trace any request.
-     */
-    DISABLED = "Disabled"
-}
-```
-
-[What is `Active tracing` mean in lambda with Xray?](https://stackoverflow.com/questions/64800794/what-is-active-tracing-mean-in-lambda-with-xray):
-
-> AWS Lambda supports both active and passive instrumentation. So basically you use passive instrumentation if your function handles requests that have been sampled by some other service (e.g. API gateway). In contrast, if your function gets "raw" un-sampled requests, you should use active instrumentation, so that the sampling takes place.
-
-Do we want an active observer or a passive one? We want an active one for observers as they are triggered by events.
-
-Why do you see two Lambda functions? I think the answer was in the video.
-
-Even without SNS client, it was able to show the Lambda functions being invoked. You couldn't see the SNS queue in the middle though.
-
-Wrapping the test clients with `AWSXRay.captureAWSv3Client` didn't seem to have any effect. They complain with the following:
-
-```text
-2023-07-26 19:15:40.467 +01:00 [ERROR] Error: Failed to get the current sub/segment from the context.
-    at Object.contextMissingLogError [as contextMissing] (D:\Users\andyb\Documents\github\cdk-cloud-test-kit\node_modules\aws-xray-sdk-core\dist\lib\context_utils.js:22:27)
-```
-
-[Developer Guide](https://docs.aws.amazon.com/pdfs/xray/latest/devguide/xray-guide.pdf)
-
-[Configuring the X-Ray SDK for Node.js](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-nodejs-configuration.html)
-
-Tried the following:
-
-```TypeScript
-AWSXRay.enableManualMode();
-
-const testClient = new IntegrationTestClient({
-  testStackId: SimpleEventRouterTestStack.Id,
-  clientOverrides: {
-    snsClient: AWSXRay.captureAWSv3Client(
-      new SNSClient({ region: IntegrationTestClient.getRegion() }),
-      new AWSXRay.Segment('SimpleEventRouterTest')
-    ),
-  },
-});
-```
-
-Even manually overriding the middleware didn't improve the trace
-
-TODO: Perhaps try the following: <https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-nodejs-subsegments.html>. What is the advantage of actually doing this?
+  - [Deploying your CDK app to different stages and environments](https://taimos.de/blog/deploying-your-cdk-app-to-different-stages-and-environments)
