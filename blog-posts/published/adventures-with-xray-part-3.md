@@ -2,7 +2,9 @@
 
 ## Instrumenting a whole application
 
-In this post I continue my [adventures with X-Ray](TODO) and try my hand at observing a whole application. In the previous posts in the [series](TODO), I looked at using X-Ray in a small context. Here we will see what happens when an end-to-end process is traced and logged.
+In this post I continue my [adventures with X-Ray](https://www.10printiamcool.com/series/adventures-with-xray) and try my hand at observing a whole application. In the previous posts in the [series](https://www.10printiamcool.com/series/adventures-with-xray), I looked at using X-Ray in a small context. Here we will see what happens when an end-to-end process is traced and logged.
+
+You can download the accompanying code and try it yourself from the [GitHub repo](https://github.com/andybalham/blog-enterprise-integration/releases/tag/blog-add-xray).
 
 ## The example application
 
@@ -14,7 +16,7 @@ The following diagram shows how we use a central [EventBridge](https://aws.amazo
 
 ## View the service map
 
-In the [last post](TODO), I walked through how I added X-Ray to the whole application. Now when I run some requests through the API, we see the following service map.
+In the [last post](https://www.10printiamcool.com/adventures-with-aws-x-ray-and-cdk-part-2?source=more_series_bottom_blogs), I walked through how I added X-Ray to the whole application. Now when I run some requests through the API, we see the following service map.
 
 ![Service map showing end-to-end application](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/service-map-overview.png?raw=true)
 
@@ -163,34 +165,37 @@ The final part of my adventure with X-Ray involved configuring the Lambda functi
 
 Looking at the resulting service map, I could see some errors I was expecting and some I didn't.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/running-system-service-map.png?raw=true)
+![Service map showing a workload running with errors](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/running-system-service-map.png?raw=true)
 
 In particular, the step function was showing that it had errored. So I selected it and filtered the traces to see what was going on. On inspection, the Lambda function that sends the response to the webhook was erroring. Clicking on the 'Exceptions' tab clearly indicated to me that the issue was that there was no response to send in this case, but the code didn't cater for it.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/running-system-bad-logic.png?raw=true)
+![Trace showing an error due to bad logic](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/running-system-bad-logic.png?raw=true)
 
 Looking at another error, I saw that the Lambda function that looks up the lenders from the [parameter store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) is throwing an error. Again, the 'Exceptions' tab shows the underlying reason. In this case, there is a rate limit on accessing the parameters in the parameter store. This indicates to me that perhaps we need the application to implement some sort of cache in front of the raw access.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/running-system-rate-exceeded.png?raw=true)
+![Trace showing an error due to rate limiting](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/adventures-with-xray-part-3/running-system-rate-exceeded.png?raw=true)
 
 ## Summary
 
-TODO
+In this post, I documented my experience using X-Ray with an application. I found the ability to view individual traces through the application, along with the associated logs, very valuable indeed. The ability to see errors and then drill down to the causes was also very valuable and allowed me to see some behaviour that otherwise would have been tricky to spot. Overall, I was very impressed as to what X-Ray has to offer.
+
+Of course, there are also numerous excellent third-party offerings, such as the following:
+
+- [New Relic](https://newrelic.com/)
+- [Datadog](https://www.datadoghq.com/)
+- [Lumigo](https://lumigo.io/)
+- [Thundra](https://www.thundra.io/)
+
+So, although you get X-Ray out of the box with AWS, please consider these as well.
 
 ## Links
 
+- [Accompanying GitHub repo](https://github.com/andybalham/blog-enterprise-integration/releases/tag/blog-add-xray)
 - [Integrating AWS X-Ray with other AWS services](https://docs.aws.amazon.com/xray/latest/devguide/xray-services.html)
-  - List of supported services
 - [How to do Distributed tracing in AWS? | AWS X-ray and Cloudwatch Service Lens](https://www.youtube.com/watch?v=OOScvywKj9s)
 - [aws-cdk-lib.aws_xray module](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_xray-readme.html)
 - [Tracing AWS SDK calls with the X-Ray SDK for Node.js](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-nodejs-awssdkclients.html)
 - [How to do Distributed tracing in AWS? | AWS X-ray and Cloudwatch Service Lens](https://www.youtube.com/watch?v=OOScvywKj9s)
-- For Lambda
-  - [Using AWS Lambda with AWS X-Ray](https://docs.aws.amazon.com/lambda/latest/dg/services-xray.html)
-  - [X-Ray Tracing Modes](https://docs.aws.amazon.com/lambda/latest/dg/API_TracingConfig.html)
-- For API Gateway
-  - [Setting up AWS X-Ray with API Gateway REST APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-enabling-xray.html)
-  - [aws-cdk-lib.aws_apigateway module](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway-readme.html)
-  - [class Stage (construct)](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.Stage.html)
-    - Tracing is enabled at a `Stage` level
-  - [Deploying your CDK app to different stages and environments](https://taimos.de/blog/deploying-your-cdk-app-to-different-stages-and-environments)
+- [Using AWS Lambda with AWS X-Ray](https://docs.aws.amazon.com/lambda/latest/dg/services-xray.html)
+- [X-Ray Tracing Modes](https://docs.aws.amazon.com/lambda/latest/dg/API_TracingConfig.html)
+- [Setting up AWS X-Ray with API Gateway REST APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-enabling-xray.html)
