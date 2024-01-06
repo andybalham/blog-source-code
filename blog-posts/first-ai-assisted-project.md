@@ -2,19 +2,63 @@
 
 ## Overview
 
-Outline the task
+In this post, I share my experience of learning how to use ChatGPT to assist me develop a tool to assist me in solving a real world problem. A problem in a domain where I have limited knowledge.
+
+Every February, under the guise of Andy Balham, I take part in [FAWM (February is Album Writing Month)](https://fawm.org/). This is an online challenge to write and record 14 songs in 28 days (14.5 in a leap year!). The problem I had was that the resulting MP3 files need to be hosted, but my usual option was is not available this year.
+
+So I set myself the challenge of finding a hosting alternative and, to provide a bit more of a challenge, develop a simple HTML interface on which to view and play the resulting songs.
 
 ## What are my options?
 
-<https://chat.openai.com/share/9371adde-efa9-4e74-a8d2-7b0c9a033c2b>
+I first started asking ChatGPT about hosting static websites in [AWS](https://aws.amazon.com/), as I have experience in that area. However, when I asked ChatGPT the following question I got an interesting suggestion:
+
+> How can I create a simple static website that looks good?
+
+The part that caught my eye was 'GitHub Pages' (emphasis mine):
+
+> **Deploy Your Website:**
+>
+> Once you're satisfied with the look and feel:
+>
+> - Host it on platforms like **GitHub Pages**, Netlify, Vercel, or any web hosting provider.
+
+I hadn't heard of this, so I prompted ChatGPT for more information:
+
+> Can you tell me more about GitHub pages please?
+
+ChatGPT duly responded:
+
+> GitHub Pages is a free web hosting service offered by GitHub that allows you to easily publish static websites directly from your GitHub repositories. It's a convenient way to showcase your projects, blogs, documentation, or personal websites to the world. Here are some key points about GitHub Pages:
+>
+> 1. Free Hosting: GitHub Pages provides free hosting for static websites, which includes HTML, CSS, JavaScript, and other static files. This makes it a cost-effective solution for hosting personal or project websites.
+>
+> 1. GitHub Integration: GitHub Pages is tightly integrated with GitHub repositories. You can create a dedicated branch (usually named gh-pages or main for user/organization pages) or use the docs folder in your repository to store your website files. When you push changes to this branch or folder, your website is automatically updated.
+
+This sounded ideal, as I already had a GitHub account and the price was right in my sweet spot (free 🙂).
+
+The original chat can be found [here](https://chat.openai.com/share/9371adde-efa9-4e74-a8d2-7b0c9a033c2b).
 
 ## How can I test it?
 
-<https://chat.openai.com/share/431c6e0f-74b7-42ad-a981-af10904d6c5b>
+Like all good software engineers, my first thought was how to test my static website as I developed it. So I lent on my assistant again:
+
+> I want to develop a static website. Whilst I am doing development on my PC, how can I host the website so that I can see instant results when I save changes?
+
+As a regular user of VS Code, the following suggestion jumped out:
+
+> Integrated Development Environment (IDE) Servers:
+>
+> 1. Most modern Integrated Development Environments (IDEs) or code editors come with built-in tools to preview websites. For instance:
+>
+>    - Visual Studio Code: Has an extension called Live Server which provides a live preview of your site with hot-reload functionality.
+
+A quick search for the [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) extension in VS Code and I soon had a way to instantly view rendered HTML. Now I was all set to go into the unfamiliar territory of website development.
+
+The original chat can be found [here](https://chat.openai.com/share/431c6e0f-74b7-42ad-a981-af10904d6c5b).
 
 ## But I'm not an HTML expert
 
-Although I have been in the IT business for quite a while, my focus has pretty much always been on the back end. I have a rudimentary knowledge of HTML, but not much beyond that. What I needed what an expert to help me, so using [SudoLang](TODO) I prompted ChatGPT with the following:
+Although I have been in the IT business for quite a while, my focus has pretty much always been on the back end. I have a rudimentary knowledge of HTML, but not much beyond that. What I needed what an expert to help me, so using [SudoLang](https://github.com/paralleldrive/sudolang-llm-support/blob/main/sudolang.sudo.md) I prompted ChatGPT with the following:
 
 ```markdown
 # An expert in writing HTML
@@ -30,9 +74,9 @@ With the role set, I asked the following:
 
 > /write a page that contains links to an album of MP3 files. The page should contain a placeholder for a description of the album. Along with links to download the MP3 files, there should be the name of each song and a link to a page containing the lyrics for that song.
 
-The result was an HTML page ([source](TODO)) that admirably met my specification:
+The result was an HTML page ([source](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/files/first-ai-assisted-project/html-expert-01.htm)) that admirably met my specification:
 
-TODO: Rendered view of HTML page
+![Rendered view of HTML page](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/first-ai-assisted-project/html-expert-01.png?raw=true)
 
 ChatGPT also added the following, providing helpful assistance in how to use the result:
 
@@ -56,9 +100,9 @@ To which I got the response:
 >
 > Here's an enhanced version of your album page with the music player functionality:
 
-And sure enough, the page ([source](TODO)) now had a music player on it. I supplied an MP3 in the appropriate location, and sure enough I could play it from my browser.
+And sure enough, the page ([source](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/files/first-ai-assisted-project/html-expert-02.htm)) now had a music player on it. I supplied an MP3 in the appropriate location, and sure enough I could play it from my browser.
 
-TODO: Rendered view of the HTML page with a music player
+![Rendered view of the HTML page with a music player](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/first-ai-assisted-project/html-expert-02.png?raw=true)
 
 I then decided to see if the process would benefit from a more precise specification. So, as an experiment, I tried using [Markdown](TODO) as a specification format and prompted ChatGPT as follows:
 
@@ -83,9 +127,9 @@ I then decided to see if the process would benefit from a more precise specifica
 > The footer should say that all material is copyrighted to Andy Balham
 > ```
 
-The result, once again, was pretty good ([source](TODO)):
+The result, once again, was pretty good ([source](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/files/first-ai-assisted-project/html-expert-03.htm)):
 
-TODO: Rendered page from markdown definition
+![Rendered page from markdown definition](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/first-ai-assisted-project/html-expert-03.png?raw=true)
 
 However, testing the page I found that the toggling didn't quite work. Using my programming knowledge I prompted ChatGPT:
 
@@ -93,13 +137,13 @@ However, testing the page I found that the toggling didn't quite work. Using my 
 
 To which ChatGPT replied:
 
-> You're right; the toggle behavior I provided previously was based on Bootstrap's show class state on the target element, which might not reflect the exact moment when the toggle happens. Let's adjust the toggle behavior by updating the script section.
+> You're right; the toggle behaviour I provided previously was based on Bootstrap's show class state on the target element, which might not reflect the exact moment when the toggle happens. Let's adjust the toggle behaviour by updating the script section.
 >
 > Here's the updated script:
 
-And sure enough, an amended script was provided which fixed the issue ([source](TODO)).
+And sure enough, an amended script was provided which fixed the issue ([source](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/files/first-ai-assisted-project/html-expert-04.htm)).
 
-I then spent some time experimenting with refining the Sudolang program to style the page in different ways, before I decided that including the lyrics in the main page would be a bit onerous.
+I then spent some time experimenting with refining the SudoLang program to style the page in different ways, before I decided that including the lyrics in the main page would be a bit onerous.
 
 So I asked ChatGPT to regenerate the page with the lyrics details of the page definition updated as follows:
 
@@ -138,17 +182,17 @@ The JavaScript option looked like what I wanted, so asked for that:
 
 > Please update the HTML with the JavaScript version
 
-As you can see from below, this was a partial success. The lyrics were loaded on demand, but the rendering left a little to be desired:
+As you can see from below, the result ([source](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/files/first-ai-assisted-project/html-expert-05.htm)) was a partial success. The lyrics were loaded on demand, but the rendering left a little to be desired:
 
-TODO: Rendered lyrics with no HTML breaks
+![Rendered lyrics with no HTML breaks](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/first-ai-assisted-project/html-expert-05.png?raw=true)
 
 So I asked ChatGPT to sort that out.
 
 > If the lyrics are in plain text format, can you amend the JavaScript to insert suitable HTML markup to make the lyrics break across lines
 
-The response was an amended JavaScript function, which I then copy and pasted into the page and the results are shown below:
+The response was an amended JavaScript function, which I then copy and pasted into the page ([source](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/files/first-ai-assisted-project/html-expert-06.htm)) and the results are shown below:
 
-TODO: Rendered lyrics with HTML breaks
+![Rendered lyrics with HTML breaks](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/first-ai-assisted-project/html-expert-06.png?raw=true)
 
 The result is not perfect, blank lines have not been preserved, but it will suffice for my needs. All-in-all, I was impressed with how I was able to go from nothing to a page that contains functionality that I wanted. It won't win any design awards, but it would have taken me significantly longer to develop with the AI assistance.
 
