@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Album Name</title>
+    <!-- Cerulean theme from Bootswatch -->
+    <link href="https://cdn.jsdelivr.net/npm/bootswatch@5.2.0/dist/cerulean/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1>Album Name</h1>
+        <img src="images/album-cover.jpg" alt="Album Cover" class="img-fluid mb-4">
+
+        <!-- Sample song entry -->
+        <div class="song-item mt-4">
+            <h3>Title of the song</h3>
+
+            <!-- Audio player -->
+            <audio controls>
+                <source src="mp3s/song-title.mp3" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+
+            <div class="mt-2">
+                <!-- Download Link -->
+                <a href="mp3s/song-title.mp3" class="btn btn-primary btn-sm" download>Download MP3</a>
+
+                <!-- Notes Toggle Button -->
+                <button class="btn btn-info btn-sm toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#notesSample">Notes</button>
+                
+                <!-- Lyrics Toggle Button -->
+                <button class="btn btn-secondary btn-sm toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#lyricsSample" onclick="loadLyrics('song-title')">Lyrics</button>
+            </div>
+
+            <!-- Notes Collapsible Section -->
+            <div class="collapse mt-3" id="notesSample">
+                <div class="card card-body">
+                    Notes for the song...
+                </div>
+            </div>
+
+            <!-- Lyrics Collapsible Section -->
+            <div class="collapse mt-3" id="lyricsSample">
+                <div class="card card-body" id="song-title-lyrics">
+                    <!-- Lyrics will be loaded here -->
+                </div>
+            </div>
+        </div>
+        <!-- Repeat the above div.song-item for each song on the album. Remember to adjust the unique IDs and paths. -->
+
+        <footer class="mt-5">
+            <p>All material is copyrighted to Andy Balham</p>
+        </footer>
+    </div>
+
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.min.js"></script>
+
+    <script>
+        // JavaScript to toggle button text for Notes and Lyrics
+        document.querySelectorAll('.toggle-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (btn.textContent === 'Notes') {
+                    btn.textContent = 'Hide Notes';
+                } else if (btn.textContent === 'Hide Notes') {
+                    btn.textContent = 'Notes';
+                } else if (btn.textContent === 'Lyrics') {
+                    btn.textContent = 'Hide Lyrics';
+                } else if (btn.textContent === 'Hide Lyrics') {
+                    btn.textContent = 'Lyrics';
+                }
+            });
+        });
+
+        // Function to load lyrics dynamically
+        function loadLyrics(songTitle) {
+            fetch(`lyrics/${songTitle}-lyrics.txt`)
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById(`${songTitle}-lyrics`).innerHTML = data;
+                })
+                .catch(error => {
+                    console.error('Error fetching lyrics:', error);
+                });
+        }
+    </script>
+</body>
+
+</html>

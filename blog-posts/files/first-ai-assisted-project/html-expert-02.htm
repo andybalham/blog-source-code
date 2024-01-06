@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Album Page</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        /* Add any custom styles here if required */
+        .song-item {
+            padding: 15px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Album Name</h1>
+        <p id="albumDescription">Placeholder for album description.</p>
+
+        <h2 class="my-4">Songs List</h2>
+
+        <!-- Sample song entry -->
+        <div class="song-item">
+            <h3>Song 1</h3>
+            <audio controls>
+                <source src="path/to/song1.mp3" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <div class="mt-2">
+                <a href="path/to/song1.mp3" class="btn btn-primary btn-sm" download>Download MP3</a>
+                <a href="path/to/song1_lyrics.html" class="btn btn-secondary btn-sm">View Lyrics</a>
+            </div>
+        </div>
+        <!-- You can copy the above div.song-item for each song in the album -->
+
+    </div>
+
+    <!-- Optional: Bootstrap JS and Popper.js for Bootstrap components that require JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.min.js"></script>
+</body>
+
+</html>
