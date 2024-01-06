@@ -157,6 +157,8 @@ Folder information:
 - The lyrics are in a sub-folder called lyrics, one file per song
 ```
 
+The result was an amendment to the collapsible lyrics section:
+
 ```html
 <!-- Lyrics Collapsible Section -->
 <div class="collapse mt-3" id="lyricsSample">
