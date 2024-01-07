@@ -239,7 +239,7 @@ I pasted in the updated function, ran the program and was presented with the fol
 
 TODO: Rendered output HTML showing album name missing
 
-The whole chat can be found via this [link](https://chat.openai.com/share/2c9f3403-2ebf-468a-a3b5-61d8d260a109).
+The whole chat can be found via this [link](https://chat.openai.com/share/2c9f3403-2ebf-468a-a3b5-61d8d260a109) and the JavaScript program [here](TODO).
 
 ## Summary
 
