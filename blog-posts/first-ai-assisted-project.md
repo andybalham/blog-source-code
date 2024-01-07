@@ -202,11 +202,44 @@ The whole chat can be found via this [link](https://chat.openai.com/share/38c541
 
 ## How could I repeat it?
 
-<https://chat.openai.com/share/f1a9b7fe-2c83-478c-9fb5-19df25e1e6b2>
+As a final step, I thought I would lean on ChatGPT once more and ask it to write a JavaScript program to merge the HTML template it had created with a YAML file in the following format:
 
-## The result
+```yaml
+albumName: Aye-Aye?
+songs:
+  - title: Guinness Greed
+    mp3Filename: 01_guinness_greed
+    notes: "Prompt: /genre greed /subject Guinness /write must include reference to John"
+  - title: Flood's Domain
+    mp3Filename: 02_floods_domain
+    notes: "Prompt: /genre fear /subject floods /write"
+```
 
-<https://andybalham.github.io/website-test/>
+My prompt for this was simply the following:
+
+> You are an expert in write Node.js programs. I would like you to write a program that receives a YAML file as input, merges the details of that file with the an HTML template, and then outputs an HTML file containing the merged result.
+>
+> Here is an example YAML file: &lt;snip&gt;
+>
+> Here is the HTML template: &lt;snip&gt;
+
+The resulting output from the resulting [program](TODO) was almost perfect:
+
+TODO: Rendered output HTML showing album name missing
+
+The only thing that wasn't right was that the `H1` element hadn't been replaced with the album name. ChatGPT had used the `replace` method and that seemed to only replace the first match, so I asked the following:
+
+> How can the program be changed to make replace('Album Name', yamlData.albumName) replace all instances of 'Album Name' and not just the first instance?
+
+To which I got the following response and an updated `mergeYAMLWithTemplate` function:
+
+> To replace all instances of a specific string in JavaScript, you can use a regular expression with the global (g) flag. This way, the replace method will replace all occurrences of the string in the text, not just the first one.
+
+I pasted in the updated function, ran the program and was presented with the following expected result:
+
+TODO: Rendered output HTML showing album name missing
+
+The whole chat can be found via this [link](https://chat.openai.com/share/2c9f3403-2ebf-468a-a3b5-61d8d260a109).
 
 ## Summary
 
