@@ -104,7 +104,7 @@ And sure enough, the page ([source](https://github.com/andybalham/blog-source-co
 
 ![Rendered view of the HTML page with a music player](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/first-ai-assisted-project/html-expert-02.png?raw=true)
 
-I then decided to see if the process would benefit from a more precise specification. So, as an experiment, I tried using [Markdown](TODO) as a specification format and prompted ChatGPT as follows:
+I then decided to see if the process would benefit from a more precise specification. So, as an experiment, I tried using [Markdown](https://www.markdownguide.org/) as a specification format and prompted ChatGPT as follows:
 
 > /write
 >
@@ -223,9 +223,9 @@ My prompt for this was simply the following:
 >
 > Here is the HTML template: &lt;snip&gt;
 
-The resulting output from the resulting [program](TODO) was almost perfect:
+The resulting output from the resulting [program](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/files/first-ai-assisted-project/chatgpt-program.js) was almost perfect:
 
-TODO: Rendered output HTML showing album name missing
+![Rendered output HTML showing album name missing](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/first-ai-assisted-project/output-html-01.png?raw=true)
 
 The only thing that wasn't right was that the `H1` element hadn't been replaced with the album name. ChatGPT had used the `replace` method and that seemed to only replace the first match, so I asked the following:
 
@@ -237,10 +237,14 @@ To which I got the following response and an updated `mergeYAMLWithTemplate` fun
 
 I pasted in the updated function, ran the program and was presented with the following expected result:
 
-TODO: Rendered output HTML showing album name missing
+![Rendered output HTML showing album name missing](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/first-ai-assisted-project/output-html-02.png?raw=true)
 
-The whole chat can be found via this [link](https://chat.openai.com/share/2c9f3403-2ebf-468a-a3b5-61d8d260a109) and the JavaScript program [here](TODO).
+The whole chat can be found via this [link](https://chat.openai.com/share/2c9f3403-2ebf-468a-a3b5-61d8d260a109) and the JavaScript program [here](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/files/first-ai-assisted-project/chatgpt-program.js).
 
 ## Summary
 
-TODO
+It was a very interesting to try a new process for developing a solution to a problem. At each stage, it was a significant advantage to be able to ask for options on how to solve the next step. The interaction felt very natural, asking for further details or asking for small changes. The process allowed me to explore very quickly and, although I could have written the final program, it was much quicker to get it generated for me. Interestingly, my solution probably would have been at risk of gold-plating. Taking the simple solution has its advantages.
+
+There is no doubt to me that these tools are a significant productivity boost. In the software realm, we can test the results (you do test don't you? 😉). This means we can easily check the output that we are given, which is not the case in others.
+
+The resulting website can be found [here](https://andybalham.github.io/website-test/).
