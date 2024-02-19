@@ -2,12 +2,16 @@
 
 ## What do we want to build?
 
-Feature definition
+### Feature definition
 
-- A multi-tenant system for hosting webhook endpoints that isolate downstream target systems that may not always be responsive
-- The system provides an appropriate 'accept' response and stores the content along with the target
-- The storing of the content raises an event, which is results in the content being validated against the webhook contract
-- If the content is invalid an error is logged, else a request is queued to deliver the content to the appropriate target
+A multi-tenant system for hosting webhook endpoints that isolate downstream target systems that may not always be responsive.
+
+Overview
+
+- The input is validated against an agreed schema
+- If invalid, the content is stored with the errors, and a Bad Request response is returned
+- If valid, the content is stored along with the target, and an appropriate 'accept' response is returned
+- The storing of the content raises an event, which is handled to queue a request to deliver the content to the appropriate target
 - The queued request is then picked up and an attempt is made to deliver to the target
 - The request is retried until success with any failures are recorded on a dead letter queue for manual retrying
 
@@ -15,40 +19,66 @@ We also want users of the existing webhooks to be able to switch to the new serv
 
 ## Skeleton architecture
 
-- API Management -> Function App (Store) -> Blob Storage
-- Blob Storage -> Event -> Function App (Validate and Queue) -> Service Bus
+- API Management -> Function App (Validate and Store) -> Blob Storage x2
+- Blob Storage -> Event -> Function App (Queue) -> Service Bus
 - Service Bus -> Function App (Deliver) -> Target API
 
 The system will need to access configuration for:
 
-- How to give the appropriate 'accept' response
+- How to give the appropriate initial response
   - Use a pipeline as follows:
     - Extract the following from the HTTP request: ContractId, WebhookId, TenantId (TODO: Do we need CallerId? API key would identify)
     - Then a middleware for each contract
-      - If handled ContractId then return the response and shortcut
-- How to validate the content
-  - Use a pipeline as follows:
-    - Extract the following from the stored content: ContractId, WebhookId, TenantId
-    - Then a middleware for each contract
-      - If handled ContractId then validate the response and shortcut if not valid
-    - Queue a request to deliver the content
+      - If not the ContractId then go to next
+      - Load the schema and validate, if invalid store with errors, and return Bad Request
+      - Return the appropriate 'Accept' response and shortcut
+- How to queue a request to deliver the content
 - How to resolve the appropriate URL and authorisation for the target
 
-## Build order
+## Build order (ClickOps)
 
-- Function App (Store)
-- API Management -> Function App (Store)
-- API Management -> Function App (Store) -> Blob Storage
-- Blob Storage -> Event -> Function App (Validate and Queue)
-- Blob Storage -> Event -> Function App (Validate and Queue) -> Service Bus
+- Function App (Validate and Store)
+- API Management -> Function App (Validate and Store)
+- API Management -> Function App (Validate and Store) -> Blob Storage
+- Blob Storage -> Event -> Function App (Queue)
+- Blob Storage -> Event -> Function App (Queue) -> Service Bus
 - Service Bus -> Function App (Deliver)
 - Service Bus -> Function App (Deliver) -> Target API
 
-## Function App (Store)
+## Function App (Validate and Store)
 
 [Code and test Azure Functions locally](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-local)
 
+[Develop in VS](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-vs?tabs=isolated-process)
+
+[Azure Functions HTTP trigger](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-http-webhook-trigger?tabs=python-v2%2Cisolated-process%2Cnodejs-v4%2Cfunctionsv2&pivots=programming-language-csharp)
+
+[How to use middleware with Azure Functions](https://www.re-mark-able.net/blogs/2021/05/09/azure-functions-middleware.html):
+
+> **The considerations of using middleware**
+>
+> When using multiple middlewares it can become very confusing when and in what order everything is executed. That’s why I would recommend, that in the program.cs where your HostBuilder is, you document why one middleware should execute before the other.
+>
+> **The other downside is that the middleware is executed on every incoming call for the entire function app.** Every middleware needs to decide on its own if it is applicable for this incoming request. So quick if this then that checks are great to do but if you are going to query a database for information keep an eye on the performance.
+>
+> **The last con is that middleware in combination with Azure Functions does not have the ability to change the outgoing response or terminate the pipeline.** yet… There is an open issue at the time of writing here. As stated in the issue it will come but it will probably take some time. For now, let’s create a middleware for Azure Functions in .NET 5 and see what we can do.
+
+In response to "From an Azure function, how can I identify the caller from the API key they are using?"
+
+> To identify the caller of an Azure Function using their API key, you typically need to implement a mapping between API keys and their corresponding users or clients. This isn't a built-in feature of Azure Functions, so you'll need to manually manage this. The process generally involves:
+>
+> 1. **Storing a Mapping**: Maintain a database or configuration file that maps API keys to user/client identities.
+> 2. **Retrieving the API Key**: Extract the API key from the incoming request. This is usually passed in headers or as a query parameter.
+> 3. **Lookup**: Use the retrieved API key to look up the corresponding user/client in your mapping.
+> 4. **Identity Verification**: Optionally, you can add additional verification or logging to ensure the validity and track usage of the API key.
+>
+> This process will require custom code within your Azure Function to handle the extraction and lookup operations. Be sure to secure your API keys and the mapping data, as this is sensitive information.
+
+So, in practise, I think we would issue API keys and client secrets and use the client secret to verify that they are who they say they are. You could then rotate the API keys.
+
 ## Chats
+
+**[Validate JSON with C#](https://chat.openai.com/share/51ed243b-4dbf-41b8-a300-5268731db00b)**
 
 **[Webhook Buffering with Azure](https://chat.openai.com/share/9eb22cd8-b01f-4eb8-8806-2ce9ebae4a39)**
 
