@@ -1,18 +1,115 @@
 # Observations on Azure Functions
 
-- Old vs New (Isolated worker process)
-- Local development experience. I.e., F5 to run vs. Lambda function deployment
+Recently, my focus at work has shifted from [AWS](TODO) development to [Azure](TODO) development. To help myself get properly acquainted with the technology, I have decided to set myself a Azure-based serverless challenge. That is, to build a multi-tenant webhook proxy. First using ClickOps and then using [Infrastructure as Code (IaC)](TODO). In this post, I will first look at writing a single [Azure Function](TODO) and see what that brings.
+
+## The Webhook Proxy Application
+
+The ultimate goal is to create a serverless application that can be placed in front of internal systems to robustly handle webhook callbacks. Its functionality will cover:
+
+- Validating the content of the callback
+- Storing the content of the callback
+- Forwarding the content to a downstream system
+- Automatically retrying if the downstream system is offline
+- Forwarding to a dead letter queue if not able to forward
+
+In AWS, I would probably build the application as follows:
+
+TODO: Image of the architecture using AWS technologies
+
+The appealing aspect of this task is that it is a real-world need, and that it covers API management, functions as a service, serverless storage, and events. This means I will need to tangle with the following Azure technologies:
+
+- [Functions](TODO)
+- [Blob Storage](TODO)
+- [API Management](https://learn.microsoft.com/en-us/azure/api-management/api-management-key-concepts)
+- [Service Bus](TODO)
+
+My first step on this journey is to create, test, and deploy an Azure Function that validates the contents of an HTTP according to a schema specified as part of the path.
+
+## Choosing an Azure Function model
+
+Things rarely turn out to be as straightforward as you think, and straight away I was forced to make a choice as to the Azure Function model to use. Since I last explored them, there is a new 'isolated worker model' for running Azure Functions. The Microsoft article on the [differences between the isolated worker model and the in-process model](https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-in-process-differences) explains that there are two execution models for .NET functions:
+
+> | Execution model       | Description                                                                                                                        |
+> | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+> | Isolated worker model | Your function code runs in a separate .NET worker process. Use with supported versions of .NET and .NET Framework.                 |
+> | In-process model      | Your function code runs in the same process as the Functions host process. Supports only Long Term Support (LTS) versions of .NET. |
+
+The [Guide for running C# Azure Functions in an isolated worker process](https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows) explains the benefits for the newer model:
+
+> - Fewer conflicts: Because your functions run in a separate process, assemblies used in your app don't conflict with different versions of the same assemblies used by the host process.
+> - Full control of the process: You control the start-up of the app, which means that you can manage the configurations used and the middleware started.
+> - Standard dependency injection: Because you have full control of the process, you can use current .NET behaviors for dependency injection and incorporating middleware into your function app.
+
+In my experience, when Microsoft develop a new model then it is better to adopt it if you can. The older models do not seem to get quite the same love. So given that, it was the isolated worker model for me.
+
+## The 'Out of the Box' Experience
+
+The Microsoft article [Create your first C# function in Azure using Visual Studio](https://learn.microsoft.com/en-us/azure/azure-functions/functions-create-your-first-function-visual-studio) was my guide to getting started. The experience compared to Lambda functions in AWS is quite stark. Visual Studio is a one-stop development environment for .NET, whereas AWS and VS Code feels like an 'assemble your own' adventure.
+
+As long as you remember to select the Azure development workload during installation of Visual Studio, then it only took a few steps after selecting the 'Azure Functions` template before I could hit F5 and have the following code executing:
+
+```c#
+[Function("HttpExample")]
+public IActionResult Run(
+  [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequest req)
+{
+    return new OkObjectResult("Welcome to Azure Functions!");
+}
+```
+
+Visual Studio had seamlessly started a local hosting process at http://localhost:7166/api/HttpExample, as can be seen below:
+
+TODO: Command window showing the local hosting of an Azure Function
+
+So straight away, I could set break points and benefit from a super-quick inner development loop. However, it turned out that the generated code was not the only way to go.
+
+### The Built-in HTTP model
+
+As the [HTTP trigger](https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows#http-trigger) documentation states:
+
+> HTTP triggers allow a function to be invoked by an HTTP request. There are two different approaches that can be used:
+>
+> - An ASP.NET Core integration model that uses concepts familiar to ASP.NET Core developers
+> - A built-in model, which doesn't require extra dependencies and uses custom types for HTTP requests and responses.
+
+I consulted with ChatGPT, which had the opinion:
+
+> The choice between the built-in Azure Functions HTTP trigger model and ASP.NET Core integration depends on the complexity of your application, the need for control over the HTTP pipeline, and your familiarity with ASP.NET Core. For simpler, serverless applications, the built-in model is often the best choice due to its simplicity and tight integration with Azure. For more complex applications requiring the full feature set of ASP.NET Core, integrating with ASP.NET Core would be more appropriate.
+
+Probing ChatGPT a bit more as to the limitations of the Built-in HTTP model, I got the following scenario where the more complex model might be needed:
+
+> While the built-in model of Azure Functions is powerful for many use cases, especially those that fit well within a serverless paradigm, it has its limitations in scenarios requiring advanced control over HTTP pipeline processing, complex authentication and authorization, and other sophisticated web API features. In these cases, integrating with a more feature-rich framework like ASP.NET Core would be more appropriate.
+
+Given that I intend to front the function with [Azure API Management](https://learn.microsoft.com/en-us/azure/api-management/api-management-key-concepts) to handle the authorisation aspects, I decided to go with the simplicity of the built-in model. This meant that the original boilerplate code became the following:
+
+```c#
+[Function("HttpExample")]
+public HttpResponseData Run(
+  [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequestData req)
+{
+    var response = req.CreateResponse(HttpStatusCode.OK);
+    response.WriteString("Welcome to Azure Functions!");
+    return response;
+}
+```
+
+So a little more verbose, but I could get rid of a dependency which was nice. I did have to amend `Program.cs` to use the defaults for a worker process:
+
+```c#
+var host = new HostBuilder()
+    // Was ConfigureFunctionsWebApplication()
+    .ConfigureFunctionsWorkerDefaults()
+    .Build();
+```
+
+### TODO: What's next?
+
+- Logging
+- Dependency injection
+- Unit testing
+- Deploying to Azure
 
 ## Observations that would be useful for myself and interesting for other readers?
-
-- Old vs New (Isolated worker process)
-
-  - [Guide for running C# Azure Functions in an isolated worker process](https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows)
-  - [Differences between the isolated worker model and the in-process model for .NET on Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-in-process-differences)
-
-- Local development experience. I.e., F5 to run vs. Lambda function deployment
-
-  - [Create your first C# function in Azure using Visual Studio](https://learn.microsoft.com/en-us/azure/azure-functions/functions-create-your-first-function-visual-studio)
 
 - Logging (I.e., how to get debug locally)
 
