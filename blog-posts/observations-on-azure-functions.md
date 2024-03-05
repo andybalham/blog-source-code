@@ -85,7 +85,7 @@ Given that I intend to front the function with [Azure API Management](https://le
 ```c#
 [Function("HttpExample")]
 public HttpResponseData Run(
-  [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequestData req)
+  [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
 {
     var response = req.CreateResponse(HttpStatusCode.OK);
     response.WriteString("Welcome to Azure Functions!");
@@ -102,18 +102,73 @@ var host = new HostBuilder()
     .Build();
 ```
 
+### Dependency Injection and Logging
+
+One significant difference that struck me between AWS Lambda functions and Azure Functions, was that the latter starts you off down the dependency injection (DI) route. The boilerplate code uses DI out of the box to inject an `ILoggerFactory` implementation that can then be used to obtain a logger:
+
+```c#
+public class SimpleHttpFunction(ILoggerFactory loggerFactory)
+{
+    private readonly ILogger _logger =
+      loggerFactory.CreateLogger<SimpleHttpFunction>();
+
+    [Function("HttpExample")]
+    public HttpResponseData Run(
+      [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
+    {
+        _logger.LogInformation("C# HTTP trigger function processed a request.");
+```
+
+As with a 'normal' application, the logging level is controlled within the `Program.cs` file. Here I want to have a very verbose output in development, but leave the level when in higher environments.
+
+```c#
+var host = new HostBuilder()
+    // ...
+    .ConfigureLogging((context, loggingConfig) =>
+    {
+        var env = context.HostingEnvironment;
+        if (env.IsDevelopment())
+            loggingConfig.SetMinimumLevel(LogLevel.Trace);
+    })
+    // ...
+    .Build();
+```
+
+I decided to take advantage of the dependency injection and created a couple of services so that my function would be isolated from the details of how a request is validated and how the request content is stored.
+
+```c#
+var host = new HostBuilder()
+    // ...
+    .ConfigureServices(services =>
+    {
+        services.AddSingleton<IRequestValidator, RequestValidator>();
+        services.AddSingleton<IRequestStore, BlobRequestStore>();
+    })
+    .Build();
+```
+
+With this in place, I could then use a [primary constructor](TODO) to have the implementations injected at runtime. This would also set me nicely to do some unit testing later on.
+
+```c#
+public class ValidateAndStoreFunction(
+    ILoggerFactory loggerFactory,
+    IRequestValidator requestValidator,
+    IRequestStore requestStore)
+{
+    private readonly ILogger _logger = 
+        loggerFactory.CreateLogger<ValidateAndStoreFunction>();
+    private readonly IRequestValidator _requestValidator = requestValidator;
+    private readonly IRequestStore _requestStore = requestStore;
+```
+
+As mentioned earlier, this all feels quite different to working with AWS Lambda functions. In AWS, it felt like the onus was on keeping everything as light as possible. I have never used any dependency injection frameworks, so this felt much more like 'normal' application development. My concern, as with all serverless functions, was that this would add to any cold start times. However, for my learning application, I am not too concerned. For those that are, Mikhail Shilkov has written this excellent article on [Cold Starts in Azure Functions](https://mikhail.io/serverless/coldstarts/azure/).
+
 ### TODO: What's next?
 
-- Logging
-- Dependency injection
 - Unit testing
 - Deploying to Azure
 
 ## Observations that would be useful for myself and interesting for other readers?
-
-- Logging (I.e., how to get debug locally)
-
-  - See `HostBuilder` for doing all the configuring
 
 - Unit testing (TODO)
 
