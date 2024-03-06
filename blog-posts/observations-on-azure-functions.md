@@ -1,4 +1,4 @@
-# Observations on Azure Functions
+# First observations on Azure Functions
 
 Recently, my focus at work has shifted from [AWS](TODO) development to [Azure](TODO) development. To help myself get properly acquainted with the technology, I have decided to set myself a Azure-based serverless challenge. That is, to build a multi-tenant webhook proxy. First using ClickOps and then using [Infrastructure as Code (IaC)](TODO). In this post, I will first look at writing a single [Azure Function](TODO) and see what that brings.
 
@@ -155,17 +155,96 @@ public class ValidateAndStoreFunction(
     IRequestValidator requestValidator,
     IRequestStore requestStore)
 {
-    private readonly ILogger _logger = 
+    private readonly ILogger _logger =
         loggerFactory.CreateLogger<ValidateAndStoreFunction>();
     private readonly IRequestValidator _requestValidator = requestValidator;
     private readonly IRequestStore _requestStore = requestStore;
 ```
 
-As mentioned earlier, this all feels quite different to working with AWS Lambda functions. In AWS, it felt like the onus was on keeping everything as light as possible. I have never used any dependency injection frameworks, so this felt much more like 'normal' application development. My concern, as with all serverless functions, was that this would add to any cold start times. However, for my learning application, I am not too concerned. For those that are, Mikhail Shilkov has written this excellent article on [Cold Starts in Azure Functions](https://mikhail.io/serverless/coldstarts/azure/).
+As mentioned earlier, this all feels quite different to working with AWS Lambda functions. In AWS, it felt like the onus was on keeping everything as light as possible. I have never used any dependency injection frameworks with AWS, so this felt much more like 'normal' application development. My concern, as with all serverless functions, was that this would add to any cold start times. However, for my learning application, I am not too concerned. For those that are, Mikhail Shilkov has written this excellent article on [Cold Starts in Azure Functions](https://mikhail.io/serverless/coldstarts/azure/).
+
+### Unit testing my function
+
+Whilst it was great to be able to run my function and invoke it from [cURL](TODO) or [Postman](TODO), I like to write pure unit tests that can be run from anywhere. This turned out to be quite straightforward, at least in the case of my function.
+
+The first task was to instantiate and instance of `ValidateAndStoreFunction`. The primary constructor for this is as follows:
+
+```c#
+ValidateAndStoreFunction(
+    ILoggerFactory loggerFactory,
+    IRequestValidator requestValidator,
+    IRequestStore requestStore)
+```
+
+Using the [Moq](TODO) mocking framework, I was able to supply mocks for these and setup appropriate return values.
+
+```c#
+_mockLoggerFactory = new Mock<ILoggerFactory>();
+_mockRequestValidator = new Mock<IRequestValidator>();
+_mockRequestStore = new Mock<IRequestStore>();
+```
+
+The first real snag was the signature of the `Run` method. It requires a `HttpRequestData` as input:
+
+```c#
+HttpResponseData Run(
+    HttpRequestData req,
+    string contractId,
+    string senderId,
+    string tenantId)
+```
+
+It turns out that `HttpRequestData` is an abstract class, so I tried to subclass it. This hit a couple of issues. The first was that `HttpRequestData` has a constructor that requires a `FunctionContext` instance. `FunctionContext` is itself abstract, so I tried using Moq to provide one.
+
+```c#
+class MockHttpRequestData() : HttpRequestData(new Mock<FunctionContext>().Object)
+```
+
+`HttpRequestData` also need to be able to create an `HttpResponseData` instance. The solution, again I subclassed `HttpResponseData` and return an instance of my new class.
+
+```c#
+public override HttpResponseData CreateResponse() => new MockHttpResponseData();
+```
+
+The final step was to be able to pass in an object to be returned as a JSON stream.
+
+```c#
+class MockHttpRequestData(object bodyObject) : HttpRequestData(new Mock<FunctionContext>().Object)
+{
+    private readonly string _bodyJson = JsonConvert.SerializeObject(bodyObject);
+
+    public override Stream Body => GetStringAsStream(_bodyJson);
+```
+
+Now with my mocks in place, I could create some nice simple unit tests that would run anywhere.
+
+```c#
+// Arrange
+var validateAndStoreSUT = new ValidateAndStoreFunction(
+    _mockLoggerFactory.Object, _mockRequestValidator.Object, mockRequestStore.Object);
+
+// Act
+var response =
+    validateAndStoreSUT.Run(
+        new MockHttpRequestData(new { }), ExpectedContractId, ExpectedSenderId, ExpectedTenantId);
+
+// Assert
+response.Should().NotBeNull();
+response.StatusCode.Should().Be(HttpStatusCode.Created);
+```
+
+I don't know if other trigger would be more difficult to mock out, but the ease of mocking `HttpRequestData` gives me cause for optimism.
+
+## Deploying to Azure
+
+Ultimately, I want to deploy the final application using infrastructure as code. However, first I thought I would try the ClickOps approach. This is done by right-clicking on the project and selecting 'Publish'.
+
+TODO: Visual Studio option to publish an Azure Function
+
+This prompted me for the Azure account and resource group and then it did the rest. The result TODO
 
 ### TODO: What's next?
 
-- Unit testing
 - Deploying to Azure
 
 ## Observations that would be useful for myself and interesting for other readers?
