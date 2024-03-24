@@ -55,9 +55,9 @@ public IActionResult Run(
 }
 ```
 
-Visual Studio had seamlessly started a local hosting process at http://localhost:7166/api/HttpExample, as can be seen below:
+Visual Studio had seamlessly started a local hosting process at <http://localhost:7166/api/HttpExample>, as can be seen below:
 
-TODO: Command window showing the local hosting of an Azure Function
+![Command window showing the local hosting of an Azure Function](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-01-developing-my-first-function/local-hosting.png?raw=true)
 
 So straight away, I could set break points and benefit from a super-quick inner development loop. However, it turned out that the generated code was not the only way to go.
 
@@ -195,7 +195,8 @@ HttpResponseData Run(
 It turns out that `HttpRequestData` is an abstract class, so I tried to subclass it. This hit a couple of issues. The first was that `HttpRequestData` has a constructor that requires a `FunctionContext` instance. `FunctionContext` is itself abstract, so I tried using Moq to provide one.
 
 ```c#
-class MockHttpRequestData() : HttpRequestData(new Mock<FunctionContext>().Object)
+class MockHttpRequestData()
+    : HttpRequestData(new Mock<FunctionContext>().Object)
 ```
 
 `HttpRequestData` also need to be able to create an `HttpResponseData` instance. The solution, again I subclassed `HttpResponseData` and return an instance of my new class.
@@ -207,7 +208,8 @@ public override HttpResponseData CreateResponse() => new MockHttpResponseData();
 The final step was to be able to pass in an object to be returned as a JSON stream.
 
 ```c#
-class MockHttpRequestData(object bodyObject) : HttpRequestData(new Mock<FunctionContext>().Object)
+class MockHttpRequestData(object bodyObject)
+    : HttpRequestData(new Mock<FunctionContext>().Object)
 {
     private readonly string _bodyJson = JsonConvert.SerializeObject(bodyObject);
 
@@ -224,7 +226,8 @@ var validateAndStoreSUT = new ValidateAndStoreFunction(
 // Act
 var response =
     validateAndStoreSUT.Run(
-        new MockHttpRequestData(new { }), ExpectedContractId, ExpectedSenderId, ExpectedTenantId);
+        new MockHttpRequestData(
+            new { }), ExpectedContractId, ExpectedSenderId, ExpectedTenantId);
 
 // Assert
 response.Should().NotBeNull();
@@ -239,4 +242,7 @@ My original intention was to finish this post with deploying to Azure from Visua
 
 ## Summary
 
-TODO
+- Azure feels more like a traditional application than AWS
+- Middleware limitations stopped me in my tracks
+- The focus seems to be on the local (F5) experience first, cloud second
+- TODO
