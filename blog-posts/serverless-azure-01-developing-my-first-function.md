@@ -1,6 +1,6 @@
-# First observations on Azure Functions
+# Observations on Developing My First Azure Function
 
-Recently, my focus at work has shifted from [AWS](TODO) development to [Azure](TODO) development. To help myself get properly acquainted with the technology, I have decided to set myself a Azure-based serverless challenge. That is, to build a multi-tenant webhook proxy. First using ClickOps and then using [Infrastructure as Code (IaC)](TODO). In this post, I will first look at writing a single [Azure Function](TODO) and see what that brings.
+Recently, my focus at work has shifted from [AWS](https://aws.amazon.com/) development to [Azure](https://portal.azure.com/) development. To help myself get properly acquainted with the technology, I have decided to set myself a Azure-based serverless challenge. That is, to build a multi-tenant webhook proxy. First using [ClickOps](https://docs.cloudposse.com/glossary/clickops/) and then using [Infrastructure as Code (IaC)](https://learn.microsoft.com/en-us/devops/deliver/what-is-infrastructure-as-code). In this post, I will first look at writing a single [Azure Function](https://learn.microsoft.com/en-us/azure/azure-functions/functions-overview) and see what that brings.
 
 ## The Webhook Proxy Application
 
@@ -12,16 +12,14 @@ The ultimate goal is to create a serverless application that can be placed in fr
 - Automatically retrying if the downstream system is offline
 - Forwarding to a dead letter queue if not able to forward
 
-In AWS, I would probably build the application as follows:
-
-TODO: Image of the architecture using AWS technologies
+In AWS, I would probably build the application using API Gateway calling a Lambda function, that stored the request in S3. Then handle the S3 events raised, using a combination of Lambda functions and Event Bridge to deliver the request.
 
 The appealing aspect of this task is that it is a real-world need, and that it covers API management, functions as a service, serverless storage, and events. This means I will need to tangle with the following Azure technologies:
 
-- [Functions](TODO)
-- [Blob Storage](TODO)
+- [Functions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-overview)
+- [Blob Storage](https://azure.microsoft.com/en-us/products/storage/blobs/)
 - [API Management](https://learn.microsoft.com/en-us/azure/api-management/api-management-key-concepts)
-- [Service Bus](TODO)
+- [Service Bus](https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview)
 
 My first step on this journey is to create, test, and deploy an Azure Function that validates the contents of an HTTP according to a schema specified as part of the path.
 
@@ -134,7 +132,7 @@ var host = new HostBuilder()
     .Build();
 ```
 
-I decided to take advantage of the dependency injection and created a couple of services so that my function would be isolated from the details of how a request is validated and how the request content is stored.
+I decided to take advantage of the dependency injection and adopt a little [hexagonal architecture](<https://en.wikipedia.org/wiki/Hexagonal_architecture_(software)>). I created a couple of services to isolate my function from the details of how a request is validated and how the request content is stored.
 
 ```c#
 var host = new HostBuilder()
@@ -147,7 +145,7 @@ var host = new HostBuilder()
     .Build();
 ```
 
-With this in place, I could then use a [primary constructor](TODO) to have the implementations injected at runtime. This would also set me nicely to do some unit testing later on.
+With this in place, I could then use a [primary constructor](https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/tutorials/primary-constructors) to have the implementations injected at runtime. This would also set me nicely to do some unit testing later on.
 
 ```c#
 public class ValidateAndStoreFunction(
@@ -165,7 +163,7 @@ As mentioned earlier, this all feels quite different to working with AWS Lambda 
 
 ### Unit testing my function
 
-Whilst it was great to be able to run my function and invoke it from [cURL](TODO) or [Postman](TODO), I like to write pure unit tests that can be run from anywhere. This turned out to be quite straightforward, at least in the case of my function.
+Whilst it was great to be able to run my function and invoke it from [cURL](https://curl.se/docs/manpage.html) or [Postman](https://www.postman.com/), I like to write pure unit tests that can be run from anywhere. This turned out to be quite straightforward, at least in the case of my function.
 
 The first task was to instantiate and instance of `ValidateAndStoreFunction`. The primary constructor for this is as follows:
 
@@ -176,7 +174,7 @@ ValidateAndStoreFunction(
     IRequestStore requestStore)
 ```
 
-Using the [Moq](TODO) mocking framework, I was able to supply mocks for these and setup appropriate return values.
+Using the [Moq](https://github.com/devlooped/moq) mocking framework, I was able to supply mocks for these and setup appropriate return values.
 
 ```c#
 _mockLoggerFactory = new Mock<ILoggerFactory>();
@@ -237,63 +235,8 @@ I don't know if other trigger would be more difficult to mock out, but the ease 
 
 ## Deploying to Azure
 
-Ultimately, I want to deploy the final application using infrastructure as code. However, first I thought I would try the ClickOps approach. This is done by right-clicking on the project and selecting 'Publish'.
+My original intention was to finish this post with deploying to Azure from Visual Studio. However, this did not prove as straightforward as thought and I will defer the trials and tribulations to the next post.
 
-TODO: Visual Studio option to publish an Azure Function
+## Summary
 
-This prompted me for the Azure account and resource group and then it did the rest. The result TODO
-
-### TODO: What's next?
-
-- Deploying to Azure
-
-## Observations that would be useful for myself and interesting for other readers?
-
-- Unit testing (TODO)
-
-  - [Unit test an Azure Function](https://learn.microsoft.com/en-us/training/modules/develop-test-deploy-azure-functions-with-visual-studio/6-unit-test-azure-functions))
-
-- Remote debugging (TODO: get working)
-
-- Deploying (TODO)
-
-## Notes
-
-- The 'New Azure Function' template is for the older model
-
-- The following would be interesting to discuss. Is it worth mocking the SDK if you use ports and adaptors?
-  - [Unit testing and mocking with the Azure SDK for .NET](https://learn.microsoft.com/en-us/dotnet/azure/sdk/unit-testing-mocking?tabs=csharp)
-
-### Purpose of `.pubxml` File
-
-The `.pubxml` file, short for "Publish XML", is a file used in Visual Studio as part of the Web Publishing Pipeline (WPP). It contains settings and configurations for deploying a web application, such as an ASP.NET app, to various destinations like IIS, Azure, or other hosting providers. Here's an overview of its purpose and why it is often best not to check it into source control:
-
-1. **Deployment Configuration**: The `.pubxml` file holds specific settings for deploying your application, like connection strings, deployment methods (Web Deploy, FTP, etc.), and target URLs.
-
-2. **Environment-Specific Settings**: It can contain environment-specific details, such as different settings for development, staging, and production environments.
-
-3. **Custom Publishing Steps**: You can define custom actions in the `.pubxml` file to run during the publishing process, like database script execution or file transformations.
-
-#### Reasons Not to Check `.pubxml` into Source Control
-
-1. **Sensitive Information**: The `.pubxml` file can contain sensitive information like usernames, passwords, and connection strings. Checking this file into source control, especially public repositories, can expose sensitive data.
-
-2. **Environment Differences**: Each developer or environment (development, staging, production) might require different deployment settings. Checking in `.pubxml` files can lead to conflicts and inconsistencies among team members or deployment environments.
-
-3. **Personalization**: Developers often have personalized settings that are not relevant or suitable for other team members. These personal preferences should not be imposed on the entire team.
-
-4. **Security Best Practices**: It's a security best practice to keep deployment settings, particularly for production, out of source control. Deployment configurations should be managed securely and separately from the codebase.
-
-#### Best Practices
-
-- **Use `.pubxml.user` for Personal Settings**: For personal or user-specific settings, you should use the `.pubxml.user` file, which is meant to be user-specific and is not checked into source control by default.
-
-- **Environment Variables and Secrets Management**: Instead of hardcoding sensitive information in `.pubxml`, use environment variables or a secure secrets management system, especially for credentials and connection strings.
-
-- **`.gitignore` or Similar**: Ensure your source control ignore file (like `.gitignore` for Git) includes `.pubxml` files to prevent accidental check-ins.
-
-- **Parameterization**: For settings that vary between environments, consider using parameterization. Parameters can be set during deployment without storing environment-specific values in source control.
-
-#### Conclusion
-
-The `.pubxml` file plays an important role in configuring the deployment of web applications. However, due to the potential inclusion of sensitive data and personalized settings, it is generally best practice to exclude this file from source control and handle deployment configurations through more secure and collaborative means.
+TODO
