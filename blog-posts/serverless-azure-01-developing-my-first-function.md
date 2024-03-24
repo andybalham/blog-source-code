@@ -242,7 +242,15 @@ My original intention was to finish this post with deploying to Azure from Visua
 
 ## Summary
 
-- Azure feels more like a traditional application than AWS
-- Middleware limitations stopped me in my tracks
-- The focus seems to be on the local (F5) experience first, cloud second
-- TODO
+Here are my observations on my first real experience with Azure Functions:
+
+- Azure Functions feel more like a traditional application than AWS Lambda functions. With dependency injection and a local development experience.
+
+- The two available models, in-process and isolated, complicates initial decisions.
+
+- Strong support for the local (F5) experience. This makes it easy to get going and there is support for remote debugging too that I didn't have time to investigate.
+
+- The middleware limitations stopped me in my tracks. I was hoping to be able to extend my functions with middleware that would short-circuit the pipeline, but this turned out not to be possible.
+
+- Unit testing was straightforward, with support for dependency injection and the framework classes making it easy to mock the inputs to the function.
+
