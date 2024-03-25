@@ -253,4 +253,3 @@ Here are my observations on my first real experience with Azure Functions:
 - The middleware limitations stopped me in my tracks. I was hoping to be able to extend my functions with middleware that would short-circuit the pipeline, but this turned out not to be possible.
 
 - Unit testing was straightforward, with support for dependency injection and the framework classes making it easy to mock the inputs to the function.
-

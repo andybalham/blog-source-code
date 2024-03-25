@@ -1,16 +1,36 @@
 # Deploying my first function
 
+## It's all gone south
+
 Ultimately, I want to deploy the final application using infrastructure as code. However, first I thought I would try the ClickOps approach. This is done by right-clicking on the project and selecting 'Publish'.
 
 TODO: Visual Studio option to publish an Azure Function
 
-This prompted me for the Azure account and resource group and then it did the rest. The result TODO
+The first time through it did successfully publish the function to Azure. However, I did notice something odd in the wizard. At one point it asks you to create a new Functions instance. The odd thing is that it only gave me one option for the storage, and that option was on the other side of the world.
+
+TODO: Creating a function instance with storage in Australia Central
+
+I thought that perhaps it was perhaps a user interface issue. Surely, it wouldn't create resources 12,000 miles apart. I clicked to continue and then looked at the created resources.
+
+TODO: Resource group view showing storage in Australia Central
+
+Sadly, it was very much the case that resources could not have been more geographically disparate.
+
+TODO:
+
+- Show creating the app via the portal
+- Show deployment successful with API key
+- Show debugging with monitor (recreate issue)
+- Have a look at what was created
+
+Interesting to see that there is two steps:
+
+1. Create somewhere for the function to be deployed to
+1. Deploy the function to that place
+
+---
 
 ## Observations that would be useful for myself and interesting for other readers?
-
-- Unit testing (TODO)
-
-  - [Unit test an Azure Function](https://learn.microsoft.com/en-us/training/modules/develop-test-deploy-azure-functions-with-visual-studio/6-unit-test-azure-functions))
 
 - Remote debugging (TODO: get working)
 
