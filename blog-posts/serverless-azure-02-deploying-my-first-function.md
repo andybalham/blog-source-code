@@ -1,24 +1,41 @@
 # Deploying my first function
 
+TODO: An overview of what we are trying to achieve in the series and what we have done so far.
+
 ## It's all gone south
 
 Ultimately, I want to deploy the final application using infrastructure as code. However, first I thought I would try the ClickOps approach. This is done by right-clicking on the project and selecting 'Publish'.
 
-TODO: Visual Studio option to publish an Azure Function
+![Visual Studio option to publish an Azure Function](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/publish-from-vs.png?raw=true)
 
 The first time through it did successfully publish the function to Azure. However, I did notice something odd in the wizard. At one point it asks you to create a new Functions instance. The odd thing is that it only gave me one option for the storage, and that option was on the other side of the world.
 
-TODO: Creating a function instance with storage in Australia Central
+![Creating a function instance with storage in Australia Central](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-australia-storage.png?raw=true)
 
 I thought that perhaps it was perhaps a user interface issue. Surely, it wouldn't create resources 12,000 miles apart. I clicked to continue and then looked at the created resources.
 
-TODO: Resource group view showing storage in Australia Central
+![Resource group view showing storage in Australia Central](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/resources-australia-central.png?raw=true)
 
-Sadly, it was very much the case that resources could not have been more geographically disparate.
+Unfortunately, it was very much the case that resources could not have been more geographically disparate if you tried.
+
+Try as I might, I could not get the Visual Studio wizard to create a set of geographically-sensible resources. Instead, I went into the Azure portal and selected the option to create a Function App. This did allow me full control over the location of any created resources. In particular, the Application Insights could now be located in the UK.
+
+![The monitoring page of the portal Function App wizard](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/app-insights-closer-to-home.png?raw=true)
+
+Once the Function App had been created via the portal, I could select it in the Visual Studio wizard.
+
+![Visual Studio publish wizard showing manually-created resources](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/portal-created-function-app.png?raw=true)
+
+Once this wizard had completed, and generated a few interesting files, I was presented by the 'Publish' button below.
+
+![Publish option within Visual Studio](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/azure-publish-profile.png?raw=true)
+
+Pressing this started the deployment and, before long, I had my function deployed into the cloud and ready to be tested.
+
+---
 
 TODO:
 
-- Show creating the app via the portal
 - Show deployment successful with API key
 - Show debugging with monitor (recreate issue)
 - Have a look at what was created
@@ -27,6 +44,8 @@ Interesting to see that there is two steps:
 
 1. Create somewhere for the function to be deployed to
 1. Deploy the function to that place
+
+![Output from the Monitor page in the Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/azure-function-monitor.png?raw=true)
 
 ---
 
