@@ -18,6 +18,8 @@ I thought that perhaps it was perhaps a user interface issue. Surely, it wouldn'
 
 Unfortunately, it was very much the case that resources could not have been more geographically disparate if you tried.
 
+## Back to the Portal
+
 Try as I might, I could not get the Visual Studio wizard to create a set of geographically-sensible resources. Instead, I went into the Azure portal and selected the option to create a Function App. This did allow me full control over the location of any created resources. In particular, the Application Insights could now be located in the UK.
 
 ![The monitoring page of the portal Function App wizard](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/app-insights-closer-to-home.png?raw=true)
@@ -31,6 +33,28 @@ Once this wizard had completed, and generated a few interesting files, I was pre
 ![Publish option within Visual Studio](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/azure-publish-profile.png?raw=true)
 
 Pressing this started the deployment and, before long, I had my function deployed into the cloud and ready to be tested.
+
+## Debugging the deployment (TODO: Better name)
+
+Full of excitement, I fired off a request to the function and got the following response.
+
+```text
+HTTP/1.1 500 Internal Server Error
+```
+
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/app-overview-function-list.png?raw=true)
+
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-developer-options.png?raw=true)
+
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-integration-overview.png?raw=true)
+
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-invocation-app-insights.png?raw=true)
+
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-invocation-details.png?raw=true)
+
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-invocation-list.png?raw=true)
+
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-monitor-logs.png?raw=true)
 
 ---
 
