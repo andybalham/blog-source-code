@@ -42,19 +42,43 @@ Full of excitement, I fired off a request to the function and got the following 
 HTTP/1.1 500 Internal Server Error
 ```
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/app-overview-function-list.png?raw=true)
+Now, I could test the function locally to recreate and debug the issue. However, it struck me that it would be an opportunity to look at what diagnostics are available in the cloud. With this in mind, I opened the Azure portal and went into the function app overview. Here, I was presented with a list of functions.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-developer-options.png?raw=true)
+![Azure portal Function list shown in Function App overview](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/app-overview-function-list.png?raw=true)
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-integration-overview.png?raw=true)
+After selecting the function, I was then given the following developer options.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-invocation-app-insights.png?raw=true)
+![Azure portal Function developer options](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-developer-options.png?raw=true)
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-invocation-details.png?raw=true)
+Out of curiosity, I selected the 'Integration' option and got a diagram showing how the triggers and inputs for the function and the outputs from the function. There was also a warning me that I could not edit my function in the portal, as I had chosen to use the isolated worker model. If such editing is important to you, then this is perhaps a reason not to choose that model. For me, I would rather not have the option.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-invocation-list.png?raw=true)
+![Azure portal Function App integration overview](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-integration-overview.png?raw=true)
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-monitor-logs.png?raw=true)
+Selecting 'Monitor' resulted in a promising list of function invocations. At the top of the list was my failure.
+
+![Azure portal Function App invocation list](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-invocation-list.png?raw=true)
+
+Clicking on the hyperlinked date brought up the details that I was looking for.
+
+![Azure portal Function App invocation details](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-invocation-details.png?raw=true)
+
+Here was the exception stack trace that clearly showed that the error lay in the code I had written. Well, the code I had copied from ChatGPT. Clearly, I had not been as diligent as I should have been with my testing.
+
+There was also an option to run a query in Application Insights. Clicking this caused the following query to run and return all the relevant entries. Note how the query uses the 'union' operator to combine data from both the `traces` and `exceptions` tables.
+
+![Azure portal Function App invocation shown in App Insights](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-invocation-app-insights.png?raw=true)
+
+For completeness, I open the 'Logs' page. This appeared to be some sort of realtime view of the logs. I ran my faulty function again and saw the following entries appear.
+
+![Azure portal Function App Monitor Logs](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/function-app-monitor-logs.png?raw=true)
+
+By default, it doesn't appear to log the actual exception. This seems to rather limit its usage, as the other views capture the full details. However, it might have some uses that are not apparent to me at the moment. It is good to know it is there though.
+
+Now I knew what the problem was, I could go and fix it. But before that, there was one more thing I wanted to try and that was remote debugging.
+
+## Remote debugging
+
+TODO
 
 ---
 
