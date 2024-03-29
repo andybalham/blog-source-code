@@ -76,7 +76,13 @@ By default, it doesn't appear to log the actual exception. This seems to rather 
 
 Now I knew what the problem was, I could go and fix it. But before that, there was one more thing I wanted to try and that was remote debugging.
 
-## Remote debugging
+## Remote debugging (eventually)
+
+[How to remote debug an HTTP trigger Azure Functions in Visual Studio 2022](https://turbo360.com/blog/remote-debugging-azure-functions-in-visual-studio-2022)
+
+[Azure Functions: how to debug remotely in production](https://demiliani.com/2023/06/27/azure-functions-how-to-debug-remotely-in-production/)
+
+[Stack Overflow: Remote debugging doesn't work for .NET 7 isolated and .NET 6 isolated Azure Function App from VS2022 (17.5.3)](https://stackoverflow.com/questions/75850754/remote-debugging-doesnt-work-for-net-7-isolated-and-net-6-isolated-azure-func)
 
 TODO
 

@@ -13,6 +13,7 @@ Points
   - [Differences between the isolated worker model and the in-process model for .NET on Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-in-process-differences)
 - Logging (TODO: how to get debug locally)
 - Remote debugging (TODO: get working)
+  - [How to remote debug an HTTP trigger Azure Functions in Visual Studio 2022](https://turbo360.com/blog/remote-debugging-azure-functions-in-visual-studio-2022)
 - Unit testing (TODO)
   - [Unit test an Azure Function](https://learn.microsoft.com/en-us/training/modules/develop-test-deploy-azure-functions-with-visual-studio/6-unit-test-azure-functions))
   - [Unit testing and mocking with the Azure SDK for .NET](https://learn.microsoft.com/en-us/dotnet/azure/sdk/unit-testing-mocking?tabs=csharp)
