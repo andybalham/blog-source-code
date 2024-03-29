@@ -78,6 +78,28 @@ Now I knew what the problem was, I could go and fix it. But before that, there w
 
 ## Remote debugging (eventually)
 
+![Visual Studio option in Publish page to attach debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-attach-from-publish.png?raw=true)
+
+![Visual Studio showing breakpoint being hit](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-breakpoint-hit.png?raw=true)
+
+![Azure portal prompting for credentials to attach remote debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-credentials-prompt.png?raw=true)
+
+![Option to download publish profile from Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-download-publish-profile.png?raw=true)
+
+![Downloaded publish profile for zip deploy](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-downloaded-publish-profile.png?raw=true)
+
+![Function App configuration in Azure portal to enable remote debugging](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-enable-on-portal.png?raw=true)
+
+![Visual Studio showing no symbols loaded](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-no-symbols-loaded.png?raw=true)
+
+![Visual Studio publish settings](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-publish-settings.png?raw=true)
+
+![Selecting the remote dotnet process to attach the debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-remote-dotnet-process.png?raw=true)
+
+![Selecting the remote w3wp process to attach the debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-remote-w3wp.png?raw=true)
+
+---
+
 [How to remote debug an HTTP trigger Azure Functions in Visual Studio 2022](https://turbo360.com/blog/remote-debugging-azure-functions-in-visual-studio-2022)
 
 [Azure Functions: how to debug remotely in production](https://demiliani.com/2023/06/27/azure-functions-how-to-debug-remotely-in-production/)
