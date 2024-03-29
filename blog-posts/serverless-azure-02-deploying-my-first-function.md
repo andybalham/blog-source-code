@@ -78,35 +78,47 @@ Now I knew what the problem was, I could go and fix it. But before that, there w
 
 ## Remote debugging (eventually)
 
+TODO: First tried the most obvious option...
+
 ![Visual Studio option in Publish page to attach debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-attach-from-publish.png?raw=true)
 
-![Visual Studio showing breakpoint being hit](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-breakpoint-hit.png?raw=true)
+TODO: Then consulted the following...
+[How to remote debug an HTTP trigger Azure Functions in Visual Studio 2022](https://turbo360.com/blog/remote-debugging-azure-functions-in-visual-studio-2022)
 
-![Azure portal prompting for credentials to attach remote debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-credentials-prompt.png?raw=true)
-
-![Option to download publish profile from Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-download-publish-profile.png?raw=true)
-
-![Downloaded publish profile for zip deploy](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-downloaded-publish-profile.png?raw=true)
-
+TODO: When I went into the portal the debugging was already enabled...
 ![Function App configuration in Azure portal to enable remote debugging](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-enable-on-portal.png?raw=true)
 
+TODO: I updated the settings in the 'Publish' page...
+![Visual Studio publish settings](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-publish-settings.png?raw=true)
+
+TODO: I was prompted for credentials to connect...
+![Azure portal prompting for credentials to attach remote debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-credentials-prompt.png?raw=true)
+
+TODO: But where did I get them from? To the Azure portal...
+![Option to download publish profile from Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-download-publish-profile.png?raw=true)
+
+TODO: In the downloaded file, we find the details for the 'Zip Deploy'...
+![Downloaded publish profile for zip deploy](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-downloaded-publish-profile.png?raw=true)
+
+TODO: After a few tries, I was able to see the processes...
+![Selecting the remote w3wp process to attach the debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-remote-w3wp.png?raw=true)
+
+TODO: However, my breakpoints were not active...
 ![Visual Studio showing no symbols loaded](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-no-symbols-loaded.png?raw=true)
 
-![Visual Studio publish settings](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-publish-settings.png?raw=true)
+TODO: After a search about the isolated worker support, I twigged that I was attaching to the wrong process...
+[Stack Overflow: Remote debugging doesn't work for .NET 7 isolated and .NET 6 isolated Azure Function App from VS2022 (17.5.3)](https://stackoverflow.com/questions/75850754/remote-debugging-doesnt-work-for-net-7-isolated-and-net-6-isolated-azure-func)
 
 ![Selecting the remote dotnet process to attach the debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-remote-dotnet-process.png?raw=true)
 
-![Selecting the remote w3wp process to attach the debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-remote-w3wp.png?raw=true)
+TODO: Finally, success and my breakpoint was hit...
+![Visual Studio showing breakpoint being hit](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-breakpoint-hit.png?raw=true)
+
+TODO: Mention gRPC worker with screenshots...
 
 ---
 
-[How to remote debug an HTTP trigger Azure Functions in Visual Studio 2022](https://turbo360.com/blog/remote-debugging-azure-functions-in-visual-studio-2022)
-
 [Azure Functions: how to debug remotely in production](https://demiliani.com/2023/06/27/azure-functions-how-to-debug-remotely-in-production/)
-
-[Stack Overflow: Remote debugging doesn't work for .NET 7 isolated and .NET 6 isolated Azure Function App from VS2022 (17.5.3)](https://stackoverflow.com/questions/75850754/remote-debugging-doesnt-work-for-net-7-isolated-and-net-6-isolated-azure-func)
-
-TODO
 
 ---
 
