@@ -78,108 +78,62 @@ Now I knew what the problem was, I could go and fix it. But before that, there w
 
 ## Remote debugging (eventually)
 
-TODO: First tried the most obvious option...
+To tell the truth, I could have saved myself quite a bit of frustration if I had read the [remote debugging](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-vs?pivots=isolated#remote-debugging) section of the Microsoft [Develop Azure Functions using Visual Studio](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-vs?pivots=isolated) guide. However, here is the tale of my more circuitous route to success.
+
+My first attempt was the most obvious option. That is, to use the option in the Publish page to attach a debugger.
 
 ![Visual Studio option in Publish page to attach debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-attach-from-publish.png?raw=true)
 
-TODO: Then consulted the following...
-[How to remote debug an HTTP trigger Azure Functions in Visual Studio 2022](https://turbo360.com/blog/remote-debugging-azure-functions-in-visual-studio-2022)
+This then indicated some activity, but ultimately no attachment occurred. Undeterred, I searched the internet and found the blog post [How to remote debug an HTTP trigger Azure Functions in Visual Studio 2022](https://turbo360.com/blog/remote-debugging-azure-functions-in-visual-studio-2022). Amongst the steps mentioned, was to enable remote debugging in the Azure portal. However, when I looked I found this was already enabled.
 
-TODO: When I went into the portal the debugging was already enabled...
 ![Function App configuration in Azure portal to enable remote debugging](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-enable-on-portal.png?raw=true)
+
+With hindsight, what I suspect had happened was that the 'Attach Debugger' operation had enabled this. The [Microsoft article](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-vs?pivots=isolated#disable-remote-debugging) advises the following:
+
+> After you're done remote debugging your code, you should disable remote debugging in the Azure portal. Remote debugging is automatically disabled after 48 hours, in case you forget.
+
+The next thing I tried was to update the publish settings. The configuration was set to 'Release', so I changed it to 'Debug'.
 
 TODO: I updated the settings in the 'Publish' page...
 ![Visual Studio publish settings](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-publish-settings.png?raw=true)
 
-TODO: I was prompted for credentials to connect...
+Following the instructions in the blog post, I tried manually attaching to the remote process and was prompted for credentials to connect.
+
 ![Azure portal prompting for credentials to attach remote debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-credentials-prompt.png?raw=true)
 
-TODO: But where did I get them from? To the Azure portal...
+The credentials required had to be downloaded from the Azure portal, via a publish profile.
+
 ![Option to download publish profile from Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-download-publish-profile.png?raw=true)
 
-TODO: In the downloaded file, we find the details for the 'Zip Deploy'...
+In the downloaded file, I found the details required in the 'Zip Deploy' element.
+
 ![Downloaded publish profile for zip deploy](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-downloaded-publish-profile.png?raw=true)
 
-TODO: After a few tries, I was able to see the processes...
+After a few tries, I was finally able to see the processes. So I followed the blog post and tried attaching to the `w3wp.exe` process.
+
 ![Selecting the remote w3wp process to attach the debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-remote-w3wp.png?raw=true)
 
-TODO: However, my breakpoints were not active...
+However, Visual Studio still reported that my breakpoints were not active.
+
 ![Visual Studio showing no symbols loaded](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-no-symbols-loaded.png?raw=true)
 
-TODO: After a search about the isolated worker support, I twigged that I was attaching to the wrong process...
-[Stack Overflow: Remote debugging doesn't work for .NET 7 isolated and .NET 6 isolated Azure Function App from VS2022 (17.5.3)](https://stackoverflow.com/questions/75850754/remote-debugging-doesnt-work-for-net-7-isolated-and-net-6-isolated-azure-func)
+I wondered for a short while if remote debugging was not supported for the [isolated worker model](https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows). Then it dawned on me that it wasn't the `w3wp.exe` process that I should be attaching to, it was the isolated `dotnet.exe` process instead.
 
 ![Selecting the remote dotnet process to attach the debugger](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-remote-dotnet-process.png?raw=true)
 
-TODO: Finally, success and my breakpoint was hit...
+Once I had done this, everything fell into place. My breakpoint was hit and I could step through my function remotely.
+
 ![Visual Studio showing breakpoint being hit](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-breakpoint-hit.png?raw=true)
+
+As mentioned, I could have avoided this, as the Microsoft article clearly states:
+
+> Check **Show process from all users** and then choose **dotnet.exe** and select **Attach**.
+
+## A peek at the internals
 
 TODO: Mention gRPC worker with screenshots...
 
----
+## Summary
 
-[Azure Functions: how to debug remotely in production](https://demiliani.com/2023/06/27/azure-functions-how-to-debug-remotely-in-production/)
+TODO
 
----
-
-TODO:
-
-- Show deployment successful with API key
-- Show debugging with monitor (recreate issue)
-- Have a look at what was created
-
-Interesting to see that there is two steps:
-
-1. Create somewhere for the function to be deployed to
-1. Deploy the function to that place
-
-![Output from the Monitor page in the Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/azure-function-monitor.png?raw=true)
-
----
-
-## Observations that would be useful for myself and interesting for other readers?
-
-- Remote debugging (TODO: get working)
-
-- Deploying (TODO)
-
-## Notes
-
-- The 'New Azure Function' template is for the older model
-
-- The following would be interesting to discuss. Is it worth mocking the SDK if you use ports and adaptors?
-  - [Unit testing and mocking with the Azure SDK for .NET](https://learn.microsoft.com/en-us/dotnet/azure/sdk/unit-testing-mocking?tabs=csharp)
-
-### Purpose of `.pubxml` File
-
-The `.pubxml` file, short for "Publish XML", is a file used in Visual Studio as part of the Web Publishing Pipeline (WPP). It contains settings and configurations for deploying a web application, such as an ASP.NET app, to various destinations like IIS, Azure, or other hosting providers. Here's an overview of its purpose and why it is often best not to check it into source control:
-
-1. **Deployment Configuration**: The `.pubxml` file holds specific settings for deploying your application, like connection strings, deployment methods (Web Deploy, FTP, etc.), and target URLs.
-
-2. **Environment-Specific Settings**: It can contain environment-specific details, such as different settings for development, staging, and production environments.
-
-3. **Custom Publishing Steps**: You can define custom actions in the `.pubxml` file to run during the publishing process, like database script execution or file transformations.
-
-#### Reasons Not to Check `.pubxml` into Source Control
-
-1. **Sensitive Information**: The `.pubxml` file can contain sensitive information like usernames, passwords, and connection strings. Checking this file into source control, especially public repositories, can expose sensitive data.
-
-2. **Environment Differences**: Each developer or environment (development, staging, production) might require different deployment settings. Checking in `.pubxml` files can lead to conflicts and inconsistencies among team members or deployment environments.
-
-3. **Personalization**: Developers often have personalized settings that are not relevant or suitable for other team members. These personal preferences should not be imposed on the entire team.
-
-4. **Security Best Practices**: It's a security best practice to keep deployment settings, particularly for production, out of source control. Deployment configurations should be managed securely and separately from the codebase.
-
-#### Best Practices
-
-- **Use `.pubxml.user` for Personal Settings**: For personal or user-specific settings, you should use the `.pubxml.user` file, which is meant to be user-specific and is not checked into source control by default.
-
-- **Environment Variables and Secrets Management**: Instead of hardcoding sensitive information in `.pubxml`, use environment variables or a secure secrets management system, especially for credentials and connection strings.
-
-- **`.gitignore` or Similar**: Ensure your source control ignore file (like `.gitignore` for Git) includes `.pubxml` files to prevent accidental check-ins.
-
-- **Parameterization**: For settings that vary between environments, consider using parameterization. Parameters can be set during deployment without storing environment-specific values in source control.
-
-#### Conclusion
-
-The `.pubxml` file plays an important role in configuring the deployment of web applications. However, due to the potential inclusion of sensitive data and personalized settings, it is generally best practice to exclude this file from source control and handle deployment configurations through more secure and collaborative means.
