@@ -1,6 +1,6 @@
-# Deploying my first function
+# Deploying and Debugging my First Azure Function
 
-TODO: An overview of what we are trying to achieve in the series and what we have done so far.
+In this [series](https://www.10printiamcool.com/series/azure-serverless), I am learning by doing and documenting my experience on the way. I am aiming to build a serverless webhook proxy, to provide a resilient interface for downstream systems. In the [first part](https://www.10printiamcool.com/observations-on-developing-my-first-azure-function), I used the local development tools to build a basic function to validate and store inbound requests. In this part, I deploy and debug the function in cloud, using the tools in Visual Studio and the Azure portal.
 
 ## It's all gone south
 
@@ -34,7 +34,7 @@ Once this wizard had completed, and generated a few interesting files, I was pre
 
 Pressing this started the deployment and, before long, I had my function deployed into the cloud and ready to be tested.
 
-## Debugging the deployment (TODO: Better name)
+## Debugging the deployment
 
 Full of excitement, I fired off a request to the function and got the following response.
 
@@ -94,7 +94,6 @@ With hindsight, what I suspect had happened was that the 'Attach Debugger' opera
 
 The next thing I tried was to update the publish settings. The configuration was set to 'Release', so I changed it to 'Debug'.
 
-TODO: I updated the settings in the 'Publish' page...
 ![Visual Studio publish settings](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-02-deploying-my-first-function/remote-debugging-publish-settings.png?raw=true)
 
 Following the instructions in the blog post, I tried manually attaching to the remote process and was prompted for credentials to connect.
@@ -129,11 +128,8 @@ As mentioned, I could have avoided this, as the Microsoft article clearly states
 
 > Check **Show process from all users** and then choose **dotnet.exe** and select **Attach**.
 
-## A peek at the internals
-
-TODO: Mention gRPC worker with screenshots...
-
 ## Summary
 
-TODO
+My experience highlighted the upsides and downsides of high-level wizards. When they work, they can be very productive. However, when they don't, it can be very difficult to understand what is going on an how to fix it. I also fell foul of the changing technology, as I was reading articles for the older function model whilst using the newer model.
 
+However, I got there in the end and the option of remote debugging is an interesting one. It is one that I have never really felt I needed with AWS Lambda functions, but perhaps I will find a use now it is available. The option does expose the internals of the isolated worker model, as you can see how there is a separate process being called from the usual `w3wp.exe` process. If you step through an unhandled exception, you can even see how [gRPC](https://grpc.io/) is used to communicate. All quite different from the black box of AWS Lambda functions.
