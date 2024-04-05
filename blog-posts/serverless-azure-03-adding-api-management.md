@@ -1,8 +1,9 @@
 # Adding API Management
 
 - [Expose serverless APIs from HTTP endpoints using Azure API Management](https://learn.microsoft.com/en-gb/azure/azure-functions/functions-openapi-definition)
+
   - [Create serverless APIs in Visual Studio using Azure Functions and API Management integration](https://learn.microsoft.com/en-gb/azure/azure-functions/openapi-apim-integrate-visual-studio)
-  - The OpenAPI and API Management integration featured in this article is currently only supported for in-process C# class library functions. __Isolated worker process C# class library functions and all other language runtimes should instead use Azure API Management integration from the portal.__
+  - The OpenAPI and API Management integration featured in this article is currently only supported for in-process C# class library functions. **Isolated worker process C# class library functions and all other language runtimes should instead use Azure API Management integration from the portal.**
 
 - [What is Azure API Management?](https://learn.microsoft.com/en-us/azure/api-management/api-management-key-concepts)
 
@@ -17,6 +18,8 @@
   - [How to integrate Azure API Management with Azure Application Insights](https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-app-insights?tabs=rest)
 
 - [Authentication and authorization to APIs in Azure API Management](https://learn.microsoft.com/en-us/azure/api-management/authentication-authorization-overview)
+
+- [Enable advanced API security features using Microsoft Defender for Cloud](https://learn.microsoft.com/en-gb/azure/api-management/protect-with-defender-for-apis?WT.mc_id=Portal-Microsoft_Azure_ApiManagement)
 
 ## [Authorization](https://learn.microsoft.com/en-us/azure/api-management/import-function-app-as-api#authorization)
 
