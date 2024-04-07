@@ -1,5 +1,9 @@
 # Adding API Management
 
+## TODO: Images
+
+## Links
+
 - [Expose serverless APIs from HTTP endpoints using Azure API Management](https://learn.microsoft.com/en-gb/azure/azure-functions/functions-openapi-definition)
 
   - [Create serverless APIs in Visual Studio using Azure Functions and API Management integration](https://learn.microsoft.com/en-gb/azure/azure-functions/openapi-apim-integrate-visual-studio)
@@ -24,6 +28,8 @@
 ## [Authorization](https://learn.microsoft.com/en-us/azure/api-management/import-function-app-as-api#authorization)
 
 Import of an Azure Function App automatically generates:
+
+TODO: Images...
 
 - Host key inside the Function App with the name apim-{your Azure API Management service instance name},
 - Named value inside the Azure API Management instance with the name {your Azure Function App instance name}-key, which contains the created host key.
