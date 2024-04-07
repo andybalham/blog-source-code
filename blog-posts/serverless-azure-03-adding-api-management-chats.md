@@ -56,6 +56,8 @@ Azure API Management (APIM) is a robust, feature-rich service for publishing, se
 
 In choosing the right service, consider factors like the specific capabilities you need, your existing architecture, security requirements, and the complexity of managing the service.
 
+-----------------------------------------------------------------------------------------------------
+
 ## Why would I use API Management in front of my Azure functions?
 
 Using Azure API Management (APIM) in front of Azure Functions can bring several benefits, especially for more complex or enterprise-level scenarios. Here's why you might consider this approach:
@@ -123,3 +125,45 @@ APIM simplifies API versioning and revision control, allowing you to:
 ### Conclusion
 
 While Azure Functions provide an excellent platform for building serverless APIs, integrating them with Azure API Management adds a layer of control, security, and scalability. It's particularly useful in enterprise scenarios, where you need to manage multiple APIs, ensure security and compliance, and provide a professional developer experience.
+
+-----------------------------------------------------------------------------------------------------
+
+## When using Azure API Management, is it possible to integrate with an Azure Function that isn't publicly accessible?
+
+Yes, you can integrate Azure API Management (APIM) with an Azure Function that isn't publicly accessible. This is a common scenario for enhancing security and controlling access to your functions. The Azure Function can be secured and made accessible only through APIM, using several methods:
+
+### 1. Restricting Access to the Function App
+
+You can restrict access to the Azure Function to only allow traffic from your API Management instance. This can be achieved in a couple of ways:
+
+- **Using Azure Functions Networking Features**: Configure your Azure Function to only accept traffic from a specific Virtual Network (VNet) and integrate your APIM instance with that VNet. This is known as [VNet Integration](https://docs.microsoft.com/en-us/azure/azure-functions/functions-networking-options).
+
+- **IP Restriction**: Restrict access to the Function App by setting IP-based firewall rules. Here, you would allow only the outbound IP addresses of the API Management service. These IP restrictions can be set in the Networking section of the Function App settings in the Azure portal.
+
+### 2. Function Keys
+
+Azure Functions provides function keys that can be used to authorize requests. While function keys aren't a substitute for proper authentication mechanisms, they can add a layer of security:
+
+- **Use Function Keys**: Create a function key in your Azure Function and configure the APIM API to include this function key in the request headers when forwarding requests to the Azure Function.
+
+### 3. Managed Identity
+
+If you're using Azure API Management (Premium tier), you can use a Managed Identity:
+
+- **Managed Identity**: Configure APIM to use a Managed Identity and grant this identity access to the Azure Function. This method is more secure and manageable than function keys.
+
+### 4. Using Azure Private Link
+
+Azure Private Link provides private connectivity from a virtual network to Azure services, like Azure Functions. It simplifies the network architecture and secures the connection between endpoints in Azure:
+
+- **Private Link for Azure Functions**: Set up a Private Link for the Azure Function and then access it from API Management through VNet Integration.
+
+### 5. Azure API Management's Self-Hosted Gateway
+
+Self-Hosted Gateways in APIM can be deployed inside the same VNet as your Azure Functions, enabling access to non-public functions:
+
+- **Self-Hosted Gateway**: Deploy a Self-Hosted Gateway in the same VNet as your Azure Function for secure internal access.
+
+### Conclusion
+
+Integrating Azure API Management with non-public Azure Functions enhances security and allows for the controlled exposure of your functions. Whether through network controls, authentication keys, Managed Identity, Private Link, or Self-Hosted Gateways, you can securely and efficiently manage the communication between API Management and Azure Functions.

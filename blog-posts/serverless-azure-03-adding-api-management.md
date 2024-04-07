@@ -103,18 +103,26 @@ My eye was also caught by the 'Test' tab, so I clicked on it and gave it a go.
 
 ![API Management showing the test UI](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/13-apim-test-ui-input.png?raw=true)
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/14-apim-test-ui-results.png?raw=true)
+The response below showed that my Azure Function had been successfully called through the managed API. So after quite a bit of clicking, it looks like I had managed to achieve my first aim.
 
+![API Management showing the test UI](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/14-apim-test-ui-results.png?raw=true)
 
-[Authorization](https://learn.microsoft.com/en-us/azure/api-management/import-function-app-as-api#authorization)
+I was a bit curious as how API Management was authorised to access my Azure Function. A bit of searching found this in the [Authorization](https://learn.microsoft.com/en-us/azure/api-management/import-function-app-as-api#authorization) section of a Microsoft article:
 
-Import of an Azure Function App automatically generates:
+> Import of an Azure Function App automatically generates:
+>
+> - Host key inside the Function App with the name apim-{your Azure API Management service instance name},
+> - Named value inside the Azure API Management instance with the name {your Azure Function App instance name}-key, which contains the created host key.
 
-- Host key inside the Function App with the name apim-{your Azure API Management service instance name},
-- Named value inside the Azure API Management instance with the name {your Azure Function App instance name}-key, which contains the created host key.
+Sure enough, when I looked in the portal, I could see the following App key in my Function App.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/11a-function-app-apim-app-key.png?raw=true)
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/11b-apim-function-app-key-named-value.png?raw=true)
+![Function App app key](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/11a-function-app-apim-app-key.png?raw=true)
+
+And in the API Management instance, I found the same value as a 'Named value' with the expected name.
+
+![API Management Function App key named value](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/11b-apim-function-app-key-named-value.png?raw=true)
+
+Ideally, I would like to used a Managed Identity and grant this identity access to the Azure Function. This method is more secure and manageable than function keys, but is only available to Premium Tier instances. So, for now, we will go with function keys.
 
 ## TODO: Specific subscription
 
@@ -154,12 +162,7 @@ Import of an Azure Function App automatically generates:
 
 - [Enable advanced API security features using Microsoft Defender for Cloud](https://learn.microsoft.com/en-gb/azure/api-management/protect-with-defender-for-apis?WT.mc_id=Portal-Microsoft_Azure_ApiManagement)
 
-## [Authorization](https://learn.microsoft.com/en-us/azure/api-management/import-function-app-as-api#authorization)
-
-Import of an Azure Function App automatically generates:
-
-- Host key inside the Function App with the name apim-{your Azure API Management service instance name},
-- Named value inside the Azure API Management instance with the name {your Azure Function App instance name}-key, which contains the created host key.
+------------------------------------------------------------------------
 
 ## Integrating with an Azure Function that isn't publicly accessible
 
