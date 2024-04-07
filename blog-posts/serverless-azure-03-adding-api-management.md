@@ -87,13 +87,24 @@ When I was presented with the next screen, I felt that I had somewhat gone round
 
 ![API Management showing Import Azure Functions](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/09-apim-import-azure-functions.png?raw=true)
 
+I was then presented with a list of Function Apps from which to import functions. I selected my Function App and clicked to progress.
+
 ![API Management showing Select Azure Function App](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/10-apim-select-azure-function-app.png?raw=true)
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/11-apim-create-from-function-app.png?raw=true)
+The next step defaulted in a set of values, which all seemed reasonable to me. So I simply clicked 'Create'.
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/12-apim-design-ui.png?raw=true)
+![API Management showing Create from Function App](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/11-apim-create-from-function-app.png?raw=true)
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/13-apim-test-ui-input.png?raw=true)
+Once the creation was complete, I was able to view the 'Design' page for the new API and see the integration with the Azure Function in the backend. I could see how the process had recognised the request parameters and I also noticed the 'Inbound processing' box mentioned modifying the request. Also in the 'Inbound processing' box was the option to add policies. These, it turns out, are where you can do things such as filtering by IP address or rate limiting by key.
+
+![API Management showing design of the API integration](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/12-apim-design-ui.png?raw=true)
+
+My eye was also caught by the 'Test' tab, so I clicked on it and gave it a go.
+
+![API Management showing the test UI](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/13-apim-test-ui-input.png?raw=true)
+
+![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/14-apim-test-ui-results.png?raw=true)
+
 
 [Authorization](https://learn.microsoft.com/en-us/azure/api-management/import-function-app-as-api#authorization)
 
@@ -107,7 +118,6 @@ Import of an Azure Function App automatically generates:
 
 ## TODO: Specific subscription
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/14-apim-test-ui-results.png?raw=true)
 ![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/15-apim-rest-client-data.png?raw=true)
 ![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/16-apim-subscription-list.png?raw=true)
 ![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/17-apim-subscription-warning.png?raw=true)
