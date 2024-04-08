@@ -153,7 +153,7 @@ resource functionApp 'Microsoft.Web/sites@2021-02-01' = {
 }
 ```
 
-### Instructions to Deploy This Bicep File:
+### Instructions to Deploy This Bicep File
 
 1. **Save this script** as a `.bicep` file (for example, `deploy-functionapp.bicep`).
 
@@ -205,7 +205,7 @@ Alternatively, you can set up a CI/CD pipeline (for example, using Azure DevOps,
 2. **Configure the Build and Deployment Tasks**: Ensure your pipeline builds your function project and deploys the built artifacts to the Azure Function App created by your Bicep deployment.
 3. **Trigger Deployment**: Committing or merging code to your main branch can automatically trigger the pipeline, deploying the latest version of your code to Azure.
 
-### Additional Notes:
+### Additional Notes
 
 - Ensure that the Azure Function App name used in the Bicep template matches the name you use when publishing your function.
 - Your Azure Function code needs to be prepared and tested locally before deploying it to Azure.

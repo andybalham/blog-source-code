@@ -56,7 +56,7 @@ Azure API Management (APIM) is a robust, feature-rich service for publishing, se
 
 In choosing the right service, consider factors like the specific capabilities you need, your existing architecture, security requirements, and the complexity of managing the service.
 
------------------------------------------------------------------------------------------------------
+---
 
 ## Why would I use API Management in front of my Azure functions?
 
@@ -126,7 +126,7 @@ APIM simplifies API versioning and revision control, allowing you to:
 
 While Azure Functions provide an excellent platform for building serverless APIs, integrating them with Azure API Management adds a layer of control, security, and scalability. It's particularly useful in enterprise scenarios, where you need to manage multiple APIs, ensure security and compliance, and provide a professional developer experience.
 
------------------------------------------------------------------------------------------------------
+---
 
 ## When using Azure API Management, is it possible to integrate with an Azure Function that isn't publicly accessible?
 
@@ -167,3 +167,5 @@ Self-Hosted Gateways in APIM can be deployed inside the same VNet as your Azure 
 ### Conclusion
 
 Integrating Azure API Management with non-public Azure Functions enhances security and allows for the controlled exposure of your functions. Whether through network controls, authentication keys, Managed Identity, Private Link, or Self-Hosted Gateways, you can securely and efficiently manage the communication between API Management and Azure Functions.
+
+---
