@@ -1,4 +1,4 @@
-# Adding API Management
+# Exposing an Azure Function using API Management
 
 This is the third post in my [series](TODO) where I explore the world of serverless Azure. I am doing this by building a webhook proxy application using only the serverless Azure services. In the first two posts, I built and deployed an Azure function that receives the webhooks and validates the request body against the corresponding schema. In this post, I look at using [Azure API Management (APIM)](TODO) in front of that function.
 
@@ -103,7 +103,7 @@ My eye was also caught by the 'Test' tab, so I clicked on it and gave it a go.
 
 ![API Management showing the test UI](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/13-apim-test-ui-input.png?raw=true)
 
-The response below showed that my Azure Function had been successfully called through the managed API. So after quite a bit of clicking, it looks like I had managed to achieve my first aim.
+The response below showed that my Azure Function had been successfully called through the new API Management instance. So after quite a bit of clicking, it looks like I had managed to achieve my first aim.
 
 ![API Management showing the test UI](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/14-apim-test-ui-results.png?raw=true)
 
@@ -154,14 +154,49 @@ I copied the primary key locally and re-ran my test from VS Code. As hoped, this
 
 There was one more thing that was bugging me though. It was still possible to call the Azure Function directly from the public internet. Although this would require the function key to be leaked, it was far from ideal. So I started to look into how I could restrict access and remove this possibility.
 
-## TODO: Disabling public access to the function
+## Disabling public access to the function
 
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/18-function-app-disable-public-access.png?raw=true)
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/19-function-app-enable-selected-access.png?raw=true)
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/20-function-app-add-service-tag-rule.png?raw=true)
-![TODO](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/21-function-app-rule-list.png?raw=true)
+I went into the Networking blade for the Function App and clicked on the link next to 'Public network access'. This brought up the options below with the 'Enabled from all networks' selected. My first thought was to disable all public access. Maybe access from API Management doesn't count as public.
+
+![Function App UI showing all public network access disabled](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/18-function-app-disable-public-access.png?raw=true)
+
+However, a quick test showed that this wasn't the case. Sure, direct access had been stopped, but so had access through API Management.
+
+Engaging with ChatGPT, there was mention of virtual networks and managed identities. The former I didn't want to get into at that point in time and the latter wasn't available at my pricing tier.
+
+I asked ChatGPT "Is it possible to add an access rule to an Azure Function that restricts access only from Azure?" The response came back:
+
+> Yes, it is possible to restrict access to an Azure Function so that it's accessible only from within Azure services. This can be done by configuring network access restrictions in your Azure Function settings. However, it's important to note that "from Azure" can encompass a wide range of sources, including other Azure services, VMs hosted in Azure, or services running in Azure regions.
+
+The suggestion from ChatGPT was to use an Azure Service tag in the network access restrictions. As it put it:
+
+> Azure Service Tags represent a group of IP address prefixes from a given Azure service, which are used to help minimize complexity for security rule creation. You can leverage these in your network security rules.
+
+Given this, I selected the option to enable from selected IP address.
+
+![Function App UI showing public network access enabled from selected endpoints](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/19-function-app-enable-selected-access.png?raw=true)
+
+This brought up a list of rules and I clicked on the option to add a new one. Following ChatGPT's advice, I added a rule for the `AzureCloud` service tag.
+
+![Function App UI to add an access rule](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/20-function-app-add-service-tag-rule.png?raw=true)
+
+Once added, my new rule took pride of place at the top of the list. The portal defaults the unmatched rule action to 'Allow'. This isn't what I wanted, so I changed it to 'Deny' which resulted in the rule at the bottom.
+
+![Function App UI rule list showing new rule](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/21-function-app-rule-list.png?raw=true)
+
+Again I tested. This time I was able to access the function through API Management, but not directly. So I now had the behaviour that I wanted. However, ChatGPT did highlight these valid considerations for using `AzureCloud` Service Tag:
+
+> - **Broad Access**: The `AzureCloud` service tag is quite broad and includes all of Azure's public IP addresses. It doesn't restrict access to only your Azure services but allows access from any Azure-hosted service, which can include Azure services used by others.
+>
+> - **Other Azure Services**: If your intention is to allow access only from specific Azure services (like Azure Logic Apps, Azure VMs, etc.), you might need a more granular approach. You can specify the IP addresses or ranges of those specific services or use relevant service tags if available.
 
 ## TODO: Summary
+
+API Management appears to be a powerful tool to expose and manage external APIs. I barely scratched the surface of its capabilities, as I was satisfied in just knowing that my Azure Function was now behind a suitable service. There was an awful lot of clicking and it makes me wonder about how all this would be done through infrastructure as code.
+
+Comparing this experience to the one I have had with [AWS](TODO) is interesting. With Azure, I had to find ways to stop my Azure Function from being exposed. With AWS, you have to find ways to expose your Lambda functions. With Azure, you have to pay for managed identity functionality to integrate API Management with Azure Functions. With AWS, you have to use [Identity Access Management](TODO) (IAM) for everything and it is completely free to use.
+
+However, I now have the front of my application in a place I want. So the next step is to look at extending the back-end functionality, which will mean integrating with [Blob storage](TODO).
 
 ## Links
 

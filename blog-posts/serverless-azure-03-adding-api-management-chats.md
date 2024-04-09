@@ -169,3 +169,35 @@ Self-Hosted Gateways in APIM can be deployed inside the same VNet as your Azure 
 Integrating Azure API Management with non-public Azure Functions enhances security and allows for the controlled exposure of your functions. Whether through network controls, authentication keys, Managed Identity, Private Link, or Self-Hosted Gateways, you can securely and efficiently manage the communication between API Management and Azure Functions.
 
 ---
+
+## Is it possible to add an access rule to an Azure Function that restricts access only from Azure?
+
+Yes, it is possible to restrict access to an Azure Function so that it's accessible only from within Azure services. This can be done by configuring network access restrictions in your Azure Function settings. However, it's important to note that "from Azure" can encompass a wide range of sources, including other Azure services, VMs hosted in Azure, or services running in Azure regions. Here's how you can approach this:
+
+### 1. Use Azure Service Tags in Network Access Restrictions
+
+Azure Service Tags represent a group of IP address prefixes from a given Azure service, which are used to help minimize complexity for security rule creation. You can leverage these in your network security rules:
+
+- **Navigate to Your Function App in the Azure Portal**: Go to the Azure Portal and find your Azure Function.
+
+- **Access Networking Features**: Go to the "Networking" section in your Function App settings.
+
+- **Configure Access Restrictions**: Add a new access rule and use the `AzureCloud` service tag. This tag encompasses the IP address ranges for most Azure services, effectively allowing access only from services hosted on Azure.
+
+### 2. Considerations for Using AzureCloud Service Tag
+
+- **Broad Access**: The `AzureCloud` service tag is quite broad and includes all of Azure's public IP addresses. It doesn't restrict access to only your Azure services but allows access from any Azure-hosted service, which can include Azure services used by others.
+
+- **Other Azure Services**: If your intention is to allow access only from specific Azure services (like Azure Logic Apps, Azure VMs, etc.), you might need a more granular approach. You can specify the IP addresses or ranges of those specific services or use relevant service tags if available.
+
+### 3. Additional Security Measures
+
+- **Function Keys**: Even with network restrictions, consider using function keys for an additional layer of security.
+
+- **Private Endpoints**: For stricter control, consider using Azure Functions with [private endpoints](https://docs.microsoft.com/en-us/azure/azure-functions/functions-create-private-endpoint). A private endpoint makes your function accessible only within a specific virtual network (VNet), further limiting access.
+
+- **Azure API Management (APIM)**: Expose your Azure Function through Azure API Management and apply access policies in APIM. You can then restrict direct access to the function.
+
+### Conclusion
+
+Restricting an Azure Function to be accessible only from Azure services can enhance security, especially when you want to limit exposure to the public internet. Using the `AzureCloud` service tag in network access restrictions is a straightforward way to achieve this, though it's broad and covers all of Azure. For more granular control, consider combining network restrictions with other security mechanisms like function keys, private endpoints, or Azure API Management.
