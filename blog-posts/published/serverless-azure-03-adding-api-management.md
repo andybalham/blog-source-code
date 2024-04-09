@@ -1,10 +1,10 @@
 # Exposing an Azure Function using API Management
 
-This is the third post in my [series](TODO) where I explore the world of serverless Azure. I am doing this by building a webhook proxy application using only the serverless Azure services. In the first two posts, I built and deployed an Azure function that receives the webhooks and validates the request body against the corresponding schema. In this post, I look at using [Azure API Management (APIM)](TODO) in front of that function.
+This is the third post in my [series](https://www.10printiamcool.com/series/azure-serverless) where I explore the world of serverless Azure. I am doing this by building a webhook proxy application using only the serverless Azure services. In the first two posts, I built and deployed an Azure function that receives the webhooks and validates the request body against the corresponding schema. In this post, I look at using [Azure API Management (APIM)](https://learn.microsoft.com/en-us/azure/api-management/api-management-key-concepts) in front of that function.
 
 ## Why use API Management?
 
-As we saw in the [previous post](TODO), the Azure function is accessible from the public internet provided you know the appropriate API key. So why would you need a service such as API Management? A few reasons are listed below.
+As we saw in the [previous post](https://www.10printiamcool.com/deploying-and-debugging-my-first-azure-function), the Azure function is accessible from the public internet provided you know the appropriate API key. So why would you need a service such as API Management? A few reasons are listed below.
 
 - Rate limiting, ensuring fair usage among consumers
 - Subscription-level control, such as key rotation
@@ -130,7 +130,7 @@ The Azure portal test had shown that the function was successfully integrated wi
 
 ![API Management test UI option to copy the HTTP request](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/15-apim-rest-client-input.png?raw=true)
 
-Using [VS Code](TODO) and the [REST Client](https://github.com/Huachao/vscode-restclient) extension, you can paste the copied value into an `.http` file and you get the following.
+Using [VS Code](https://code.visualstudio.com/) and the [REST Client](https://github.com/Huachao/vscode-restclient) extension, you can paste the copied value into an `.http` file and you get the following.
 
 ![VS Code showing pasted HTTP request](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-03-adding-api-management/15-apim-rest-client-data.png?raw=true)
 
@@ -190,13 +190,13 @@ Again I tested. This time I was able to access the function through API Manageme
 >
 > - **Other Azure Services**: If your intention is to allow access only from specific Azure services (like Azure Logic Apps, Azure VMs, etc.), you might need a more granular approach. You can specify the IP addresses or ranges of those specific services or use relevant service tags if available.
 
-## TODO: Summary
+## Summary
 
 API Management appears to be a powerful tool to expose and manage external APIs. I barely scratched the surface of its capabilities, as I was satisfied in just knowing that my Azure Function was now behind a suitable service. There was an awful lot of clicking and it makes me wonder about how all this would be done through infrastructure as code.
 
-Comparing this experience to the one I have had with [AWS](TODO) is interesting. With Azure, I had to find ways to stop my Azure Function from being exposed. With AWS, you have to find ways to expose your Lambda functions. With Azure, you have to pay for managed identity functionality to integrate API Management with Azure Functions. With AWS, you have to use [Identity Access Management](TODO) (IAM) for everything and it is completely free to use.
+Comparing this experience to the one I have had with [AWS](https://aws.amazon.com/) is interesting. With Azure, I had to find ways to stop my Azure Function from being exposed. With AWS, you have to find ways to expose your Lambda functions. With Azure, you have to pay for managed identity functionality to integrate API Management with Azure Functions. With AWS, you have to use [Identity and Access Management (IAM)](https://aws.amazon.com/iam/) for everything and it is completely free to use.
 
-However, I now have the front of my application in a place I want. So the next step is to look at extending the back-end functionality, which will mean integrating with [Blob storage](TODO).
+However, I now have the front of my application in a place I want. So the next step is to look at extending the back-end functionality, which will mean integrating with [Blob storage](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction).
 
 ## Links
 
