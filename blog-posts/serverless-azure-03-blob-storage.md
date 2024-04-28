@@ -8,15 +8,6 @@
 
 ### Design
 
-Have two containers:
-
-- ValidWebhookPayloads: `/{tenantId}/{senderId}/{contractId}/{yyyy-mm-dd}/{messageId}.json`
-- InvalidWebhookPayloads: `/{tenantId}/{senderId}/{contractId}/{yyyy-mm-dd}/{messageId}.json`
-
-We will return `messageId` as a custom header `10piac-message-id`.
-
-We will log out a message to link the `messageId` to the location of the payload.
-
 [Azure Blob Storage documentation](https://learn.microsoft.com/en-gb/azure/storage/blobs/)
 
 [No Subscription Found after Successful Sign-In](https://github.com/microsoft/AzureStorageExplorer/issues/5777)
@@ -74,8 +65,69 @@ Another useful tool is the [Azure Storage Explorer](https://azure.microsoft.com/
 
 One thing I did note was that to start the emulator, I needed to run the function app using F5. This started the Azurite background process, which then showed up in the storage explorer as follows:
 
-TODO: Storage Explorer showing emulated storage
+![Storage Explorer showing emulated storage](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/010-storage-viewer-emulated.png?raw=true)
 
 If I didn't do this, the storage explorer would tell me to install Azurite.
 
+With the emulator up and running, the next step was to create some [containers](TODO) for the payloads. I had decided to split the payloads into two containers, one for payloads that had passed validation (`webhook-payloads-accepted`) and were accepted for further processing and another for payloads that were rejected (`webhook-payloads-rejected`).
+
+![Storage Explorer showing containers in emulated storage](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/010-storage-viewer-emulated-containers.png?raw=true)
+
 TODO
+
+```csharp
+private static string GetBlobName(
+    string tenantId,
+    string senderId,
+    string contractId,
+    string messageId)
+{
+    var blobName = $"{tenantId}/{senderId}/{contractId}/{DateTime.UtcNow:yyyy-MM-dd}/{messageId}.json";
+    return blobName;
+}
+```
+
+TODO: `BlobServiceClient` instantiation considerations.
+
+```csharp
+public BlobPayloadStore(ILoggerFactory loggerFactory)
+{
+    _logger = loggerFactory.CreateLogger<BlobPayloadStore>();
+    _blobServiceClient = new BlobServiceClient("UseDevelopmentStorage=true");
+}
+```
+
+In `Program.cs`:
+
+```csharp
+.ConfigureServices(services =>
+{
+    // <snip>
+    services.AddSingleton<IPayloadStore, BlobPayloadStore>();
+})
+```
+
+```csharp
+private async Task UploadPayloadAsync<T>(
+    string containerName,
+    string tenantId,
+    string senderId,
+    string contractId,
+    string messageId,
+    T payload) where T : PayloadBase
+{
+    string payloadJsonString = JsonConvert.SerializeObject(payload, Formatting.Indented);
+
+    var blobServiceClient = GetBlobServiceClient();
+    var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+
+    var blobName = GetBlobName(tenantId, senderId, contractId, messageId);
+
+    var blobClient = containerClient.GetBlobClient(blobName);
+
+    var byteArray = Encoding.UTF8.GetBytes(payloadJsonString);
+    using var stream = new MemoryStream(byteArray);
+
+    await blobClient.UploadAsync(stream, overwrite: true);
+}
+```
