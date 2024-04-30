@@ -57,7 +57,7 @@ There are other aspects to Blob Storage, such as:
 - **Security**: Options regarding encryption at rest and in transit.
 - **Redundancy**: Options such as 'Locally Redundant Storage (LRS)', 'Zone-Redundant Storage (ZRS)', and 'Geo-Redundant Storage (GRS)'.
 
-## Integrating with local Blob Storage (TODO: Rephrase)
+## Creating our containers
 
 Visual Studio 2022 ships with the [Azurite emulator](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite?tabs=visual-studio%2Cblob-storage) for local Azure Storage development, so I already had it installed. However, if you're running an earlier version of Visual Studio, you can install Azurite by using either Node Package Manager (npm), DockerHub, or by cloning the Azurite GitHub repository.
 
@@ -71,25 +71,32 @@ If I didn't do this, the storage explorer would tell me to install Azurite.
 
 With the emulator up and running, the next step was to create some [containers](TODO) for the payloads. I had decided to split the payloads into two containers, one for payloads that had passed validation (`webhook-payloads-accepted`) and were accepted for further processing and another for payloads that were rejected (`webhook-payloads-rejected`).
 
-![Storage Explorer showing containers in emulated storage](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/010-storage-viewer-emulated-containers.png?raw=true)
+![Storage Explorer showing containers in emulated storage](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/020-storage-viewer-emulated-containers.png?raw=true)
 
-TODO
+## Storing the payloads
+
+Before storing the payloads in the new containers, I needed to decide how they should be stored. Blob Storage is essentially a flat namespace, which means it doesn't have real directories or folders. However, it does support a folder-like structure using naming conventions and delimiters, typically the forward slash (`/`), within blob names.
+
+Putting myself in the place of someone fielding a support query, I imagined being told that a tenant was expecting a payload from a particular third party on a specific day. With this hierarchy in mind, I decided upon the following 'folder' structure.
 
 ```csharp
 private static string GetBlobName(
     string tenantId,
     string senderId,
-    string contractId,
     string messageId)
 {
-    var blobName = $"{tenantId}/{senderId}/{contractId}/{DateTime.UtcNow:yyyy-MM-dd}/{messageId}.json";
+    var blobName = $"{tenantId}/{senderId}/{DateTime.UtcNow:yyyy-MM-dd}/{messageId}.json";
     return blobName;
 }
 ```
 
-TODO: `BlobServiceClient` instantiation considerations.
+The value of `messageId` is globally unique and will be passed back to the caller in a custom header. This adds another possible route for debugging calls between the systems.
+
+Now we know how we are going to store the payloads, we need to use the SDK to store them. First of all we need a `BlobServiceClient` instance. It can be good practice to avoid over-instantiation of SDK clients. ChatGPT seemed to think that reusing the same instance is recommended in official Azure SDK documentation to improve performance and resource utilization. For production, I would double-check this, but for now that is good enough for me and so I stored the client at a module level.
 
 ```csharp
+private readonly BlobServiceClient _blobServiceClient;
+
 public BlobPayloadStore(ILoggerFactory loggerFactory)
 {
     _logger = loggerFactory.CreateLogger<BlobPayloadStore>();
@@ -97,7 +104,7 @@ public BlobPayloadStore(ILoggerFactory loggerFactory)
 }
 ```
 
-In `Program.cs`:
+`BlobPayloadStore` was registered as a singleton with the dependency injection, so there was no need to have any statics involved. I.e., in `Program.cs`:
 
 ```csharp
 .ConfigureServices(services =>
@@ -106,6 +113,8 @@ In `Program.cs`:
     services.AddSingleton<IPayloadStore, BlobPayloadStore>();
 })
 ```
+
+This just left me the task of writing the code to upload the payloads to the appropriate containers. The result is as follows.
 
 ```csharp
 private async Task UploadPayloadAsync<T>(
