@@ -1,35 +1,6 @@
-# Using Blob Storage
+# Using Local Blob Storage
 
-## Notes (to be deleted)
-
-### Steps
-
-- Store the requests in local storage and explore that storage
-
-### Design
-
-[Azure Blob Storage documentation](https://learn.microsoft.com/en-gb/azure/storage/blobs/)
-
-[No Subscription Found after Successful Sign-In](https://github.com/microsoft/AzureStorageExplorer/issues/5777)
-[Azure Storage Explorer not connecting to Free Account](https://learn.microsoft.com/en-us/answers/questions/1121467/azure-storage-explorer-not-connecting-to-free-acco#:~:text=Go%20to%20Accounts%20tab.%20Click%20on%20settings%20icon%20next%20to%20Default%20Directory.%20Click%20Un%2Dfilter)
-
-### Questions
-
-- Should we assign a unique id and return that as a custom header?
-
-  - Yes
-
-- Does the choice of 'folder' structure affect the event in any way?
-
-  - Yes, see `BlobTrigger("samples-work-items/{name}", Connection = "AzureWebJobsStorage")]`
-
-- How do I start Azurite?
-
-  - <https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite?tabs=visual-studio%2Cblob-storage>
-
----
-
-In the [previous post](TODO) in this [series on creating a webhook proxy](TODO), I added API Management in front of my Azure Function. In this post, I turn my attention to fleshing out the back-end functionality. In particular, storing data in Azure Blob Storage.
+In the [previous post](TODO) in this [series on creating a webhook proxy](TODO), I added API Management in front of an Azure Function. In this post, I turn my attention to fleshing out the back-end functionality. In particular, implementing the 'store' part of the store and forward pattern and putting the received request payloads in Azure Blob Storage for subsequent processing.
 
 ## A quick overview of Azure Blob Storage
 
@@ -131,7 +102,6 @@ private async Task UploadPayloadAsync<T>(
     var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
 
     var blobName = GetBlobName(tenantId, senderId, contractId, messageId);
-
     var blobClient = containerClient.GetBlobClient(blobName);
 
     var byteArray = Encoding.UTF8.GetBytes(payloadJsonString);
@@ -140,3 +110,40 @@ private async Task UploadPayloadAsync<T>(
     await blobClient.UploadAsync(stream, overwrite: true);
 }
 ```
+
+## Local testing
+
+After hitting F5 to run the function, I submitted a valid request to the local endpoint. Opening up Azure Storage Explorer, I could see a blob had been added as expected to the 'accepted' container.
+
+![Local storage showing accepted payload](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/030-accepted-payload-local-storage.png?raw=true)
+
+The Azure Storage Explorer has a handy feature to preview the contents. Using this, I inspected the contents and could see that they contained the expected details. I did note that the API key value was not present, so must have been very sensibly filtered out.
+
+![Local storage showing accepted payload preview](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/040-accepted-payload-preview.png?raw=true)
+
+I then ran a test with an invalid payload and, sure enough, a blob was added to the rejected container.
+
+![Local storage showing rejected payload](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/050-rejected-payload-local-storage.png?raw=true)
+
+Previewing this, I could see that the errors had been passed through as expected.
+
+![Local storage showing rejected payload preview](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/060-rejected-payload-preview.png?raw=true)
+
+## Cloud considerations
+
+The next step is to deploy to the cloud and test there. However, this raises a number of questions.
+
+- How should the Blob containers be exposed?
+  - Public vs. Private endpoints
+- How should the Azure Function connect to the containers?
+  - Connection string?
+  - Managed identity?
+- If using a connection string, how should it be obtained?
+  - Environment variable?
+  - Key vault?
+
+Given these considerations, this feels like a post in itself. So I will leave it till next time.
+
+## Summary
+
+In this post, I showed how I was able to use the local Azure development tools to implement and test storing the request payloads. However, to get the functionality deployed and working in the cloud will require some more thought and experimentation.
