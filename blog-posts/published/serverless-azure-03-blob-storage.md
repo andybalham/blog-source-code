@@ -1,10 +1,10 @@
 # Using Local Blob Storage
 
-In the [previous post](TODO) in this [series on creating a webhook proxy](TODO), I added API Management in front of an Azure Function. In this post, I turn my attention to fleshing out the back-end functionality. In particular, implementing the 'store' part of the store and forward pattern and putting the received request payloads in Azure Blob Storage for subsequent processing.
+In the [previous post](https://www.10printiamcool.com/exposing-an-azure-function-using-api-management) in this [series on creating a webhook proxy](https://www.10printiamcool.com/series/azure-serverless) using Azure serverless technology, I added API Management in front of an Azure Function. In this post, I turn my attention to fleshing out the back-end functionality. In particular, implementing the 'store' part of the store and forward pattern and putting the received request payloads in Azure Blob Storage for subsequent processing.
 
 ## A quick overview of Azure Blob Storage
 
-[Blob Storage](TODO) is the Azure service that is equivalent to [AWS S3](TODO), in that it is used for storing large amounts of unstructured data, such as text or binary data.
+[Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction) is the Azure service that is equivalent to [AWS S3](https://aws.amazon.com/s3/), in that it is used for storing large amounts of unstructured data, such as text or binary data.
 
 Blob Storage is composed of the following resource hierarchy:
 
@@ -40,7 +40,7 @@ One thing I did note was that to start the emulator, I needed to run the functio
 
 If I didn't do this, the storage explorer would tell me to install Azurite.
 
-With the emulator up and running, the next step was to create some [containers](TODO) for the payloads. I had decided to split the payloads into two containers, one for payloads that had passed validation (`webhook-payloads-accepted`) and were accepted for further processing and another for payloads that were rejected (`webhook-payloads-rejected`).
+With the emulator up and running, the next step was to create some [containers](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction#containers) for the payloads. I had decided to split the payloads into two containers, one for payloads that had passed validation (`webhook-payloads-accepted`) and were accepted for further processing and another for payloads that were rejected (`webhook-payloads-rejected`).
 
 ![Storage Explorer showing containers in emulated storage](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/020-storage-viewer-emulated-containers.png?raw=true)
 
