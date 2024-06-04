@@ -1,8 +1,16 @@
 # Connecting to cloud Azure Blob Storage
 
 - [Connecting to cloud Azure Blob Storage](#connecting-to-cloud-azure-blob-storage)
+  - [Overview](#overview)
+  - [Connection strings and account keys are evil](#connection-strings-and-account-keys-are-evil)
+  - [Creating cloud containers](#creating-cloud-containers)
+  - [Managed identities](#managed-identities)
+  - [Using `DefaultAzureCredential`](#using-defaultazurecredential)
+  - [Using Log Stream for quick feedback](#using-log-stream-for-quick-feedback)
+  - [Summary](#summary)
+  - [Links](#links)
   - [Notes (to be deleted)](#notes-to-be-deleted)
-    - [Links](#links)
+    - [Links](#links-1)
       - [Authorize access and connect to Blob Storage](#authorize-access-and-connect-to-blob-storage)
       - [Manage storage account access keys](#manage-storage-account-access-keys)
       - [Authorize access to data in Azure Storage](#authorize-access-to-data-in-azure-storage)
@@ -11,7 +19,41 @@
       - [Quickstart: Azure Blob Storage client library for .NET](#quickstart-azure-blob-storage-client-library-for-net)
       - [Step-by-Step Guide to Setting a Time to Live (TTL)](#step-by-step-guide-to-setting-a-time-to-live-ttl)
         - [Step-by-Step **Guide**](#step-by-step-guide)
+      - [Chats](#chats)
         - [Example Configuration](#example-configuration)
+
+## Overview
+
+In the previous [post](TODO) in this [series](TODO) on creating a serverless webhook proxy, I used [Azurite](TODO) (local Blob Storage emulator) to develop the code that stores the requests received. This was very convenient, but avoided a number of concerns that we encounter when we want to use cloud-based resources. These concerns relate to access, security, and debugging amongst others.
+
+## Connection strings and account keys are evil
+
+'Evil' is perhaps a strong word, but both are risky as they can easily be leaked. I have seen too many credentials shared in plain text in emails or chats. There have also been too many stories of credentials being accidentally checked into source control. So, what is the best way to handle them? The answer is, not to have them in the first place.
+
+I am familiar with the AWS serverless offerings, Lambda functions, DynamoDB, SQS, and so forth. In all these cases, I have never had to use a connection string or an account key. In AWS, every component needs to be granted access to the resources that it needs interact with. This is done through the AWS IAM (Identity and Access Management). This avoids the use of explicit credentials and the risk associated with them. It turns out that Azure is going the same way, but first we need to create our containers.
+
+## Creating cloud containers
+
+- Storage needed to be 'Enabled from all networks'
+- Time-to-live? If we can work out how.
+
+![Selecting storage account in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/070-select-storage-account.png?raw=true)
+
+![Configuring storage account basics in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/080-storage-account-basics.png?raw=true)
+
+![Configuring storage account network in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/090-storage-account-network.png?raw=true)
+
+![Viewing storage account access keys in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/100-storage-account-access-keys.png?raw=true)
+
+## Managed identities
+
+## Using `DefaultAzureCredential`
+
+## Using Log Stream for quick feedback
+
+## Summary
+
+## Links
 
 ## Notes (to be deleted)
 
@@ -124,6 +166,8 @@ Setting a Time to Live (TTL) for blobs within an Azure Blob Storage container is
 
 8. **Save**:
    - Finally, click "Save" to apply the lifecycle management policy to your storage account.
+
+#### Chats
 
 ##### Example Configuration
 
