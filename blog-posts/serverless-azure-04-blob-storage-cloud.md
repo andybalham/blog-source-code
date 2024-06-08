@@ -55,22 +55,37 @@ Although I had no intention of using them, I took a look at the 'Access keys' bl
 
 ## Creating and configuring the containers
 
-- Create the containers
-- Time-to-live? If we can work out how.
+With the storage account in place, I clicked the option to add a container.
 
 ![Adding a Blob container in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/110-storage-account-container-add.png?raw=true)
 
+Then specified the name of the container and accepted the other defaults.
+
 ![Setting a Blob container details in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/120-storage-account-container-details.png?raw=true)
+
+I then repeated this for the other container that I needed. The resulting list showed the two containers that I had created and one that seemed to have been created by Azure (`$logs`).
 
 ![Blob container list in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/130-storage-account-container-list.png?raw=true)
 
+As these container are going to container personally identifiable information (PII), it is important not to hold on to the data for longer than is strictly necessary. This is where time-to-live (TTL) functionality comes in very handy. This functionality allows us to defer the responsibility of deleting old data to the cloud provider.
+
+For Blob Storage, this is done by selecting 'Lifecycle management' blade, under 'Data management' in the Azure portal.
+
 ![Lifecycle management in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/140-storage-account-lifecycle-management.png?raw=true)
+
+The first step was to give the rule a name and specify the blobs to which the rule applies. In my case, I wanted to delete all request blobs after 30 days. So I selected the rule scope to filter the blobs to which the rule applies.
 
 ![Adding lifecycle rules in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/150-storage-account-rule-add.png?raw=true)
 
+The next section allowed me to specify an action to take and the condition under which to take it. In my case, I wanted to delete all blobs 30 days after creation.
+
 ![Specifying lifecycle conditions in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/160-storage-account-rule-condition.png?raw=true)
 
+The final step was to specify the filter set. In my case, I specified `webhook-payload-` to filter the rule to the request containers.
+
 ![Specifying lifecycle filters in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/170-storage-account-rule-filter.png?raw=true)
+
+Now I had my containers in place, with rules to keep them managed. Although there was public access via keys, I had no intention of using them. This is because I intended to use managed identities.
 
 ## Managed identities
 
@@ -92,10 +107,7 @@ Talk about:
 
 - Using Log Stream as quick feedback from cloud-based testing
 - Assigning managed identity and granting access
-- How I needed to add myself to use my Entra identity
 - Using default credential and issues with local emulator
-- Storage needed to be 'Enabled from all networks'
-- Time-to-live? If we can work out how.
 
 Can we do any remocal testing? Would we have to end up using connection strings?
 
