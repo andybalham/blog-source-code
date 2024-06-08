@@ -3,7 +3,8 @@
 - [Connecting to cloud Azure Blob Storage](#connecting-to-cloud-azure-blob-storage)
   - [Overview](#overview)
   - [Connection strings and account keys are evil](#connection-strings-and-account-keys-are-evil)
-  - [Creating cloud containers](#creating-cloud-containers)
+  - [Creating the storage account](#creating-the-storage-account)
+  - [Creating and configuring the containers](#creating-and-configuring-the-containers)
   - [Managed identities](#managed-identities)
   - [Using `DefaultAzureCredential`](#using-defaultazurecredential)
   - [Using Log Stream for quick feedback](#using-log-stream-for-quick-feedback)
@@ -32,18 +33,44 @@ In the previous [post](TODO) in this [series](TODO) on creating a serverless web
 
 I am familiar with the AWS serverless offerings, Lambda functions, DynamoDB, SQS, and so forth. In all these cases, I have never had to use a connection string or an account key. In AWS, every component needs to be granted access to the resources that it needs interact with. This is done through the AWS IAM (Identity and Access Management). This avoids the use of explicit credentials and the risk associated with them. It turns out that Azure is going the same way, but first we need to create our containers.
 
-## Creating cloud containers
+## Creating the storage account
 
-- Storage needed to be 'Enabled from all networks'
-- Time-to-live? If we can work out how.
+In future, I want to deploy all the cloud resources via infrastructure as code (IaC) using [Bicep](TODO). However, for the first pass I used click-ops and the Azure portal. From within my project resource group, I clicked to add a service and selected the 'Storage account' service from Microsoft.
 
 ![Selecting storage account in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/070-select-storage-account.png?raw=true)
 
+Next, I specified the basic properties of the account. I provided the account name and changed the 'Redundancy' level to the cheapest option, but otherwise left the properties at their default values.
+
 ![Configuring storage account basics in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/080-storage-account-basics.png?raw=true)
+
+For the networking options, I left the access level at 'Enable public access from all networks'. I experimented with a more restrictive access level, as I wasn't comfortable with the public access. However, I was not able to access the account unless this level was selected. At this point in my journey, I did not want to start creating private networks. However, for a production system, this is the route I would go.
+
+Here was a significant difference to my experience with AWS, where the default for S3 buckets is to prevent public access. You can then use AWS IAM to grant bucket access to the appropriate resources, such as Lambda functions, without having to create any private networking.
 
 ![Configuring storage account network in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/090-storage-account-network.png?raw=true)
 
+Although I had no intention of using them, I took a look at the 'Access keys' blade. Here, as you would expect, you can find the access keys and connection strings to access the account. You can also manually rotate the keys from this blade, which highlights another good reason to avoid using them.
+
 ![Viewing storage account access keys in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/100-storage-account-access-keys.png?raw=true)
+
+## Creating and configuring the containers
+
+- Create the containers
+- Time-to-live? If we can work out how.
+
+![Adding a Blob container in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/110-storage-account-container-add.png?raw=true)
+
+![Setting a Blob container details in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/120-storage-account-container-details.png?raw=true)
+
+![Blob container list in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/130-storage-account-container-list.png?raw=true)
+
+![Lifecycle management in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/140-storage-account-lifecycle-management.png?raw=true)
+
+![Adding lifecycle rules in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/150-storage-account-rule-add.png?raw=true)
+
+![Specifying lifecycle conditions in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/160-storage-account-rule-condition.png?raw=true)
+
+![Specifying lifecycle filters in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/170-storage-account-rule-filter.png?raw=true)
 
 ## Managed identities
 
