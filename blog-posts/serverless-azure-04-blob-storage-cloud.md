@@ -85,9 +85,25 @@ The final step was to specify the filter set. In my case, I specified `webhook-p
 
 ![Specifying lifecycle filters in Azure Portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/170-storage-account-rule-filter.png?raw=true)
 
-Now I had my containers in place, with rules to keep them managed. Although there was public access via keys, I had no intention of using them. This is because I intended to use managed identities.
+Now I had my containers in place, with rules to keep them managed and, although there was public access via keys, I had no intention of using them. This is because I intended to use managed identities.
 
 ## Managed identities
+
+The Microsoft Learn article [What are managed identities for Azure resources?](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) give a good overview of what managed identities are.
+
+> A common challenge for developers is the management of secrets, credentials, certificates, and keys used to secure communication between services. Managed identities eliminate the need for developers to manage these credentials.
+>
+> While developers can securely store the secrets in Azure Key Vault, services need a way to access Azure Key Vault. Managed identities provide an automatically managed identity in Microsoft Entra ID for applications to use when connecting to resources that support Microsoft Entra authentication. Applications can use managed identities to obtain Microsoft Entra tokens without having to manage any credentials.
+
+It goes on to list some of echo some the benefits of using managed identities that I mentioned earlier.
+
+> - You don't need to manage credentials. Credentials aren’t even accessible to you.
+> - You can use managed identities to authenticate to any resource that supports Microsoft Entra authentication, including your own applications.
+> - Managed identities can be used at no extra cost.
+
+As I also mentioned, in AWS this is the default. In fact, it is the only option in order to access some services. It is good to see Azure following down this path.
+
+The article goes on to mention that there are two types of managed identity, system-assigned and user-assigned. In my case, I want a system-managed identity for my Azure Function.
 
 ## Using `DefaultAzureCredential`
 
