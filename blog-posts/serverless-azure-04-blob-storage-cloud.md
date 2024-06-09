@@ -6,7 +6,8 @@
   - [Creating the storage account](#creating-the-storage-account)
   - [Creating and configuring the containers](#creating-and-configuring-the-containers)
   - [Managed identities](#managed-identities)
-  - [Using `DefaultAzureCredential`](#using-defaultazurecredential)
+  - [Using token credentials to connect](#using-token-credentials-to-connect)
+  - [A special mention for DefaultAzureCredential](#a-special-mention-for-defaultazurecredential)
   - [Using Log Stream for quick feedback](#using-log-stream-for-quick-feedback)
   - [Summary](#summary)
   - [Links](#links)
@@ -116,27 +117,114 @@ The next step was to select the role that I wished to give my function app. I fi
 
 ![Adding a contributor to a storage account in Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/195-storage-account-add-contributor.png?raw=true)
 
-The next step was to select my function app as a member of this role. The portal gives a dropdown list of managed identity types, so I selected 'Function App' and my function app from the resulting list.
-
 ![Selecting members for storage account access in Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/200-storage-account-select-members.png?raw=true)
 
-TODO
+The next step was to select my function app as a member of this role. The portal gives a dropdown list of managed identity types, so I selected 'Function App' and my function app from the resulting list.
 
 ![Selecting a function app as a member in Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/210-storage-account-select-function-app.png?raw=true)
 
-TODO
+I then took the defaults and completed the wizard. The resulting list of role assignment confirmed that the function app identity now had access to the storage account.
 
 ![Storage account access control list in Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/220-storage-account-access-control-list.png?raw=true)
 
-TODO
+Now all that was left was to update the code to use the managed identity to connect to the storage account.
 
-## Using `DefaultAzureCredential`
+## Using token credentials to connect
+
+The current code was connecting to the local Azurite storage emulator using a hardcoded connection string. I wanted to keep this behaviour for local testing, but also wanted to be able to connect to cloud storage when running in the cloud.
+
+I tried in vain to use the [`DefaultAzureCredential`](TODO) class to seamlessly change the access mechanism depending on environment. However, despite my best efforts, I was not able to get it to work. Instead, I decided to hide the logic behind a new `IBlobServiceClientFactory` interface implementation.
+
+This simple interface had a single method for creating a `BlobServiceClient`.
+
+```csharp
+public interface IBlobServiceClientFactory
+{
+    BlobServiceClient CreateClient();
+}
+```
+
+The implementation is also quite simple. It checks an environment variable to see if the code is being run in an environment with a storage emulator. If so, the hardcoded connection string is used. If not, then a storage URI and `ManagedIdentityCredential` instance are used.
+
+```csharp
+public class BlobServiceClientFactory : IBlobServiceClientFactory
+{
+    private readonly TokenCredential _tokenCredential;
+
+    public BlobServiceClientFactory()
+    {
+        _tokenCredential = new ManagedIdentityCredential();
+    }
+
+    public BlobServiceClient CreateClient()
+    {
+        BlobServiceClient blobServiceClient;
+
+        if (Environment.GetEnvironmentVariable(
+            "AZURE_STORAGE_EMULATOR_RUNNING") == "true")
+        {
+            // Use connection string for Azurite
+            string connectionString = "UseDevelopmentStorage=true";
+            blobServiceClient = new BlobServiceClient(connectionString);
+        }
+        else
+        {
+            // Use TokenCredential for Azure Storage
+            var webhookStorageAccount =
+                Environment.GetEnvironmentVariable("WEBHOOK_STORAGE_ACCOUNT");
+            var blobServiceUri =
+                new Uri($"https://{webhookStorageAccount}.blob.core.windows.net");
+            blobServiceClient =
+                new BlobServiceClient(blobServiceUri, _tokenCredential);
+        }
+
+        return blobServiceClient;
+    }
+}
+```
+
+I then added this to the dependency injection configuration.
+
+```csharp
+.ConfigureServices(services =>
+{
+   // <snip>
+   services.AddSingleton<IBlobServiceClientFactory, BlobServiceClientFactory>();
+})
+```
+
+Finally, I updated the `BlobPayloadStore` to have an instance injected and to use this instance to create an appropriate client.
+
+```csharp
+private readonly BlobServiceClient _blobServiceClient;
+
+public BlobPayloadStore(IBlobServiceClientFactory blobServiceClientFactory)
+{
+   _blobServiceClient = blobServiceClientFactory.CreateClient();
+}
+```
+
+## A special mention for DefaultAzureCredential
+
+As mentioned in the previous section. I tried to use the [`DefaultAzureCredential`](https://learn.microsoft.com/en-us/dotnet/azure/sdk/authentication/?tabs=command-line#defaultazurecredential) class. This was because the documentation states:
+
+> The `DefaultAzureCredential` class provided by the Azure SDK allows apps to use different authentication methods depending on the environment they're run in. This allows apps to be promoted from local development to test environments to production without code changes. You configure the appropriate authentication method for each environment and `DefaultAzureCredential` will automatically detect and use that authentication method. The use of `DefaultAzureCredential` should be preferred over manually coding conditional logic or feature flags to use different authentication methods in different environments.
+
+This sounded exactly what I was after, but I could not find a way to get it to connect to the local emulator or the cloud storage. In the end, I had to resort to my own logic and using the `ManagedIdentityCredential` class explicitly. I am quite happy with this choice, as this means my function app can **only** use managed identities, which is the intention.
+
+However, you may have different intentions and so it is definitely worth consideration. For more details, see the following excellent blog post: [DefaultAzureCredentials Under the Hood](https://nestenius.se/2024/04/18/default-azure-credentials-under-the-hood)
 
 ## Using Log Stream for quick feedback
 
+TODO
+
 ## Summary
 
+TODO
+
 ## Links
+
+TODO
 
 ## Notes (to be deleted)
 
