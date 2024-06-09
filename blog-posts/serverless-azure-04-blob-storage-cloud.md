@@ -105,6 +105,31 @@ As I also mentioned, in AWS this is the default. In fact, it is the only option 
 
 The article goes on to mention that there are two types of managed identity, system-assigned and user-assigned. In my case, I want a system-managed identity for my Azure Function.
 
+Assigning a managed identity to a function app using the Azure portal was a simple task. I selected the function app and the 'Identity' blade. Then all that was required was to switch the status to 'On'.
+![Assigning a managed identity to a function app in Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/180-function-app-managed-identity.png?raw=true)
+
+To grant access to the storage account, I needed to open the storage account and select the 'Access Control' blade. I then selected 'Add role assignment' from the 'Add' menu.
+
+![Storage account access control in Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/190-storage-account-access-control.png?raw=true)
+
+The next step was to select the role that I wished to give my function app. I filtered the list to those with 'blob' in them and was given the list shown below. As the function app needs to write to the storage account, I chose 'Storage Blob Data Contributor' and to assign it to a managed identity.
+
+![Adding a contributor to a storage account in Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/195-storage-account-add-contributor.png?raw=true)
+
+The next step was to select my function app as a member of this role. The portal gives a dropdown list of managed identity types, so I selected 'Function App' and my function app from the resulting list.
+
+![Selecting members for storage account access in Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/200-storage-account-select-members.png?raw=true)
+
+TODO
+
+![Selecting a function app as a member in Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/210-storage-account-select-function-app.png?raw=true)
+
+TODO
+
+![Storage account access control list in Azure portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-04-blob-storage/220-storage-account-access-control-list.png?raw=true)
+
+TODO
+
 ## Using `DefaultAzureCredential`
 
 ## Using Log Stream for quick feedback
