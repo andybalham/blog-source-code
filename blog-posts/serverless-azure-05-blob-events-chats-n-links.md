@@ -11,6 +11,9 @@
   - [How can I have an Azure Function that is triggered by Azure Blob Storage using Event Grid?](#how-can-i-have-an-azure-function-that-is-triggered-by-azure-blob-storage-using-event-grid)
   - [How can I parse the eventGridEvent.Data payload into a strongly-typed Blob Storage event?](#how-can-i-parse-the-eventgrideventdata-payload-into-a-strongly-typed-blob-storage-event)
   - [Does Azure Event Grid have dead letter queue functionality if it is unable to successfully deliver an event?](#does-azure-event-grid-have-dead-letter-queue-functionality-if-it-is-unable-to-successfully-deliver-an-event)
+    - [What is the equivalent Azure service to AWS SQS?](#what-is-the-equivalent-azure-service-to-aws-sqs)
+    - [Is there any way to simulate Azure Cosmos DB locally?](#is-there-any-way-to-simulate-azure-cosmos-db-locally)
+    - [How can an Azure Function receive messages from an Azure Storage Queue?](#how-can-an-azure-function-receive-messages-from-an-azure-storage-queue)
 
 ## Links
 
@@ -351,3 +354,161 @@ az eventgrid event-subscription create \
 ```
 
 This feature is particularly useful for ensuring that no events are lost due to temporary network issues, endpoint downtime, or other transient failures. It allows you to investigate delivery failures and potentially reprocess events that couldn't be delivered initially.
+
+### What is the equivalent Azure service to AWS SQS?
+
+The equivalent Azure service to Amazon Simple Queue Service (SQS) is Azure Queue Storage and Azure Service Bus. Both offer message queue functionalities, but they have different features and use cases. Let's compare them:
+
+1. Azure Queue Storage:
+
+   - Simple, cost-effective queue service
+   - Part of Azure Storage account
+   - Best for simple queuing scenarios
+   - Supports up to 64 KB message size
+   - Offers at-least-once delivery guarantee
+   - Similar to AWS SQS standard queues
+
+2. Azure Service Bus:
+   - More feature-rich messaging service
+   - Supports both queues and topics (pub/sub model)
+   - Offers advanced features like message scheduling, transactions, de-duplication, and sessions
+   - Supports up to 1 MB message size (256 KB in Standard tier)
+   - Provides at-least-once and exactly-once delivery guarantees
+   - Comparable to AWS SQS FIFO queues and Amazon SNS combined
+
+Key differences and considerations:
+
+- If you need simple, high-volume queuing with minimal overhead, Azure Queue Storage is often sufficient and more cost-effective.
+- For more complex scenarios requiring advanced features, transactional support, or pub/sub capabilities, Azure Service Bus is the better choice.
+- Azure Service Bus offers better integration with other Azure services and supports the Advanced Message Queuing Protocol (AMQP).
+- Azure Queue Storage is typically easier to set up and use for basic queuing needs.
+
+When migrating from AWS SQS:
+
+- Standard SQS queues are more closely aligned with Azure Queue Storage.
+- FIFO SQS queues are more similar to Azure Service Bus queues.
+
+The choice between Azure Queue Storage and Azure Service Bus depends on your specific requirements, message volume, complexity of your messaging scenarios, and budget considerations.
+
+### Is there any way to simulate Azure Cosmos DB locally?
+
+Yes, you can simulate Azure Cosmos DB locally for development and testing purposes. Microsoft provides the Azure Cosmos DB Emulator, which is a local emulator that provides a development environment that emulates the Azure Cosmos DB service. Here's an overview:
+
+1. Azure Cosmos DB Emulator:
+
+   - Free local emulator that provides a development environment for Azure Cosmos DB
+   - Supports operations against a local instance using the Azure Cosmos DB APIs
+
+2. Key features:
+
+   - Supports multiple APIs: SQL (Core), MongoDB, Gremlin, Cassandra, and Table
+   - No costs associated with its usage
+   - Provides a local endpoint for your application to connect to
+
+3. Limitations:
+
+   - Doesn't support all Cosmos DB features (e.g., some consistency levels)
+   - Performance characteristics may differ from the cloud service
+   - Doesn't exactly replicate all behaviors of the cloud-based Cosmos DB
+
+4. Installation:
+
+   - Can be downloaded from the Microsoft website
+   - Available for Windows and as a Docker container for cross-platform use
+
+5. Usage:
+
+   - After installation, you can start the emulator and connect to it using your application
+   - Use a specific connection string to connect to the local emulator
+
+6. Example connection string:
+
+   ```
+   AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
+   ```
+
+7. Data Explorer:
+
+   - Includes a built-in Data Explorer for managing data and settings
+
+8. Typical workflow:
+   - Develop and test locally using the emulator
+   - When ready, switch the connection string to point to your cloud-based Cosmos DB instance
+
+To use the Azure Cosmos DB Emulator:
+
+1. Download and install the emulator from the Microsoft website
+2. Start the emulator
+3. Update your application's connection string to point to the local emulator
+4. Develop and test your application as usual
+
+Remember that while the emulator is very useful for development and initial testing, it's always important to also test with the actual cloud-based Cosmos DB before deploying to production, as there may be subtle differences in behaviour or performance.
+
+### How can an Azure Function receive messages from an Azure Storage Queue?
+
+An Azure Function can easily receive messages from an Azure Storage Queue using a Queue trigger. Here's how you can set this up:
+
+1. Create an Azure Function App:
+   If you haven't already, create a Function App in Azure.
+
+2. Create a new function:
+   In your Function App, create a new function and select "Queue trigger" as the template.
+
+3. Configure the function:
+   When creating the function, you'll need to specify:
+
+   - The name of the function
+   - The name of the queue
+   - The connection string to your storage account
+
+4. Code the function:
+   Here's an example of a C# function that processes queue messages:
+
+```csharp
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Extensions.Logging;
+
+public static class QueueTriggerFunction
+{
+    [FunctionName("QueueTriggerFunction")]
+    public static void Run([QueueTrigger("myqueue-items", Connection = "AzureWebJobsStorage")]string myQueueItem, ILogger log)
+    {
+        log.LogInformation($"C# Queue trigger function processed: {myQueueItem}");
+
+        // Your logic to process the queue message goes here
+    }
+}
+```
+
+5. Configure connection string:
+   In your function app's `local.settings.json` file (for local development) or in the Azure Portal (for deployed functions), ensure you have the correct connection string:
+
+```json
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "YOUR_STORAGE_ACCOUNT_CONNECTION_STRING",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet"
+  }
+}
+```
+
+6. Deploy your function:
+   If you're not running locally, deploy your function to Azure.
+
+7. Test your function:
+   Add a message to your queue and watch your function process it. You can add messages through the Azure Portal, Azure Storage Explorer, or programmatically.
+
+Key points to remember:
+
+- The `QueueTrigger` attribute binds the function to the specified queue.
+- The `Connection` property in the attribute specifies which connection string to use.
+- The function automatically deserializes the queue message into the parameter type (string in this example, but it could be a custom object).
+- You can customize the function to handle batch processing, handle poison messages, etc.
+
+For more complex scenarios, you might want to consider:
+
+- Using dependency injection for services your function might need.
+- Implementing error handling and logging.
+- Setting up output bindings if your function needs to write data somewhere after processing.
