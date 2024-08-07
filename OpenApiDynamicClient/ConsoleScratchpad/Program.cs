@@ -14,7 +14,7 @@ namespace ConsoleScratchpad;
 
 internal class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         //await NJsonSchemaValidator1();
 
@@ -22,17 +22,20 @@ internal class Program
 
         //await NJsonSchemaValidator2();
 
-        InvokeClient();
+        await InvokeOpenApiClientAsync();
 
         Console.WriteLine("Hit return to exit...");
         Console.ReadLine();
     }
 
-    private static async void InvokeClient()
+    private static async Task InvokeOpenApiClientAsync()
     {
-        var petStoreDefinitionStream = 
+        var petStoreOpenApiStream =
             new FileStream("petstore.swagger.json", FileMode.Open);
+
         var petStoreBaseUrl = "https://petstore.swagger.io/v2";
+
+        var petStoreClient = OpenApiClient.Create(petStoreOpenApiStream, petStoreBaseUrl);
 
         var petJson = """
             {
@@ -55,15 +58,7 @@ internal class Program
             }
             """;
 
-        var petStoreClient = 
-            ApiClient.Create(petStoreDefinitionStream, petStoreBaseUrl);
-
-        var response = 
-            await petStoreClient.PerformOperationAsync(
-                "addPet",
-                [ 
-                    new ApiParameter("body", petJson)
-                ]);
+        var response = await petStoreClient.PerformAsync("addPet",[ ("body", petJson) ]);
 
         Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
     }

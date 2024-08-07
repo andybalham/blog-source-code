@@ -85,7 +85,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ApiClient.cs" />
+    <Compile Include="OpenApiClient.cs" />
     <Compile Include="JsonRequest.cs" />
     <Compile Include="IResponseMapper.cs" />
     <Compile Include="IRequestMapper.cs" />

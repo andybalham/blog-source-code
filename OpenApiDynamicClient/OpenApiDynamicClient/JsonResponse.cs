@@ -9,6 +9,7 @@ namespace OpenApiDynamicClient;
 
 public class JsonResponse
 {
+    // TODO: Should we have a ResponseStatus? E.g., Completed, Error, etc
     public bool IsSuccessful { get; set; }
     public HttpStatusCode? HttpStatusCode { get; set; }
     public string ResponseDescription { get; set; }
