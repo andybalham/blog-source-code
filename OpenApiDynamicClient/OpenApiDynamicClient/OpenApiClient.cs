@@ -9,6 +9,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Web.UI.WebControls;
+using Microsoft.OpenApi.Writers;
+using Newtonsoft.Json.Linq;
+using NJsonSchema;
+using Newtonsoft.Json;
 
 namespace OpenApiDynamicClient;
 
@@ -42,7 +47,11 @@ public class OpenApiClient
 
         if (operationPath.Value == null)
         {
-            throw new ArgumentException("Unknown operation", nameof(operationId));
+            return new JsonResponse
+            {
+                IsSuccessful = false,
+                FailureReason = $"Invalid operation id: {operationId}",
+            };
         }
 
         var operation =
@@ -51,21 +60,120 @@ public class OpenApiClient
 
         var request = new RestRequest(operationPath.Key, GetMethod(operation.Key));
 
-        /* TODO:
-         * Loop through all declared parameters, adding them as appropriate
-         * If any required ones are missing then add an error to a list
-         * Validate each parameter against the declared type
-         * If there is an object body parameter, validate it against the schema
-         * 
-         * request.AddUrlSegment("partId", "123");
-         * request.AddQueryParameter("filter", "active");
-         * request.AddStringBody(bodyJson, ContentType.Json);
-         */
+        var parameterErrors = new List<string>();
 
-        // TODO: Should an invalid request result in an exception or an unsuccessful response?
+        foreach (var openApiParameter in operation.Value.Parameters)
+        {
+            var parameterValues = 
+                parameters
+                    .Where(p => p.Item1 == openApiParameter.Name)
+                    .Select(p => p.Item2);
 
-        var bodyJson = parameters.First().Item1;
-        request.AddStringBody(bodyJson, ContentType.Json);
+            if (parameterValues.Count() == 0)
+            {
+                // TODO: We can provide a default if there is one defined
+
+                if (openApiParameter.Required)
+                {
+                    parameterErrors.Add($"{openApiParameter.Name} parameter is required");
+                }
+
+                continue;
+            }
+
+            // TODO: Validate against the declared type
+
+            switch (openApiParameter.In)
+            {
+                case ParameterLocation.Path:
+                    // TODO: Validate only a single value
+                    request.AddUrlSegment(openApiParameter.Name, parameterValues.First());
+                    break;
+                case ParameterLocation.Query:
+                    // TODO: Package according to the array syntax (if there is some)
+                    foreach (var parameterValue in parameterValues)
+                    {
+                        request.AddQueryParameter(openApiParameter.Name, parameterValue);
+                    }
+                    break;
+                default:
+                    parameterErrors.Add(
+                        $"{openApiParameter.Name} parameter has an unsupported In value " +
+                        $"{openApiParameter.In}");
+                    break;
+            }
+        }
+
+        if (operation.Value.RequestBody != null)
+        {
+            var bodyValues =
+                parameters
+                    .Where(p => p.Item1 == "body")
+                    .Select(p => p.Item2);
+
+            if (bodyValues.Count() == 0)
+            {
+                if (operation.Value.RequestBody.Required)
+                {
+                    parameterErrors.Add($"body parameter is required");
+                }
+            }
+            else
+            {
+                if (bodyValues.Count() > 1)
+                {
+                    parameterErrors.Add($"Multiple body parameters not supported");
+                }
+                else
+                {
+                    if (operation.Value.RequestBody.Content.TryGetValue(
+                        "application/json", out var mediaType))
+                    {
+                        var bodyJson = bodyValues.First();
+
+                        // Convert OpenApiSchema to JSON Schema
+                        var schemaData = SerializeSchema(mediaType.Schema);
+                        var jsonSchema = await JsonSchema.FromJsonAsync(schemaData);
+
+                        // Parse the JSON to validate
+                        var jsonToken = JToken.Parse(bodyJson);
+
+                        // Validate the JSON against the schema
+                        var schemaErrors = jsonSchema.Validate(jsonToken);
+
+                        if (schemaErrors.Count() > 0)
+                        {
+                            parameterErrors.Add(
+                                $"body parameter has schema errors " +
+                                $"({JsonConvert.SerializeObject(schemaErrors)})");
+                        }
+                        else
+                        {
+                            request.AddStringBody(bodyJson, ContentType.Json);
+                        }
+                    }
+                    else
+                    {
+                        return new JsonResponse
+                        {
+                            IsSuccessful = false,
+                            FailureReason =
+                                $"body does not support application/json",
+                        };
+                    }
+                }
+            }
+        }
+
+        if (parameterErrors.Count > 0)
+        {
+            return new JsonResponse
+            {
+                IsSuccessful = false,
+                FailureReason = 
+                    $"Parameter validation failed: {string.Join(", ", parameterErrors)}",
+            };
+        }
 
         // TODO: Security considerations
 
@@ -83,6 +191,31 @@ public class OpenApiClient
             IsSuccessful = response.IsSuccessful,
             Body = response.Content,            
         };
+    }
+
+    private static string SerializeSchema(OpenApiSchema schema)
+    {
+        using var memoryStream = new MemoryStream();
+        using (var writer = new StreamWriter(memoryStream))
+        {
+            var writerSettings =
+                new OpenApiWriterSettings()
+                {
+                    InlineLocalReferences = true,
+                    InlineExternalReferences = true,
+                };
+
+            schema.SerializeAsV2WithoutReference(
+                new OpenApiJsonWriter(writer, writerSettings));
+        }
+
+        var schemaJson = GetStringFromMemoryStream(memoryStream);
+        return schemaJson;
+    }
+
+    private static string GetStringFromMemoryStream(MemoryStream memoryStream)
+    {
+        return Encoding.UTF8.GetString(memoryStream.ToArray());
     }
 
     private Method GetMethod(OperationType operationType) => 

@@ -43,6 +43,18 @@
     <Reference Include="Microsoft.OpenApi.Readers, Version=1.6.17.0, Culture=neutral, PublicKeyToken=3f5743946376f042, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.OpenApi.Readers.1.6.17\lib\netstandard2.0\Microsoft.OpenApi.Readers.dll</HintPath>
     </Reference>
+    <Reference Include="Namotion.Reflection, Version=3.1.1.0, Culture=neutral, PublicKeyToken=c2f9c3bdfae56102, processorArchitecture=MSIL">
+      <HintPath>..\packages\Namotion.Reflection.3.1.1\lib\net462\Namotion.Reflection.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="NJsonSchema, Version=11.0.2.0, Culture=neutral, PublicKeyToken=c2f9c3bdfae56102, processorArchitecture=MSIL">
+      <HintPath>..\packages\NJsonSchema.11.0.2\lib\net462\NJsonSchema.dll</HintPath>
+    </Reference>
+    <Reference Include="NJsonSchema.Annotations, Version=11.0.2.0, Culture=neutral, PublicKeyToken=c2f9c3bdfae56102, processorArchitecture=MSIL">
+      <HintPath>..\packages\NJsonSchema.Annotations.11.0.2\lib\net462\NJsonSchema.Annotations.dll</HintPath>
+    </Reference>
     <Reference Include="RestSharp, Version=111.4.1.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
       <HintPath>..\packages\RestSharp.111.4.1\lib\net48\RestSharp.dll</HintPath>
     </Reference>

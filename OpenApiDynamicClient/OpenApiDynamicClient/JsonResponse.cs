@@ -14,4 +14,5 @@ public class JsonResponse
     public HttpStatusCode? HttpStatusCode { get; set; }
     public string ResponseDescription { get; set; }
     public string Body { get; set; }
+    public string FailureReason { get; internal set; }
 }

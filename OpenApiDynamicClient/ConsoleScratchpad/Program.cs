@@ -58,9 +58,19 @@ internal class Program
             }
             """;
 
-        var response = await petStoreClient.PerformAsync("addPet",[ ("body", petJson) ]);
+        var addPetResponse = await petStoreClient.PerformAsync("addPet", [("body", petJson)]);
 
-        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+        Console.WriteLine(JsonConvert.SerializeObject(addPetResponse, Formatting.Indented));
+
+        var getPetByIdResponse = await petStoreClient.PerformAsync("getPetById", [("petId", "1")]);
+        
+        Console.WriteLine(JsonConvert.SerializeObject(getPetByIdResponse, Formatting.Indented));
+
+        var findPetsByStatusResponse =
+            await petStoreClient.PerformAsync(
+                "findPetsByStatus", [("status", "available"), ("status", "pending")]);
+        
+        Console.WriteLine(JsonConvert.SerializeObject(findPetsByStatusResponse, Formatting.Indented));
     }
 
     private static async Task ExportComponentSchemas()
