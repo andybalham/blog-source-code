@@ -59,18 +59,25 @@ internal class Program
             """;
 
         var addPetResponse = await petStoreClient.PerformAsync("addPet", [("body", petJson)]);
-
         Console.WriteLine(JsonConvert.SerializeObject(addPetResponse, Formatting.Indented));
 
-        var getPetByIdResponse = await petStoreClient.PerformAsync("getPetById", [("petId", "1")]);
-        
+        var invalidAddPetResponse = await petStoreClient.PerformAsync("addPet", [("body", "{}")]);
+        Console.WriteLine(JsonConvert.SerializeObject(invalidAddPetResponse, Formatting.Indented));
+
+        var getPetByIdResponse = await petStoreClient.PerformAsync("getPetById", [("petId", "0")]);
         Console.WriteLine(JsonConvert.SerializeObject(getPetByIdResponse, Formatting.Indented));
 
-        var findPetsByStatusResponse =
-            await petStoreClient.PerformAsync(
-                "findPetsByStatus", [("status", "available"), ("status", "pending")]);
-        
-        Console.WriteLine(JsonConvert.SerializeObject(findPetsByStatusResponse, Formatting.Indented));
+        var invalidGetPetByIdResponse = await petStoreClient.PerformAsync("getPetById", []);
+        Console.WriteLine(JsonConvert.SerializeObject(invalidGetPetByIdResponse, Formatting.Indented));
+
+        //var findPetsByStatusResponse =
+        //    await petStoreClient.PerformAsync(
+        //        "findPetsByStatus", [("status", "available"), ("status", "pending")]);
+        //Console.WriteLine(JsonConvert.SerializeObject(findPetsByStatusResponse, Formatting.Indented));
+
+        //var defaultFindPetsByStatusResponse =
+        //    await petStoreClient.PerformAsync("findPetsByStatus", []);
+        //Console.WriteLine(JsonConvert.SerializeObject(defaultFindPetsByStatusResponse, Formatting.Indented));
     }
 
     private static async Task ExportComponentSchemas()
