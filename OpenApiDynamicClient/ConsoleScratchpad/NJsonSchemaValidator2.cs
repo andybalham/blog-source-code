@@ -7,7 +7,6 @@ using NJsonSchema;
 using System.IO;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
-using System.Collections.Generic;
 using System.Text;
 
 namespace ConsoleScratchpad;
@@ -84,22 +83,17 @@ public class NJsonSchemaValidator2
         using var memoryStream = new MemoryStream();
         using (var writer = new StreamWriter(memoryStream))
         {
-            //using StreamWriter writer = new StreamWriter(memoryStream);
             var writerSettings =
                 new OpenApiWriterSettings()
                 {
                     InlineLocalReferences = true,
                     InlineExternalReferences = true,
                 };
-            schema.SerializeAsV2WithoutReference(new OpenApiJsonWriter(writer, writerSettings));
+            schema.SerializeAsV2WithoutReference(
+                new OpenApiJsonWriter(writer, writerSettings));
         }
 
-        var schemaJson = GetStringFromMemoryStream(memoryStream);
+        var schemaJson = Encoding.UTF8.GetString(memoryStream.ToArray());
         return schemaJson;
-    }
-
-    public static string GetStringFromMemoryStream(MemoryStream memoryStream)
-    {
-        return Encoding.UTF8.GetString(memoryStream.ToArray());
     }
 }

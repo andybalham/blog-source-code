@@ -16,13 +16,13 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
-        //await NJsonSchemaValidator1();
+        await NJsonSchemaValidator1();
 
         //await ExportComponentSchemas();
 
         //await NJsonSchemaValidator2();
 
-        await InvokeOpenApiClientAsync();
+        //await InvokeOpenApiClientAsync();
 
         Console.WriteLine("Hit return to exit...");
         Console.ReadLine();

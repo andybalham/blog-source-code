@@ -95,6 +95,60 @@ foreach (var path in openApiDocument.Paths)
 
 TODO
 
+```text
+Newtonsoft.Json.JsonSerializationException
+  HResult=0x80131500
+  Message=Self referencing loop detected for property 'HostDocument' with type 'Microsoft.OpenApi.Models.OpenApiDocument'. Path 'Properties.category.Reference.HostDocument.Paths['/pet/{petId}/uploadImage'].Operations.Post.Tags[0].Reference'.
+  Source=Newtonsoft.Json
+```
+
+```csharp
+var schemaData = JsonConvert.SerializeObject(openApiSchema);
+```
+
+Q. How did I work out how to serialize?
+
+A. [Get the JSON Schema's from a large OpenAPI Document OR using NewtonSoft and resolve refs](https://stackoverflow.com/questions/71960630/get-the-json-schemas-from-a-large-openapi-document-or-using-newtonsoft-and-reso)
+
+```csharp
+using (FileStream fs = File.Open(file.FullName, FileMode.Open));
+
+var openApiDocument = 
+    new OpenApiStreamReader().Read(fs, out var diagnostic);
+
+foreach (var schema in openApiDocument.Components.Schemas)
+{
+    var schemaName = schema.Key;
+    var schemaContent = schema.Value;
+
+    // <snip>
+
+    var outputString = 
+        schemaContent.Serialize(
+            OpenApiSpecVersion.OpenApi3_0, OpenApiFormat.Json);
+
+    // <snip>
+}
+```
+
+But how did I get to?
+
+```csharp
+private static void SerializeSchema(
+    KeyValuePair<string, OpenApiSchema> schemaEntry, string outputPath)
+{
+    FileStream fileStream;
+    StreamWriter writer;
+
+    fileStream = new FileStream(outputPath, FileMode.CreateNew);
+    var writerSettings = new OpenApiWriterSettings() { InlineLocalReferences = true, InlineExternalReferences = true };
+    writer = new StreamWriter(fileStream);
+    schemaEntry.Value.SerializeAsV2WithoutReference(new OpenApiJsonWriter(writer, writerSettings));
+}
+```
+
+Read further in the article!
+
 ## Links
 
 - [OpenAPI Specification](https://swagger.io/specification/)
