@@ -2,7 +2,7 @@
 
 - [Creating a Dynamic OpenAPI Client](#creating-a-dynamic-openapi-client)
   - [The road to the Microsoft.OpenApi library](#the-road-to-the-microsoftopenapi-library)
-  - [Getting Claude's code to work](#getting-claudes-code-to-work)
+  - [Getting Claude.ai's code to work](#getting-claudeais-code-to-work)
   - [Links](#links)
 
 Recently, I needed to integrate a system that generates raw JSON with an external API. Usefully, I had an OpenAPI specification for the API. [OpenAPI](https://swagger.io/specification/) is a specification for machine-readable interface files for describing, producing, consuming, and visualising RESTful web services. It is also well-known as its previous name of Swagger. You can see and interact with an example specification via the online [Swagger Editor](https://editor.swagger.io/).
@@ -91,9 +91,9 @@ foreach (var path in openApiDocument.Paths)
             var requestSchema = requestMediaType.Schema;
 ```
 
-## Getting Claude's code to work
+## Getting Claude.ai's code to work
 
-TODO
+This was great, but it only had one snag. It didn't work. When I tried running the code I got the following exception.
 
 ```text
 Newtonsoft.Json.JsonSerializationException
@@ -102,52 +102,42 @@ Newtonsoft.Json.JsonSerializationException
   Source=Newtonsoft.Json
 ```
 
+The problem lied with the following line.
+
 ```csharp
 var schemaData = JsonConvert.SerializeObject(openApiSchema);
 ```
 
-Q. How did I work out how to serialize?
-
-A. [Get the JSON Schema's from a large OpenAPI Document OR using NewtonSoft and resolve refs](https://stackoverflow.com/questions/71960630/get-the-json-schemas-from-a-large-openapi-document-or-using-newtonsoft-and-reso)
+Claude.ai had predicted that something called `OpenApiSchema` was a serializable JSON schema. It turns out that it isn't, so I had to go back to some old-fashioned searching on [StackOverflow]([TODO](https://stackoverflow.com/)). My search turned up the following question, [Get the JSON Schema's from a large OpenAPI Document OR using NewtonSoft and resolve refs](https://stackoverflow.com/questions/71960630/get-the-json-schemas-from-a-large-openapi-document-or-using-newtonsoft-and-reso). The accepted answer had the following code (slightly abbreviated for this post).
 
 ```csharp
-using (FileStream fs = File.Open(file.FullName, FileMode.Open));
+var reader = new OpenApiStreamReader();
+var result = 
+    await reader.ReadAsync(new FileStream(file.FullName, FileMode.Open));
 
-var openApiDocument = 
-    new OpenApiStreamReader().Read(fs, out var diagnostic);
-
-foreach (var schema in openApiDocument.Components.Schemas)
+foreach (var schemaEntry in result.OpenApiDocument.Components.Schemas)
 {
-    var schemaName = schema.Key;
-    var schemaContent = schema.Value;
+    var schemaFileName = schemaEntry.Key + ".json";
+    var outputPath = 
+        Path.Combine(outputDir, schemaFileName + "-Schema.json");
 
-    // <snip>
+    using FileStream? fileStream = 
+        new FileStream(outputPath, FileMode.CreateNew);
+    using var writer = new StreamWriter(fileStream);
 
-    var outputString = 
-        schemaContent.Serialize(
-            OpenApiSpecVersion.OpenApi3_0, OpenApiFormat.Json);
+    var writerSettings = 
+        new OpenApiWriterSettings() 
+        { 
+            InlineLocalReferences = true, 
+            InlineExternalReferences = true 
+        };
 
-    // <snip>
+    schemaEntry.Value.SerializeAsV2WithoutReference(
+        new OpenApiJsonWriter(writer, writerSettings));
 }
 ```
 
-But how did I get to?
-
-```csharp
-private static void SerializeSchema(
-    KeyValuePair<string, OpenApiSchema> schemaEntry, string outputPath)
-{
-    FileStream fileStream;
-    StreamWriter writer;
-
-    fileStream = new FileStream(outputPath, FileMode.CreateNew);
-    var writerSettings = new OpenApiWriterSettings() { InlineLocalReferences = true, InlineExternalReferences = true };
-    writer = new StreamWriter(fileStream);
-    schemaEntry.Value.SerializeAsV2WithoutReference(new OpenApiJsonWriter(writer, writerSettings));
-}
-```
-
-Read further in the article!
+TODO
 
 ## Links
 
