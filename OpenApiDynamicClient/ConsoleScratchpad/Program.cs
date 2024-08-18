@@ -16,7 +16,7 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
-        await NJsonSchemaValidator1();
+        //await NJsonSchemaValidator1();
 
         //await ExportComponentSchemas();
 
@@ -24,8 +24,57 @@ internal class Program
 
         //await InvokeOpenApiClientAsync();
 
+        await UseOpenApiSchemaValidatorAsync();
+
         Console.WriteLine("Hit return to exit...");
         Console.ReadLine();
+    }
+
+    private static async Task UseOpenApiSchemaValidatorAsync()
+    {
+        var petJson = """
+            {
+                "id": 0,
+                "category": {
+                    "id": 0,
+                    "name": "string"
+                },
+                "name": "doggie",
+                "photoUrls": [
+                    "string"
+                ],
+                "tags": [
+                    {
+                        "id": 0,
+                        "name": "string"
+                    }
+                ],
+                "status": "available"
+            }
+            """;
+
+        // What we wanted to do
+        //var validator =
+        //    await OpenApiSchemaValidator(
+        //        new FileStream("petstore.swagger.json", FileMode.Open));
+
+        var validator =
+            await OpenApiSchemaValidator.CreateAsync(
+                new FileStream("petstore.swagger.json", FileMode.Open));
+
+        var validationResult =
+            validator.ValidateRequestBodyJson(operationId: "addPet", bodyJson: petJson);
+
+        if (validationResult.IsValid)
+        {
+            Console.WriteLine("Request JSON is valid");
+        }
+        else
+        {
+            Console.WriteLine(
+                $"Request JSON had the following errors: \n- " +
+                $"{string.Join("\n- ", validationResult.Errors)}");
+        }
     }
 
     private static async Task InvokeOpenApiClientAsync()
@@ -106,19 +155,19 @@ internal class Program
             }
             var outputPath = Path.Combine(outputDir, schemaFileName + "-Schema.json");
 
-            SerializeSchema(schemaEntry, outputPath);
+            using var fileStream = new FileStream(outputPath, FileMode.CreateNew);
+            using var writer = new StreamWriter(fileStream);
+
+            var writerSettings =
+                new OpenApiWriterSettings()
+                {
+                    InlineLocalReferences = true,
+                    InlineExternalReferences = true
+                };
+
+            schemaEntry.Value.SerializeAsV2WithoutReference(
+                new OpenApiJsonWriter(writer, writerSettings));
         }
-    }
-
-    private static void SerializeSchema(KeyValuePair<string, OpenApiSchema> schemaEntry, string outputPath)
-    {
-        FileStream fileStream;
-        StreamWriter writer;
-
-        fileStream = new FileStream(outputPath, FileMode.CreateNew);
-        var writerSettings = new OpenApiWriterSettings() { InlineLocalReferences = true, InlineExternalReferences = true };
-        writer = new StreamWriter(fileStream);
-        schemaEntry.Value.SerializeAsV2WithoutReference(new OpenApiJsonWriter(writer, writerSettings));
     }
 
     private static async Task NJsonSchemaValidator1()

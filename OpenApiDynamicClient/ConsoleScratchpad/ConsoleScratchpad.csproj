@@ -98,6 +98,8 @@
     <Compile Include="JsonXmlPropertyRemover.cs" />
     <Compile Include="NJsonSchemaValidator2.cs" />
     <Compile Include="NJsonSchemaValidator1.cs" />
+    <Compile Include="OpenApiSchemaValidationResult.cs" />
+    <Compile Include="OpenApiSchemaValidator.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

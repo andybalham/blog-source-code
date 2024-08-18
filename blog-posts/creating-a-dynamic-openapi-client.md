@@ -3,6 +3,7 @@
 - [Creating a Dynamic OpenAPI Client](#creating-a-dynamic-openapi-client)
   - [The road to the Microsoft.OpenApi library](#the-road-to-the-microsoftopenapi-library)
   - [Getting Claude.ai's code to work](#getting-claudeais-code-to-work)
+  - [Creating my OpenApiSchemaValidator](#creating-my-openapischemavalidator)
   - [Links](#links)
 
 Recently, I needed to integrate a system that generates raw JSON with an external API. Usefully, I had an OpenAPI specification for the API. [OpenAPI](https://swagger.io/specification/) is a specification for machine-readable interface files for describing, producing, consuming, and visualising RESTful web services. It is also well-known as its previous name of Swagger. You can see and interact with an example specification via the online [Swagger Editor](https://editor.swagger.io/).
@@ -108,36 +109,117 @@ The problem lied with the following line.
 var schemaData = JsonConvert.SerializeObject(openApiSchema);
 ```
 
-Claude.ai had predicted that something called `OpenApiSchema` was a serializable JSON schema. It turns out that it isn't, so I had to go back to some old-fashioned searching on [StackOverflow]([TODO](https://stackoverflow.com/)). My search turned up the following question, [Get the JSON Schema's from a large OpenAPI Document OR using NewtonSoft and resolve refs](https://stackoverflow.com/questions/71960630/get-the-json-schemas-from-a-large-openapi-document-or-using-newtonsoft-and-reso). The accepted answer had the following code (slightly abbreviated for this post).
+Claude.ai had predicted that something called `OpenApiSchema` was a serializable JSON schema. It turns out that it isn't, so I had to go back to some old-fashioned searching on [StackOverflow](https://stackoverflow.com/). My search turned up the following question, [Get the JSON Schema's from a large OpenAPI Document OR using NewtonSoft and resolve refs](https://stackoverflow.com/questions/71960630/get-the-json-schemas-from-a-large-openapi-document-or-using-newtonsoft-and-reso). The accepted answer had the following code (slightly abbreviated for this post).
 
 ```csharp
 var reader = new OpenApiStreamReader();
-var result = 
+var result =
     await reader.ReadAsync(new FileStream(file.FullName, FileMode.Open));
 
 foreach (var schemaEntry in result.OpenApiDocument.Components.Schemas)
 {
     var schemaFileName = schemaEntry.Key + ".json";
-    var outputPath = 
+    var outputPath =
         Path.Combine(outputDir, schemaFileName + "-Schema.json");
 
-    using FileStream? fileStream = 
-        new FileStream(outputPath, FileMode.CreateNew);
+    using var fileStream = new FileStream(outputPath, FileMode.CreateNew);
     using var writer = new StreamWriter(fileStream);
 
-    var writerSettings = 
-        new OpenApiWriterSettings() 
-        { 
-            InlineLocalReferences = true, 
-            InlineExternalReferences = true 
+    var writerSettings =
+        new OpenApiWriterSettings()
+        {
+            InlineLocalReferences = true,
+            InlineExternalReferences = true
         };
 
-    schemaEntry.Value.SerializeAsV2WithoutReference(
-        new OpenApiJsonWriter(writer, writerSettings));
+    schemaEntry.Value
+        .SerializeAsV2WithoutReference(
+            new OpenApiJsonWriter(writer, writerSettings));
 }
 ```
 
+Sure enough, when I ran this code against the Petstore OpenAPI document, it successfully created the following schema files:
+
+![List of exported JSON schemas](exported-schema-file-list.png)
+
+Opening up `User.json-Schema.json`, I could see that the contents looked promising too.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "format": "int64",
+      "type": "integer"
+    },
+    "petId": {
+      "format": "int64",
+      "type": "integer"
+    },
+    "quantity": {
+      "format": "int32",
+      "type": "integer"
+    },
+    "shipDate": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "status": {
+      "description": "Order Status",
+      "enum": ["placed", "approved", "delivered"],
+      "type": "string"
+    },
+    "complete": {
+      "type": "boolean"
+    }
+  },
+  "xml": {
+    "name": "Order"
+  }
+}
+```
+
+The key here was the use of the `SerializeAsV2WithoutReference` method with the `OpenApiJsonWriter` and `OpenApiWriterSettings`. Together they control how an `OpenApiSchema` instance is serialized. In this case, we want to inline all references to get a self-contained schema.
+
+```csharp
+var writerSettings =
+    new OpenApiWriterSettings()
+    {
+        InlineLocalReferences = true,
+        InlineExternalReferences = true
+    };
+
+schemaEntry.Value
+    .SerializeAsV2WithoutReference(
+        new OpenApiJsonWriter(writer, writerSettings));
+```
+
+Now I had a way of extracting the schemas, I could move on to my ultimate aim of using them to validate my dynamically-created requests.
+
+## Creating my OpenApiSchemaValidator
+
 TODO
+
+```csharp
+var validator = 
+    new OpenApiSchemaValidator(
+        new FileStream("petstore.swagger.json", FileMode.Open));
+
+var validationResult = 
+    await validator.ValidateOperationBodyAsync(
+        operationId: "addPet", bodyJson: petJson);
+
+if (validationResult.IsValid)
+{
+    Console.WriteLine("Request JSON is valid");
+}
+else
+{
+    Console.WriteLine(
+        $"Request JSON had the following errors - " +
+        $"{string.Join(", ", validationResult.Errors)}");
+}
+```
 
 ## Links
 
