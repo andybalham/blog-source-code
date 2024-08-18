@@ -62,8 +62,11 @@ internal class Program
             await OpenApiSchemaValidator.CreateAsync(
                 new FileStream("petstore.swagger.json", FileMode.Open));
 
+        //var validationResult =
+        //    validator.ValidateRequestBodyJson(operationId: "addPet", bodyJson: petJson);
+
         var validationResult =
-            validator.ValidateRequestBodyJson(operationId: "addPet", bodyJson: petJson);
+            validator.ValidateRequestBodyJson(operationId: "addPet", bodyJson: "{}");
 
         if (validationResult.IsValid)
         {
@@ -84,7 +87,8 @@ internal class Program
 
         var petStoreBaseUrl = "https://petstore.swagger.io/v2";
 
-        var petStoreClient = OpenApiClient.Create(petStoreOpenApiStream, petStoreBaseUrl);
+        var petStoreClient = 
+            OpenApiClient.Create(petStoreOpenApiStream, petStoreBaseUrl);
 
         var petJson = """
             {
