@@ -153,7 +153,7 @@ internal class Program
         var petStoreDomain = "https://petstore.swagger.io";
 
         var petStoreClient =
-            OpenApiClientV2.Create(petStoreOpenApiJson, new Uri(petStoreDomain));
+           await OpenApiClientV2.CreateAsync(petStoreOpenApiJson, new Uri(petStoreDomain));
 
         var petJson = """
             {
@@ -176,17 +176,17 @@ internal class Program
             }
             """;
 
-        var addPetResponse = await petStoreClient.PerformAsync("addPet", [("body", petJson)]);
-        Console.WriteLine(JsonConvert.SerializeObject(addPetResponse, Formatting.Indented));
+        //var addPetResponse = await petStoreClient.PerformAsync("addPet", [("body", petJson)]);
+        //LogResponse(addPetResponse);
 
-        var invalidAddPetResponse = await petStoreClient.PerformAsync("addPet", [("body", "{}")]);
-        Console.WriteLine(JsonConvert.SerializeObject(invalidAddPetResponse, Formatting.Indented));
+        //var invalidAddPetResponse = await petStoreClient.PerformAsync("addPet", [("body", "{}")]);
+        //LogResponse(invalidAddPetResponse);
 
-        //var getPetByIdResponse = 
-        //    await petStoreClient.PerformAsync("getPetById", [("petId", "1")]);
-        //LogResponse(getPetByIdResponse);
+        var getPetByIdResponse =
+            await petStoreClient.PerformAsync("getPetById", [("petId", "2")]);
+        LogResponse(getPetByIdResponse);
 
-        //var invalidGetPetByIdResponse1 = 
+        //var invalidGetPetByIdResponse1 =
         //    await petStoreClient.PerformAsync("getPetById", []);
         //LogResponse(invalidGetPetByIdResponse1);
 
@@ -204,12 +204,12 @@ internal class Program
         //LogResponse(defaultFindPetsByStatusResponse);
 
         //var unknownPetStoreClient =
-        //    OpenApiClientV2.Create(
-        //        new FileStream("petstore.swagger.json", FileMode.Open),
-        //        "https://xxx-petstore.swagger.io");
+        //    await OpenApiClientV2.CreateAsync(
+        //        petStoreOpenApiJson, new Uri("https://xxx-petstore.swagger.io"));
 
-        //var unknownGetPetByIdResponse = await unknownPetStoreClient.PerformAsync("getPetById", [("petId", "0")]);
-        //Console.WriteLine(JsonConvert.SerializeObject(unknownGetPetByIdResponse, Formatting.Indented));
+        //var unknownGetPetByIdResponse = 
+        //    await unknownPetStoreClient.PerformAsync("getPetById", [("petId", "0")]);
+        //LogResponse(unknownGetPetByIdResponse);
 
         static void LogResponse(JsonResponse response)
         {

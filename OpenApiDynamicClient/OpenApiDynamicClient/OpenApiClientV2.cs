@@ -1,7 +1,11 @@
 ﻿using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Readers;
+using Microsoft.OpenApi.Writers;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NJsonSchema;
+using NJsonSchema.Validation;
 using RestSharp;
 using System;
 using System.Collections.Generic;
@@ -38,7 +42,7 @@ public class OpenApiClientV2
 
     #region Public
 
-    public static OpenApiClientV2 Create(string openApiJson, Uri domainUri)
+    public static async Task<OpenApiClientV2> CreateAsync(string openApiJson, Uri domainUri)
     {
         using var openApiJsonStream =
             new MemoryStream(Encoding.UTF8.GetBytes(openApiJson));
@@ -48,7 +52,7 @@ public class OpenApiClientV2
 
         AssertNoOpenApiErrors(openApiDiagnostic);
 
-        var clientOperations = GetClientOperations(openApiDocument);
+        var clientOperations = await BuildClientOperationsAsync(openApiDocument);
 
         var basePath = SelectBasePath(openApiJson); // basePath not in OpenApiDocument
         var baseUri = new Uri(domainUri, basePath);
@@ -79,7 +83,7 @@ public class OpenApiClientV2
 
     #region Private
 
-    private static IDictionary<string, ClientOperation> GetClientOperations(
+    private static async Task<IDictionary<string, ClientOperation>> BuildClientOperationsAsync(
         OpenApiDocument openApiDocument)
     {
         var clientOperations = new Dictionary<string, ClientOperation>();
@@ -94,6 +98,10 @@ public class OpenApiClientV2
                         Operation = operation.Value,
                         OperationType = operation.Key,
                         Path = path.Key,
+                        RequestBodyRequired = 
+                            operation.Value.RequestBody?.Required ?? false,
+                        RequestBodyJsonSchema = 
+                            await GetRequestBodyJsonSchemaAsync(operation.Value.RequestBody),
                     };
 
                 clientOperations.Add(operation.Value.OperationId, clientOperation);
@@ -101,6 +109,41 @@ public class OpenApiClientV2
         }
 
         return clientOperations;
+    }
+
+    private static async Task<JsonSchema> GetRequestBodyJsonSchemaAsync(
+        OpenApiRequestBody requestBody)
+    {
+        if (requestBody != null 
+            && requestBody.Content.TryGetValue("application/json", out var mediaType))
+        {
+            var schemaData = SerializeOpenApiSchema(mediaType.Schema);
+            var jsonSchema = await JsonSchema.FromJsonAsync(schemaData);
+            return jsonSchema;
+        }
+        
+        return null;
+    }
+
+    private static string SerializeOpenApiSchema(OpenApiSchema schema)
+    {
+        using var memoryStream = new MemoryStream();
+        using (var writer = new StreamWriter(memoryStream))
+        {
+            var writerSettings =
+                new OpenApiWriterSettings()
+                {
+                    InlineLocalReferences = true,
+                    InlineExternalReferences = true,
+                };
+
+            schema.SerializeAsV2WithoutReference(
+                new OpenApiJsonWriter(writer, writerSettings));
+        }
+
+        var schemaJson = Encoding.UTF8.GetString(memoryStream.ToArray());
+
+        return schemaJson;
     }
 
     private async Task<JsonResponse> PerformClientOperationAsync(
@@ -119,11 +162,12 @@ public class OpenApiClientV2
 
         if (parameterErrors.Count > 0)
         {
-            return new JsonResponse
-            {
-                IsSuccessful = false,
-                FailureReasons = parameterErrors,
-            };
+            return 
+                new JsonResponse
+                {
+                    IsSuccessful = false,
+                    FailureReasons = parameterErrors,
+                };
         }
 
         // TODO: Add security headers via delegates
@@ -142,7 +186,7 @@ public class OpenApiClientV2
         return jsonResponse;
     }
 
-    private void SetBodyParameter(
+    private static void SetBodyParameter(
         ClientOperation clientOperation,
         IEnumerable<(string, string)> parameters,
         RestRequest restRequest,
@@ -150,9 +194,7 @@ public class OpenApiClientV2
     {
         if (clientOperation.Operation.RequestBody != null)
         {
-            var bodyValue =
-                GetBodyValue(
-                    clientOperation.Operation.RequestBody, parameters, out var errors);
+            var bodyValue = GetBodyValue(clientOperation, parameters, out var errors);
 
             if (errors.Any())
             {
@@ -174,7 +216,7 @@ public class OpenApiClientV2
         foreach (var openApiParameter in clientOperation.Operation.Parameters)
         {
             var parameterValues =
-                GetParameterValues(openApiParameter, parameters, out var errors);
+                GetNonBodyParameterValues(openApiParameter, parameters, out var errors);
 
             if (errors.Any())
             {
@@ -182,21 +224,81 @@ public class OpenApiClientV2
             }
             else
             {
-                SetParameterValues(
+                SetNonBodyParameterValues(
                     openApiParameter, parameterValues, restRequest, parameterErrors);
             }
         }
     }
 
-    private string GetBodyValue(
-        OpenApiRequestBody requestBody, 
+    private static string GetBodyValue(
+        ClientOperation clientOperation, 
         IEnumerable<(string, string)> parameters, 
         out IEnumerable<string> errors)
     {
-        throw new NotImplementedException();
+        var bodyValues =
+            parameters
+                .Where(p => p.Item1 == "body")
+                .Select(p => p.Item2);
+
+        if (clientOperation.RequestBodyJsonSchema == null)
+        {
+            errors = [$"{clientOperation.Operation.OperationId} does not consume JSON"];
+            return null;
+        }
+
+        if (clientOperation.RequestBodyRequired && bodyValues.Count() == 0)
+        {
+            errors = [$"body parameter is required"];
+            return null;
+        }
+        
+        if (bodyValues.Count() > 1)
+        {
+            errors = [$"Multiple body parameters found"];
+            return null;
+        }
+
+        try
+        {
+            var bodyJson = bodyValues.First();
+            var bodyJsonToken = JToken.Parse(bodyJson);
+            var bodySchemaErrors = 
+                clientOperation.RequestBodyJsonSchema.Validate(bodyJsonToken);
+
+            if (bodySchemaErrors.Count() > 0)
+            {
+                errors = GetSchemaErrorSummaries(bodySchemaErrors);
+                return null;
+            }
+
+            errors = [];
+            return bodyJson;
+        }
+        catch (JsonReaderException ex)
+        {
+            errors = [$"Unable to parse body JSON: {ex.Message}"];
+            return null;
+        }
     }
 
-    private static void SetParameterValues(
+    private static IEnumerable<string> GetSchemaErrorSummaries(
+        ICollection<ValidationError> schemaErrors)
+    {
+        var schemaErrorSummaries =
+            schemaErrors
+                .Select(se =>
+                    new {
+                        se.Property,
+                        se.Path,
+                        Kind = se.Kind.ToString(),
+                    })
+                .Select(se =>
+                    $"body parameter error: {JsonConvert.SerializeObject(se)}");
+
+        return schemaErrorSummaries;
+    }
+
+    private static void SetNonBodyParameterValues(
         OpenApiParameter openApiParameter,
         IEnumerable<string> parameterValues,
         RestRequest restRequest,
@@ -268,7 +370,7 @@ public class OpenApiClientV2
         restRequest.AddUrlSegment(openApiParameter.Name, parameterValues.First());
     }
 
-    private static IEnumerable<string> GetParameterValues(
+    private static IEnumerable<string> GetNonBodyParameterValues(
         OpenApiParameter openApiParameter, 
         IEnumerable<(string, string)> parameters,
         out IEnumerable<string> validationErrors)
@@ -283,8 +385,7 @@ public class OpenApiClientV2
 
         if (parameterValues.Count() == 0 && defaultParameterValue != null)
         {
-            var defaultOpenApiString = (OpenApiString)defaultParameterValue;
-            parameterValues = [defaultOpenApiString.Value];
+            parameterValues = [((OpenApiString)defaultParameterValue).Value];
         }
 
         if (openApiParameter.Required && parameterValues.Count() == 0)
