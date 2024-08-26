@@ -1,4 +1,5 @@
-﻿using Microsoft.OpenApi.Models;
+﻿using Microsoft.OpenApi.Any;
+using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Readers;
 using Newtonsoft.Json.Linq;
 using RestSharp;
@@ -61,14 +62,17 @@ public class OpenApiClientV2
     {
         if (_clientOperations.TryGetValue(operationId, out var clientOperation))
         {
-            return await PerformClientOperationAsync(clientOperation, parameters);
+            var jsonResponse = 
+                await PerformClientOperationAsync(clientOperation, parameters);
+            return jsonResponse;
         }
 
-        return new JsonResponse
-        {
-            IsSuccessful = false,
-            FailureReasons = [$"Invalid operation id: {operationId}"],
-        };
+        return 
+            new JsonResponse
+            {
+                IsSuccessful = false,
+                FailureReasons = [$"Invalid operation id: {operationId}"],
+            };
     }
 
     #endregion
@@ -80,7 +84,21 @@ public class OpenApiClientV2
     {
         var clientOperations = new Dictionary<string, ClientOperation>();
 
-        // TODO
+        foreach (var path in openApiDocument.Paths)
+        {
+            foreach (var operation in path.Value.Operations)
+            {
+                var clientOperation =
+                    new ClientOperation
+                    {
+                        Operation = operation.Value,
+                        OperationType = operation.Key,
+                        Path = path.Key,
+                    };
+
+                clientOperations.Add(operation.Value.OperationId, clientOperation);
+            }
+        }
 
         return clientOperations;
     }
@@ -95,38 +113,18 @@ public class OpenApiClientV2
 
         var parameterErrors = new List<string>();
 
-        // TODO: Look at a method with 'out var errors' here
-        foreach (var openApiParameter in clientOperation.Operation.Parameters)
+        SetNonBodyParameters(clientOperation, parameters, restRequest, parameterErrors);
+
+        SetBodyParameter(clientOperation, parameters, restRequest, parameterErrors);
+
+        if (parameterErrors.Count > 0)
         {
-            var parameterValues =
-                GetParameterValues(openApiParameter, parameters, out var errors);
-
-            if (errors.Any())
+            return new JsonResponse
             {
-                parameterErrors.AddRange(errors);
-                continue;
-            }
-
-            SetParameterValues(openApiParameter, parameterValues, restRequest);
+                IsSuccessful = false,
+                FailureReasons = parameterErrors,
+            };
         }
-
-        if (clientOperation.Operation.RequestBody != null)
-        {
-            var bodyValue =
-                GetBodyValue(
-                    clientOperation.Operation.RequestBody, parameters, out var errors);
-
-            if (errors.Any())
-            {
-                parameterErrors.AddRange(errors);
-            }
-            else
-            {
-                restRequest.AddStringBody(bodyValue, ContentType.Json);
-            }
-        }
-
-        // TODO: Assert no parameter errors
 
         // TODO: Add security headers via delegates
 
@@ -144,6 +142,52 @@ public class OpenApiClientV2
         return jsonResponse;
     }
 
+    private void SetBodyParameter(
+        ClientOperation clientOperation,
+        IEnumerable<(string, string)> parameters,
+        RestRequest restRequest,
+        List<string> parameterErrors)
+    {
+        if (clientOperation.Operation.RequestBody != null)
+        {
+            var bodyValue =
+                GetBodyValue(
+                    clientOperation.Operation.RequestBody, parameters, out var errors);
+
+            if (errors.Any())
+            {
+                parameterErrors.AddRange(errors);
+            }
+            else
+            {
+                restRequest.AddStringBody(bodyValue, ContentType.Json);
+            }
+        }
+    }
+
+    private static void SetNonBodyParameters(
+        ClientOperation clientOperation,
+        IEnumerable<(string, string)> parameters,
+        RestRequest restRequest,
+        List<string> parameterErrors)
+    {
+        foreach (var openApiParameter in clientOperation.Operation.Parameters)
+        {
+            var parameterValues =
+                GetParameterValues(openApiParameter, parameters, out var errors);
+
+            if (errors.Any())
+            {
+                parameterErrors.AddRange(errors);
+            }
+            else
+            {
+                SetParameterValues(
+                    openApiParameter, parameterValues, restRequest, parameterErrors);
+            }
+        }
+    }
+
     private string GetBodyValue(
         OpenApiRequestBody requestBody, 
         IEnumerable<(string, string)> parameters, 
@@ -155,9 +199,73 @@ public class OpenApiClientV2
     private static void SetParameterValues(
         OpenApiParameter openApiParameter,
         IEnumerable<string> parameterValues,
+        RestRequest restRequest,
+        List<string> parameterErrors)
+    {
+        switch (openApiParameter.In)
+        {
+            case ParameterLocation.Header:
+                AddHeaderParameter(
+                    openApiParameter, parameterValues, restRequest, parameterErrors);
+                break;
+            case ParameterLocation.Path:
+                AddPathParameter(
+                    openApiParameter, parameterValues, restRequest, parameterErrors);
+                break;
+            case ParameterLocation.Query:
+                AddQueryParameters(openApiParameter, parameterValues, restRequest);
+                break;
+            default:
+                parameterErrors.Add(
+                    $"{openApiParameter.Name} parameter has an unsupported In value " +
+                    $"{openApiParameter.In}");
+                break;
+        }
+    }
+
+    private static void AddQueryParameters(
+        OpenApiParameter openApiParameter,
+        IEnumerable<string> parameterValues,
         RestRequest restRequest)
     {
-        throw new NotImplementedException();
+        // FUTURE: Package according to the collectionFormat (not in OpenApiParameter)
+
+        foreach (var parameterValue in parameterValues)
+        {
+            restRequest.AddQueryParameter(openApiParameter.Name, parameterValue);
+        }
+    }
+
+    private static void AddHeaderParameter(
+        OpenApiParameter openApiParameter,
+        IEnumerable<string> parameterValues,
+        RestRequest restRequest,
+        List<string> parameterErrors)
+    {
+        if (parameterValues.Count() > 1)
+        {
+            parameterErrors.Add(
+                $"{openApiParameter.Name} header parameter has multiple values");
+            return;
+        }
+
+        restRequest.AddHeader(openApiParameter.Name, parameterValues.First());
+    }
+
+    private static void AddPathParameter(
+        OpenApiParameter openApiParameter,
+        IEnumerable<string> parameterValues,
+        RestRequest restRequest,
+        List<string> parameterErrors)
+    {
+        if (parameterValues.Count() > 1)
+        {
+            parameterErrors.Add(
+                $"{openApiParameter.Name} path parameter has multiple values");
+            return;
+        }
+
+        restRequest.AddUrlSegment(openApiParameter.Name, parameterValues.First());
     }
 
     private static IEnumerable<string> GetParameterValues(
@@ -165,7 +273,30 @@ public class OpenApiClientV2
         IEnumerable<(string, string)> parameters,
         out IEnumerable<string> validationErrors)
     {
-        throw new NotImplementedException();
+        var errors = new List<string>();
+
+        var parameterValues =
+            parameters
+                .Where(p => p.Item1 == openApiParameter.Name).Select(p => p.Item2);
+
+        var defaultParameterValue = openApiParameter.Schema?.Items?.Default;
+
+        if (parameterValues.Count() == 0 && defaultParameterValue != null)
+        {
+            var defaultOpenApiString = (OpenApiString)defaultParameterValue;
+            parameterValues = [defaultOpenApiString.Value];
+        }
+
+        if (openApiParameter.Required && parameterValues.Count() == 0)
+        {
+            errors.Add($"{openApiParameter.Name} parameter is required");
+        }
+
+        // TODO: Validate against the declared type
+
+        validationErrors = errors;
+
+        return parameterValues;
     }
 
     private static JsonResponse GetJsonResponse(RestResponse restResponse)
@@ -231,5 +362,83 @@ public class OpenApiClientV2
         }
     }
 
+    #endregion
+
+    #region From Claude.ai
+
+    public static bool ValidateParameterValue(string value, OpenApiParameter parameter)
+    {
+        try
+        {
+            // Get the parameter schema
+            var schema = parameter.Schema;
+
+            // Validate the value based on the parameter type
+            switch (schema.Type)
+            {
+                case "string":
+                    return ValidateStringParameter(value, schema);
+                case "integer":
+                    return int.TryParse(value, out _);
+                case "number":
+                    return double.TryParse(value, out _);
+                case "boolean":
+                    return bool.TryParse(value, out _);
+                case "array":
+                    return ValidateArrayParameter(value, schema);
+                default:
+                    return false;
+            }
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    private static bool ValidateStringParameter(string value, OpenApiSchema schema)
+    {
+        if (schema.Pattern != null)
+        {
+            return System.Text.RegularExpressions.Regex.IsMatch(value, schema.Pattern);
+        }
+
+        if (schema.MinLength.HasValue && value.Length < schema.MinLength.Value)
+        {
+            return false;
+        }
+
+        if (schema.MaxLength.HasValue && value.Length > schema.MaxLength.Value)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool ValidateArrayParameter(string value, OpenApiSchema schema)
+    {
+        try
+        {
+            // Split the string into an array
+            var items = value.Split(',');
+
+            // Validate each item in the array
+            foreach (var item in items)
+            {
+                if (!ValidateParameterValue(
+                    item.Trim(), new OpenApiParameter { Schema = schema.Items }))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
     #endregion
 }

@@ -142,14 +142,13 @@ internal class Program
 
         var unknownGetPetByIdResponse = await unknownPetStoreClient.PerformAsync("getPetById", [("petId", "0")]);
         Console.WriteLine(JsonConvert.SerializeObject(unknownGetPetByIdResponse, Formatting.Indented));
-
     }
 
     private static async Task InvokeOpenApiClientV2Async()
     {
         var petStoreOpenApiJson =
             File.ReadAllText("petstore.swagger.json");
-            //File.ReadAllText("invalid.swagger.json");
+        //File.ReadAllText("invalid.swagger.json");
 
         var petStoreDomain = "https://petstore.swagger.io";
 
@@ -177,26 +176,32 @@ internal class Program
             }
             """;
 
-        //var addPetResponse = await petStoreClient.PerformAsync("addPet", [("body", petJson)]);
-        //Console.WriteLine(JsonConvert.SerializeObject(addPetResponse, Formatting.Indented));
+        var addPetResponse = await petStoreClient.PerformAsync("addPet", [("body", petJson)]);
+        Console.WriteLine(JsonConvert.SerializeObject(addPetResponse, Formatting.Indented));
 
-        //var invalidAddPetResponse = await petStoreClient.PerformAsync("addPet", [("body", "{}")]);
-        //Console.WriteLine(JsonConvert.SerializeObject(invalidAddPetResponse, Formatting.Indented));
+        var invalidAddPetResponse = await petStoreClient.PerformAsync("addPet", [("body", "{}")]);
+        Console.WriteLine(JsonConvert.SerializeObject(invalidAddPetResponse, Formatting.Indented));
 
-        var getPetByIdResponse = await petStoreClient.PerformAsync("getPetById", [("petId", "0")]);
-        Console.WriteLine(JsonConvert.SerializeObject(getPetByIdResponse, Formatting.Indented));
+        //var getPetByIdResponse = 
+        //    await petStoreClient.PerformAsync("getPetById", [("petId", "1")]);
+        //LogResponse(getPetByIdResponse);
 
-        //var invalidGetPetByIdResponse = await petStoreClient.PerformAsync("getPetById", []);
-        //Console.WriteLine(JsonConvert.SerializeObject(invalidGetPetByIdResponse, Formatting.Indented));
+        //var invalidGetPetByIdResponse1 = 
+        //    await petStoreClient.PerformAsync("getPetById", []);
+        //LogResponse(invalidGetPetByIdResponse1);
+
+        //var invalidGetPetByIdResponse2 =
+        //    await petStoreClient.PerformAsync("getPetById", [("petId", "0"), ("petId", "616")]);
+        //LogResponse(invalidGetPetByIdResponse2);
 
         //var findPetsByStatusResponse =
         //    await petStoreClient.PerformAsync(
         //        "findPetsByStatus", [("status", "available"), ("status", "pending")]);
-        //Console.WriteLine(JsonConvert.SerializeObject(findPetsByStatusResponse, Formatting.Indented));
+        //LogResponse(findPetsByStatusResponse);
 
         //var defaultFindPetsByStatusResponse =
         //    await petStoreClient.PerformAsync("findPetsByStatus", []);
-        //Console.WriteLine(JsonConvert.SerializeObject(defaultFindPetsByStatusResponse, Formatting.Indented));
+        //LogResponse(defaultFindPetsByStatusResponse);
 
         //var unknownPetStoreClient =
         //    OpenApiClientV2.Create(
@@ -205,6 +210,11 @@ internal class Program
 
         //var unknownGetPetByIdResponse = await unknownPetStoreClient.PerformAsync("getPetById", [("petId", "0")]);
         //Console.WriteLine(JsonConvert.SerializeObject(unknownGetPetByIdResponse, Formatting.Indented));
+
+        static void LogResponse(JsonResponse response)
+        {
+            Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+        }
     }
 
     private static async Task ExportComponentSchemas()

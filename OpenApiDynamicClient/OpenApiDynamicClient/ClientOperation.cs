@@ -9,9 +9,9 @@ namespace OpenApiDynamicClient;
 
 internal class ClientOperation // TODO: Change the name?
 {
-    public OpenApiOperation Operation { get; }
-    public OperationType OperationType { get; }
-    public string Path { get; }
+    public OpenApiOperation Operation { get; set; }
+    public OperationType OperationType { get; set; }
+    public string Path { get; set; }
     // Request schema?
     // Response schemas by response?
     // HasRequestBody?
