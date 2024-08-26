@@ -16,26 +16,27 @@ using NJsonSchema;
 using Newtonsoft.Json;
 using Microsoft.OpenApi.Any;
 using NJsonSchema.Validation;
+using System.Net;
 
 namespace OpenApiDynamicClient;
 
-public class OpenApiClient  
+public class OpenApiClientV1  
 {
     private readonly OpenApiDocument _openApiDocument;
     private readonly RestClient _client;
 
-    private OpenApiClient(OpenApiDocument openApiDocument, string baseUrl)
+    private OpenApiClientV1(OpenApiDocument openApiDocument, string baseUrl)
     {
         _openApiDocument = openApiDocument;
         _client = new RestClient(baseUrl);
     }
 
-    public static OpenApiClient Create(Stream openApiStream, string baseUrl)
+    public static OpenApiClientV1 Create(Stream openApiStream, string baseUrl)
     {
         var openApiDocument =
             new OpenApiStreamReader().Read(openApiStream, out var diagnostic);
 
-        return new OpenApiClient(openApiDocument, baseUrl);
+        return new OpenApiClientV1(openApiDocument, baseUrl);
     }
 
     public async Task<JsonResponse> PerformAsync(
@@ -44,7 +45,7 @@ public class OpenApiClient
     {
         var operationPath =
             _openApiDocument.Paths
-                .FirstOrDefault(p => 
+                .FirstOrDefault(p =>
                     p.Value.Operations.Any(o => o.Value.OperationId == operationId));
 
         if (operationPath.Value == null)
@@ -52,7 +53,7 @@ public class OpenApiClient
             return new JsonResponse
             {
                 IsSuccessful = false,
-                FailureReason = $"Invalid operation id: {operationId}",
+                FailureReasons = [$"Invalid operation id: {operationId}"],
             };
         }
 
@@ -66,7 +67,7 @@ public class OpenApiClient
 
         foreach (var openApiParameter in operation.Value.Parameters)
         {
-            var parameterValues = 
+            var parameterValues =
                 parameters
                     .Where(p => p.Item1 == openApiParameter.Name).Select(p => p.Item2);
 
@@ -78,7 +79,7 @@ public class OpenApiClient
 
             if (openApiParameter.Required && parameterValues.Count() == 0)
             {
-                parameterErrors.Add($"{openApiParameter.Name} is required");
+                parameterErrors.Add($"{openApiParameter.Name} parameter is required");
                 continue;
             }
 
@@ -103,7 +104,7 @@ public class OpenApiClient
                     break;
                 default:
                     parameterErrors.Add(
-                        $"{openApiParameter.Name} has an unsupported In value " +
+                        $"{openApiParameter.Name} parameter has an unsupported In value " +
                         $"{openApiParameter.In}");
                     break;
             }
@@ -118,11 +119,11 @@ public class OpenApiClient
 
             if (operation.Value.RequestBody.Required && bodyValues.Count() == 0)
             {
-                parameterErrors.Add($"body is required");
+                parameterErrors.Add($"body parameter is required");
             }
             else if (bodyValues.Count() > 1)
             {
-                parameterErrors.Add($"multiple body values");
+                parameterErrors.Add($"Multiple body parameters found");
             }
             else if (operation.Value.RequestBody.Content.TryGetValue(
                         "application/json", out var mediaType))
@@ -140,7 +141,8 @@ public class OpenApiClient
                     if (bodySchemaErrors.Count() > 0)
                     {
                         parameterErrors.Add(
-                            $"body has errors {GetSchemaErrorSummary(bodySchemaErrors)}");
+                            $"body parameter has errors " +
+                            $"{GetSchemaErrorSummary(bodySchemaErrors)}");
                     }
                     else
                     {
@@ -152,8 +154,8 @@ public class OpenApiClient
                     return new JsonResponse
                     {
                         IsSuccessful = false,
-                        FailureReason =
-                            $"Unable to parse body JSON: {ex.Message}",
+                        FailureReasons =
+                            [$"Unable to parse body JSON: {ex.Message}"],
                     };
                 }
             }
@@ -162,8 +164,8 @@ public class OpenApiClient
                 return new JsonResponse
                 {
                     IsSuccessful = false,
-                    FailureReason =
-                        $"body does not support application/json",
+                    FailureReasons =
+                        [$"body does not support application/json"],
                 };
             }
         }
@@ -173,8 +175,7 @@ public class OpenApiClient
             return new JsonResponse
             {
                 IsSuccessful = false,
-                FailureReason = 
-                    $"Parameter validation failed: {string.Join(", ", parameterErrors)}",
+                FailureReasons = parameterErrors,
             };
         }
 
@@ -189,14 +190,25 @@ public class OpenApiClient
 
         // TODO: If the response does not match the declared schema, what should we do?
 
-        // TODO: If the response.ResponseStatus was Error, then add more detail to the response
+        HttpStatusCode? httpStatusCode =
+            response.ResponseStatus == ResponseStatus.Completed
+                ? response.StatusCode 
+                : null;
+
+        IEnumerable<string> failureReasons =
+            response.ResponseStatus == ResponseStatus.Completed
+                ? []
+                : response.ErrorException?.InnerException == null
+                    ? [response.ErrorMessage]
+                    : [response.ErrorException.InnerException.Message];
 
         return new JsonResponse
         {
             IsSuccessful = response.IsSuccessful,
-            HttpStatusCode = response.StatusCode,
-            ResponseStatus = response.ResponseStatus.ToString(),
-            Body = response.Content,
+            HttpResponseStatus = response.ResponseStatus.ToString(),
+            HttpStatusCode = httpStatusCode,
+            FailureReasons = failureReasons,
+            BodyJson = response.Content,
         };
     }
 
@@ -234,7 +246,7 @@ public class OpenApiClient
         return schemaJson;
     }
 
-    private Method GetMethod(OperationType operationType) => 
+    private static Method GetMethod(OperationType operationType) => 
         operationType switch
         {
             OperationType.Get => Method.Get,

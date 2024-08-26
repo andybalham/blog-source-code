@@ -97,13 +97,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="OpenApiClient.cs" />
-    <Compile Include="JsonRequest.cs" />
-    <Compile Include="IResponseMapper.cs" />
-    <Compile Include="IRequestMapper.cs" />
+    <Compile Include="ClientOperation.cs" />
+    <Compile Include="OpenApiClientV1.cs" />
     <Compile Include="JsonResponse.cs" />
+    <Compile Include="OpenApiClientV2.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ApiParameter.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

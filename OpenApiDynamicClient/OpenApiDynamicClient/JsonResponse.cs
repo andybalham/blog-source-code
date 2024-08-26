@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace OpenApiDynamicClient;
 
-public class JsonResponse
+public record JsonResponse
 {
-    public bool IsSuccessful { get; set; }
-    public HttpStatusCode? HttpStatusCode { get; set; }
-    public string ResponseStatus { get; set; }
-    public string Body { get; set; }
-    public string FailureReason { get; internal set; }
+    public bool IsSuccessful { get; internal set; }
+    public string HttpResponseStatus { get; internal set; }
+    public HttpStatusCode? HttpStatusCode { get; internal set; }
+    public string BodyJson { get; internal set; }
+    public IEnumerable<string> FailureReasons { get; internal set; }
 }

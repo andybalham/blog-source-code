@@ -8,7 +8,7 @@
 
 Recently, I needed to integrate an internal system that generates JSON with a third-party API. Usefully, I had an OpenAPI specification for the API in question. [OpenAPI](https://swagger.io/specification/) is a specification for machine-readable interface files for describing, producing, consuming, and visualising RESTful web services. It is also well-known as its previous name of Swagger. You can see and interact with an example specification via the online [Swagger Editor](https://editor.swagger.io/).
 
-The specification includes definitions of the objects used by the API. For example, in the [Petstore](https://petstore.swagger.io/) example the method to add a pet has a payload that takes a `Pet` object as a its payload.
+The specification includes definitions of the objects used by the API. In the [Petstore](https://petstore.swagger.io/) example, the method to add a pet has a payload that takes a `Pet` object as a its payload.
 
 ```yaml
 Pet:
@@ -62,7 +62,7 @@ using JsonDocument doc = JsonDocument.Parse(swaggerJson);
                       {
 ```
 
-It occurred to me that my prompt was not broad enough. I was assuming a certain solution. So instead, I tried a higher level request.
+It occurred to me that my prompt was not high-level enough. I was assuming a certain solution. So instead, I tried the following request.
 
 > I am using .NET Framework and C#. I have a Swagger definition for an API. How can I extract the JSON Schema for the request and response body for each operation in the definition?
 
@@ -94,7 +94,7 @@ foreach (var path in openApiDocument.Paths)
 
 ## Getting Claude.ai's code to work
 
-This was great, but it only had one snag. It didn't work. When I tried running the code I got the following exception.
+This was great, but it only had one flaw. It didn't work. When I tried running the code I got the following exception.
 
 ```text
 Newtonsoft.Json.JsonSerializationException
@@ -103,7 +103,7 @@ Newtonsoft.Json.JsonSerializationException
   Source=Newtonsoft.Json
 ```
 
-The problem lied with the following line.
+The exceptioin occurred on the following line.
 
 ```csharp
 var schemaData = JsonConvert.SerializeObject(openApiSchema);
@@ -140,9 +140,9 @@ foreach (var schemaEntry in result.OpenApiDocument.Components.Schemas)
 
 Sure enough, when I ran this code against the Petstore OpenAPI document, it successfully created the following schema files:
 
-![List of exported JSON schemas](exported-schema-file-list.png)
+![List of exported JSON schemas](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/openapi-posts/exported-schema-file-list.png?raw=true)
 
-Opening up `User.json-Schema.json`, I could see that the contents looked promising too.
+Opening up `User.json-Schema.json`, I could see that the contents looked to my eye like a valid JSON schema.
 
 ```json
 {
@@ -198,16 +198,16 @@ Now I had a way of extracting the schemas, I could move on to my ultimate aim of
 
 ## Creating my OpenApiSchemaValidator
 
-As I mentioned in my [Designing a CDK State Machine Builder](https://www.10printiamcool.com/designing-a-cdk-state-machine-builder-part-1) post, I like to build software using an API-first approach. That is, before jumping into the component implementation, I imagine it exists and write the code the calling code. This allows me to quickly iterate over the external API until it feels it has the right level of expression.
+As I mentioned in my [Designing a CDK State Machine Builder](https://www.10printiamcool.com/designing-a-cdk-state-machine-builder-part-1) post, I like to build software using an API-first approach. That is, before jumping into the component implementation, I imagine it exists and write the code the calling code. This allows me to quickly iterate over the external API until it feels it has the right level of expression and abstraction.
 
-With this in mind, I imagined a `OpenApiSchemaValidator` class and then iterated until I got the following code.
+With this in mind, I imagined a `OpenApiSchemaValidator` class and then iterated on the calling code until I got the following.
 
 ```csharp
-var validator = 
+var validator =
     new OpenApiSchemaValidator(
         new FileStream("petstore.swagger.json", FileMode.Open));
 
-var validationResult = 
+var validationResult =
     validator.ValidateRequestBodyJson(
         operationId: "addPet", bodyJson: petJson);
 
@@ -219,9 +219,9 @@ else
         $"{string.Join("\n- ", validationResult.Errors)}");
 ```
 
-I decided to split the creation of `OpenApiSchemaValidator` from the method call, as that would allow the creation to process the OpenAPI document and avoid this static overhead on each validation call.
+I decided to split the creation of `OpenApiSchemaValidator` from the method call. This would allow the creation of the instance to process the OpenAPI document and avoid this static overhead on each validation call.
 
-However, when I dived int the implementation, I had to make a small change. I was using the [NJsonSchema for .NET](https://github.com/RicoSuter/NJsonSchema?tab=readme-ov-file#njsonschema-for-net) library to validate the JSON requests against the JSON schemas. However, the method to parse the JSON schema was `async`. So I could not have this in a constructor and had to have an `async` factory method instead.
+However, when I dived int the implementation, I had to make a small change. I was using the [NJsonSchema for .NET](https://github.com/RicoSuter/NJsonSchema?tab=readme-ov-file#njsonschema-for-net) NuGet package to validate the JSON requests against the JSON schemas. It turned out that the method to parse the JSON schema was `async`. Since I could not have this in a constructor, I had to have an `async` factory method instead.
 
 ```csharp
 var validator =
@@ -314,19 +314,18 @@ Request JSON had the following errors:
 
 ## Summary
 
-Thanks to Claude.ai and StackOverflow, I was able to implement the functionality I wanted, in a class only 95 lines long. The key piece of information was the existence of the [Microsoft.OpenApi namespace](https://learn.microsoft.com/en-us/dotnet/api/microsoft.openapi). This did all the heavy lifting of reading the OpenApi document and outputting the request schemas as JSON schemas. From there, it was straightforward to use [NJsonSchema](https://github.com/RicoSuter/NJsonSchema?tab=readme-ov-file#njsonschema-for-net) to do the validation.
+Thanks to Claude.ai and StackOverflow, I was able to implement the functionality I wanted, in a class only 95 lines long. The key piece of information was the existence of the [Microsoft.OpenApi namespace](https://learn.microsoft.com/en-us/dotnet/api/microsoft.openapi). This did all the heavy lifting of reading the OpenApi document and outputting the request schemas as JSON schemas. From there, it was straightforward to use [NJsonSchema](https://github.com/RicoSuter/NJsonSchema?tab=readme-ov-file#njsonschema-for-net) to do the validation. The resulting OpenApiSchemaValidator class can be found on GitHub [here](https://github.com/andybalham/blog-source-code/blob/master/OpenApiDynamicClient/ConsoleScratchpad/OpenApiSchemaValidator.cs).
 
-Now that I had a way of reading the OpenAPI document, I realised that I could do more with it than just validating request bodies. An OpenAPI document include the paths, parameters, and more for each endpoint. I asked myself, would it be possible to build a dynamic OpenAPI client that I could use as follows?
+Now that I had a way of reading the OpenAPI document, I realised that I could do more with it than just validating request bodies. An OpenAPI document includes the paths, parameters, and more for each endpoint. I asked myself, would it be possible to build a dynamic OpenAPI client that I could use as follows?
 
 ```csharp
-var petStoreClient = 
+var petStoreClient =
     await OpenApiClient.CreateAsync(
         new FileStream("petstore.swagger.json", FileMode.Open),
         "https://petstore.swagger.io/v2");
 
-var getPetByIdResponse = 
+var getPetByIdResponse =
     await petStoreClient.PerformAsync("getPetById", [("petId", "0")]);
 ```
 
 One for another post I think.
-****

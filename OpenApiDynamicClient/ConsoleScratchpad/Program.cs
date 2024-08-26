@@ -22,9 +22,11 @@ internal class Program
 
         //await NJsonSchemaValidator2();
 
-        //await InvokeOpenApiClientAsync();
+        //await InvokeOpenApiClientV1Async();
 
-        await UseOpenApiSchemaValidatorAsync();
+        await InvokeOpenApiClientV2Async();
+
+        //await UseOpenApiSchemaValidatorAsync();
 
         Console.WriteLine("Hit return to exit...");
         Console.ReadLine();
@@ -80,15 +82,16 @@ internal class Program
         }
     }
 
-    private static async Task InvokeOpenApiClientAsync()
+    private static async Task InvokeOpenApiClientV1Async()
     {
         var petStoreOpenApiStream =
             new FileStream("petstore.swagger.json", FileMode.Open);
+            //new FileStream("invalid.swagger.json", FileMode.Open);
 
         var petStoreBaseUrl = "https://petstore.swagger.io/v2";
 
         var petStoreClient = 
-            OpenApiClient.Create(petStoreOpenApiStream, petStoreBaseUrl);
+            OpenApiClientV1.Create(petStoreOpenApiStream, petStoreBaseUrl);
 
         var petJson = """
             {
@@ -131,6 +134,77 @@ internal class Program
         //var defaultFindPetsByStatusResponse =
         //    await petStoreClient.PerformAsync("findPetsByStatus", []);
         //Console.WriteLine(JsonConvert.SerializeObject(defaultFindPetsByStatusResponse, Formatting.Indented));
+
+        var unknownPetStoreClient =
+            OpenApiClientV1.Create(
+                new FileStream("petstore.swagger.json", FileMode.Open), 
+                "https://xxx-petstore.swagger.io/v2");
+
+        var unknownGetPetByIdResponse = await unknownPetStoreClient.PerformAsync("getPetById", [("petId", "0")]);
+        Console.WriteLine(JsonConvert.SerializeObject(unknownGetPetByIdResponse, Formatting.Indented));
+
+    }
+
+    private static async Task InvokeOpenApiClientV2Async()
+    {
+        var petStoreOpenApiJson =
+            File.ReadAllText("petstore.swagger.json");
+            //File.ReadAllText("invalid.swagger.json");
+
+        var petStoreDomain = "https://petstore.swagger.io";
+
+        var petStoreClient =
+            OpenApiClientV2.Create(petStoreOpenApiJson, new Uri(petStoreDomain));
+
+        var petJson = """
+            {
+                "id": 0,
+                "category": {
+                    "id": 0,
+                    "name": "string"
+                },
+                "name": "doggie",
+                "photoUrls": [
+                    "string"
+                ],
+                "tags": [
+                    {
+                        "id": 0,
+                        "name": "string"
+                    }
+                ],
+                "status": "available"
+            }
+            """;
+
+        //var addPetResponse = await petStoreClient.PerformAsync("addPet", [("body", petJson)]);
+        //Console.WriteLine(JsonConvert.SerializeObject(addPetResponse, Formatting.Indented));
+
+        //var invalidAddPetResponse = await petStoreClient.PerformAsync("addPet", [("body", "{}")]);
+        //Console.WriteLine(JsonConvert.SerializeObject(invalidAddPetResponse, Formatting.Indented));
+
+        var getPetByIdResponse = await petStoreClient.PerformAsync("getPetById", [("petId", "0")]);
+        Console.WriteLine(JsonConvert.SerializeObject(getPetByIdResponse, Formatting.Indented));
+
+        //var invalidGetPetByIdResponse = await petStoreClient.PerformAsync("getPetById", []);
+        //Console.WriteLine(JsonConvert.SerializeObject(invalidGetPetByIdResponse, Formatting.Indented));
+
+        //var findPetsByStatusResponse =
+        //    await petStoreClient.PerformAsync(
+        //        "findPetsByStatus", [("status", "available"), ("status", "pending")]);
+        //Console.WriteLine(JsonConvert.SerializeObject(findPetsByStatusResponse, Formatting.Indented));
+
+        //var defaultFindPetsByStatusResponse =
+        //    await petStoreClient.PerformAsync("findPetsByStatus", []);
+        //Console.WriteLine(JsonConvert.SerializeObject(defaultFindPetsByStatusResponse, Formatting.Indented));
+
+        //var unknownPetStoreClient =
+        //    OpenApiClientV2.Create(
+        //        new FileStream("petstore.swagger.json", FileMode.Open),
+        //        "https://xxx-petstore.swagger.io");
+
+        //var unknownGetPetByIdResponse = await unknownPetStoreClient.PerformAsync("getPetById", [("petId", "0")]);
+        //Console.WriteLine(JsonConvert.SerializeObject(unknownGetPetByIdResponse, Formatting.Indented));
     }
 
     private static async Task ExportComponentSchemas()
