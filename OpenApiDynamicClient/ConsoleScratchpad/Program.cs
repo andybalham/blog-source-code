@@ -176,23 +176,27 @@ internal class Program
             }
             """;
 
-        //var addPetResponse = await petStoreClient.PerformAsync("addPet", [("body", petJson)]);
-        //LogResponse(addPetResponse);
+        var addPetResponse = await petStoreClient.PerformAsync("addPet", [("body", petJson)]);
+        LogResponse(addPetResponse);
 
-        //var invalidAddPetResponse = await petStoreClient.PerformAsync("addPet", [("body", "{}")]);
-        //LogResponse(invalidAddPetResponse);
+        var invalidAddPetResponse = await petStoreClient.PerformAsync("addPet", [("body", "{}")]);
+        LogResponse(invalidAddPetResponse);
 
         var getPetByIdResponse =
             await petStoreClient.PerformAsync("getPetById", [("petId", "2")]);
         LogResponse(getPetByIdResponse);
 
-        //var invalidGetPetByIdResponse1 =
-        //    await petStoreClient.PerformAsync("getPetById", []);
-        //LogResponse(invalidGetPetByIdResponse1);
+        var invalidGetPetByIdResponse1 =
+            await petStoreClient.PerformAsync("getPetById", []);
+        LogResponse(invalidGetPetByIdResponse1);
 
-        //var invalidGetPetByIdResponse2 =
-        //    await petStoreClient.PerformAsync("getPetById", [("petId", "0"), ("petId", "616")]);
-        //LogResponse(invalidGetPetByIdResponse2);
+        var invalidGetPetByIdResponse2 =
+            await petStoreClient.PerformAsync("getPetById", [("petId", "0"), ("petId", "616")]);
+        LogResponse(invalidGetPetByIdResponse2);
+
+        var invalidGetPetByIdResponse3 =
+            await petStoreClient.PerformAsync("getPetById", [("petId", "Banana")]);
+        LogResponse(invalidGetPetByIdResponse3);
 
         //var findPetsByStatusResponse =
         //    await petStoreClient.PerformAsync(
@@ -202,6 +206,11 @@ internal class Program
         //var defaultFindPetsByStatusResponse =
         //    await petStoreClient.PerformAsync("findPetsByStatus", []);
         //LogResponse(defaultFindPetsByStatusResponse);
+
+        var invalidPetsByStatusResponse =
+            await petStoreClient.PerformAsync(
+                "findPetsByStatus", [("status", "apple"), ("status", "banana")]);
+        LogResponse(invalidPetsByStatusResponse);
 
         //var unknownPetStoreClient =
         //    await OpenApiClientV2.CreateAsync(

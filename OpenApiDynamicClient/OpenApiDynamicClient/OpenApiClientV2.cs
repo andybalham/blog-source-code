@@ -14,6 +14,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -174,12 +175,7 @@ public class OpenApiClientV2
 
         var restResponse = await _restClient.ExecuteAsync(restRequest);
 
-        /* TODO:
-         * If there is a response, map to declared responses
-         * If there is a response object, validate the response against the schema
-         */
-
-        // TODO: If the response does not match the declared schema, what should we do?
+        // FUTURE: Use the OpenAPI document to validate the response
 
         var jsonResponse = GetJsonResponse(restResponse);
 
@@ -393,7 +389,15 @@ public class OpenApiClientV2
             errors.Add($"{openApiParameter.Name} parameter is required");
         }
 
-        // TODO: Validate against the declared type
+        foreach (var parameterValue in parameterValues)
+        {
+            if (!ValidateParameterValue(parameterValue, openApiParameter))
+            {
+                errors.Add(
+                    $"{openApiParameter.Name} parameter value is invalid " +
+                    $"'{parameterValue}'");
+            }
+        }
 
         validationErrors = errors;
 
@@ -463,45 +467,43 @@ public class OpenApiClientV2
         }
     }
 
-    #endregion
-
-    #region From Claude.ai
-
     public static bool ValidateParameterValue(string value, OpenApiParameter parameter)
     {
-        try
-        {
-            // Get the parameter schema
-            var schema = parameter.Schema;
+        var schema = parameter.Schema;
 
-            // Validate the value based on the parameter type
-            switch (schema.Type)
-            {
-                case "string":
-                    return ValidateStringParameter(value, schema);
-                case "integer":
-                    return int.TryParse(value, out _);
-                case "number":
-                    return double.TryParse(value, out _);
-                case "boolean":
-                    return bool.TryParse(value, out _);
-                case "array":
-                    return ValidateArrayParameter(value, schema);
-                default:
-                    return false;
-            }
-        }
-        catch (Exception)
+        /* FUTURE: How far do we go in validating the parameters? Mixed type support?
+         * https://swagger.io/docs/specification/data-models/data-types/
+            public decimal? Maximum { get; set; }
+            public bool? ExclusiveMaximum { get; set; }
+            public decimal? Minimum { get; set; }
+            public bool? ExclusiveMinimum { get; set; }
+            public decimal? MultipleOf { get; set; }
+            */
+
+        return schema.Type switch
         {
-            return false;
-        }
+            "string" => ValidateStringParameter(value, schema),
+            "integer" => int.TryParse(value, out _),
+            "number" => double.TryParse(value, out _),
+            "boolean" => bool.TryParse(value, out _),
+            "array" => ValidateParameterValue(
+                value, new OpenApiParameter { Schema = schema.Items }),
+            _ => true,
+        };
     }
 
     private static bool ValidateStringParameter(string value, OpenApiSchema schema)
     {
+        if (schema.Enum != null)
+        {
+            return schema.Enum.Contains(new OpenApiString(value));
+        }
+
         if (schema.Pattern != null)
         {
-            return System.Text.RegularExpressions.Regex.IsMatch(value, schema.Pattern);
+            // Mitigate against ReDOS (Regular Expression Denial of Service)
+            var safePattern = LimitGreedyQuantifiers(schema.Pattern);
+            return Regex.IsMatch(value, safePattern);
         }
 
         if (schema.MinLength.HasValue && value.Length < schema.MinLength.Value)
@@ -517,29 +519,42 @@ public class OpenApiClientV2
         return true;
     }
 
-    private static bool ValidateArrayParameter(string value, OpenApiSchema schema)
+    public static string LimitGreedyQuantifiers(string pattern, int limit = 1000)
     {
-        try
-        {
-            // Split the string into an array
-            var items = value.Split(',');
+        // FUTURE: Add parameters collection to ClientOperation class with safe patterns
 
-            // Validate each item in the array
-            foreach (var item in items)
+        if (string.IsNullOrEmpty(pattern))
+            return pattern;
+
+        // Replace unbounded greedy quantifiers with bounded ones
+        string safePattern = 
+            Regex.Replace(pattern, @"(\*|\+)(?!\?)(?!\{)", m =>
             {
-                if (!ValidateParameterValue(
-                    item.Trim(), new OpenApiParameter { Schema = schema.Items }))
+                return m.Value switch
                 {
-                    return false;
-                }
-            }
+                    "*" => $"{{0,{limit}}}",
+                    "+" => $"{{1,{limit}}}",
+                    _ => m.Value,
+                };
+            });
 
-            return true;
-        }
-        catch (Exception)
-        {
-            return false;
-        }
+        // Replace existing bounded quantifiers that exceed the limit
+        safePattern = 
+            Regex.Replace(safePattern, @"\{(\d+),?\s*(\d+)?\}", m =>
+            {
+                int min = int.Parse(m.Groups[1].Value);
+                int max = m.Groups[2].Success ? int.Parse(m.Groups[2].Value) : int.MaxValue;
+
+                if (max > limit)
+                {
+                    return $"{{{min},{limit}}}";
+                }
+
+                return m.Value;
+            });
+
+        return safePattern;
     }
+
     #endregion
 }
