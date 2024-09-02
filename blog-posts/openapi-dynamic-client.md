@@ -1,5 +1,7 @@
 # Using Microsoft.OpenApiReader to create a dynamic client
 
+[microsoft / kiota](https://github.com/microsoft/kiota)
+
 The key here is what is the interesting thing about developing the client?
 
 - Is it exploring the OpenApiReader?
@@ -21,14 +23,18 @@ Talk about how to invert the OpenApi document to index by `operationId` and not 
   "paths": {
     // ...
     "/pet/{petId}": {
-      "get": { 
-        "operationId": "getPetById",
+      "get": {
+        "operationId": "getPetById"
         // ...
       },
-      "post": { /* ... */ },
-      "delete": { /* ... */ }
+      "post": {
+        /* ... */
+      },
+      "delete": {
+        /* ... */
+      }
     }
-  }    
+  }
 }
 ```
 
@@ -45,4 +51,3 @@ class ClientOperation { // Name?
   // IsRequestBodyRequired?
 }
 ```
-
