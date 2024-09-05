@@ -103,7 +103,7 @@ Newtonsoft.Json.JsonSerializationException
   Source=Newtonsoft.Json
 ```
 
-The exceptioin occurred on the following line.
+The exception occurred on the following line.
 
 ```csharp
 var schemaData = JsonConvert.SerializeObject(openApiSchema);

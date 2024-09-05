@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace OpenApiDynamicClient;
 
-internal class ClientOperation
+internal record ClientOperation
 {
     public OpenApiOperation Operation { get; set; }
     public OperationType OperationType { get; set; }
