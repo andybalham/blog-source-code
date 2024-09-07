@@ -161,6 +161,8 @@ public class OpenApiClientV2
 
         SetBodyParameter(clientOperation, parameters, restRequest, parameterErrors);
 
+        // FUTURE: Allow additional headers to be added, if not part of the specification
+
         if (parameterErrors.Count > 0)
         {
             return 
@@ -170,8 +172,6 @@ public class OpenApiClientV2
                     FailureReasons = parameterErrors,
                 };
         }
-
-        // TODO: Add security headers via delegates
 
         var restResponse = await _restClient.ExecuteAsync(restRequest);
 

@@ -31,23 +31,22 @@ class ClientOperation { // Name?
 }
 ```
 
----------------------------
+---
 
-In my [previous post]([TOO](https://www.10printiamcool.com/validating-json-requests-using-c-and-openapiswagger)), I discovered the [Microsoft.OpenApi](https://github.com/microsoft/OpenAPI.NET) packages and used them to extract JSON schemas from an Open API document.
+In my [previous post](<[TOO](https://www.10printiamcool.com/validating-json-requests-using-c-and-openapiswagger)>), I discovered the [Microsoft.OpenApi](https://github.com/microsoft/OpenAPI.NET) packages and used them to extract JSON schemas from an Open API document.
 
 At the end of that post, I pondered if it would be possible to build on my experience to create a client that could be used as follows.
 
 ```csharp
 var petStoreClient =
     await OpenApiClient.CreateAsync(
-        new FileStream("petstore.swagger.json", FileMode.Open),
-        "https://petstore.swagger.io/v2");
+        File.ReadAllText("petstore.swagger.json"), "https://petstore.swagger.io");
 
 var getPetByIdResponse =
     await petStoreClient.PerformAsync("getPetById", [("petId", "0")]);
 ```
 
-Now there are many good options for creating static clients, which according to Claude.ai include:
+Now, there are many good options for creating static clients. According to [Claude.ai](TODO), these include:
 
 1. Swagger Codegen
 
@@ -81,8 +80,7 @@ Although I would probably go down the static route for a production system, I wa
 
 Following the [Fred Brooks adage](https://en.wikiquote.org/wiki/Fred_Brooks) of 'plan to throw one away; you will, anyhow', I started by creating a rough and ready prototype which can be found [here](https://github.com/andybalham/blog-source-code/blob/master/OpenApiDynamicClient/OpenApiDynamicClient/OpenApiClientV1.cs).
 
-What I noticed when developing this, was that an OpenAPI document is organised around paths and the methods that can be used with them.
-
+What I noticed when developing this, was that an OpenAPI document is organised around paths and, within those paths, the methods that can be used.
 
 ```jsonc
 {
@@ -105,7 +103,7 @@ What I noticed when developing this, was that an OpenAPI document is organised a
 }
 ```
 
-However, my desired API is based around operations. As a result, the prototype code had to go back up and down the hierarchy to get the details required.
+However, my desired API is based around operations and not paths. As a result, the prototype code had to go back up and down the hierarchy to get the details required. This resulted in quite a bit of code like the following.
 
 ```csharp
 var operationPath =
@@ -118,7 +116,7 @@ var operation =
         .FirstOrDefault(o => o.Value.OperationId == operationId);
 ```
 
-So, on the second time through TOFO
+So, on the second time through I had the client pre-process the OpenAPI document and build a dictionary of operations.
 
 ```csharp
 internal record ClientOperation
@@ -133,12 +131,113 @@ internal record ClientOperation
 private readonly IDictionary<string, ClientOperation> _clientOperations
 ```
 
+This simplified verifying the operation id and delegating down to perform it.
+
+```csharp
+public async Task<JsonResponse> PerformAsync(
+    string operationId,
+    IEnumerable<(string, string)> parameters)
+{
+    if (_clientOperations.TryGetValue(operationId, out var clientOperation))
+    {
+        var jsonResponse =
+            await PerformClientOperationAsync(clientOperation, parameters);
+        return jsonResponse;
+    }
+
+    // <snip>
+}
+```
 
 ## Chapter 2
 
-## Chapter 3
+The original 'perform' method quickly got overly long, weighing in at over 150 lines. However, that did enable me to understand the steps that were required. Pre-armed with this knowledge, my second try was much cleaner.
 
-## Chapter 4
+```csharp
+private async Task<JsonResponse> PerformClientOperationAsync(
+    ClientOperation clientOperation,
+    IEnumerable<(string, string)> parameters)
+{
+    var restRequest =
+        new RestRequest(
+            clientOperation.Path, GetMethod(clientOperation.OperationType));
+
+    var parameterErrors = new List<string>();
+
+    SetNonBodyParameters(clientOperation, parameters, restRequest, parameterErrors);
+
+    SetBodyParameter(clientOperation, parameters, restRequest, parameterErrors);
+
+    if (parameterErrors.Count > 0)
+    {
+        return
+            new JsonResponse
+            {
+                IsSuccessful = false,
+                FailureReasons = parameterErrors,
+            };
+    }
+
+    var restResponse = await _restClient.ExecuteAsync(restRequest);
+
+    var jsonResponse = GetJsonResponse(restResponse);
+
+    return jsonResponse;
+}
+```
+
+Here we can clearly see how we use the OpenAPI details to prepare the `RestRequest` instance. First to set the path and the method, then to set the parameters as defined by the OpenAPI document. The parameters are validated as they are set, recording any errors in the collection that is then inspected before the request is executed.
+
+The final step is to package the response from `RestSharp` into our own `JsonResponse` class. This keeps the outside code decoupled from the `RestSharp` package.
+
+## RestSharp simplified development
+
+`RestSharp` made the client development straightforward. In particular, the `AddUrlSegment` method allowed me to set the path parameters without having to worry about any string parsing or encoding.
+
+```csharp
+private static void AddPathParameter(
+    OpenApiParameter openApiParameter,
+    IEnumerable<string> parameterValues,
+    RestRequest restRequest,
+    List<string> parameterErrors)
+{
+    if (parameterValues.Count() > 1)
+    {
+        parameterErrors.Add(
+            $"{openApiParameter.Name} path parameter has multiple values");
+        return;
+    }
+
+    restRequest.AddUrlSegment(openApiParameter.Name, parameterValues.First());
+}
+```
+
+It was a similar situation for the other types of parameters. I could write my code without worrying about encodings.
+
+## OpenApiDocument doesn't contain all properties
+
+One thing that did become apparent during development, was that the `OpenApiDocument` implementation does not contain all possible OpenAPI properties. For example, the `basePath` property is specified in the Petstore example:
+
+![Swagger definition with baseUrl highlighted](swagger-with-baseurl-highlighted.png)
+
+However, when inspecting the `OpenApiDocument` instance, it was nowhere to be seen:
+
+![Quick Watch showing no baseUrl in OpenApiDocument](quick-watch-showing-no-baseurl-in-openapi-document.png)
+
+As a result, I had to add a `SelectBasePath` method that parsed the OpenAPI document JSON and extracted the value.
+
+```csharp
+public static async Task<OpenApiClientV2> CreateAsync(string openApiJson, Uri domainUri)
+{
+    // <snip>
+
+    var basePath = SelectBasePath(openApiJson); // basePath not in OpenApiDocument
+    var baseUri = new Uri(domainUri, basePath);
+
+    return new OpenApiClientV2(clientOperations, baseUri);
+}
+```
+
+This wasn't a big deal, but is something to be aware of if you are using `OpenApiDocument`. Another example is `collectionFormat`, which specifies how a collection of parameters is packaged.
 
 ## Chapter 5
-
