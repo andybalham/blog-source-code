@@ -38,12 +38,12 @@ public class HybridOpenApiClient
         if (response.HttpStatusCode.HasValue)
         {
             throw new OpenApiException(
-                $"{operationId} received {(int)response.HttpStatusCode} {response.HttpStatusCode}: " +
+                $"{operationId} received {(int)response.HttpStatusCode}: " +
                 $"{string.Join(", ", response.FailureReasons)}");
         }
 
         throw new OpenApiException(
-            $"{operationId}: " +
+            $"{operationId} failed: " +
             $"{string.Join(", ", response.FailureReasons)}",
             response.Exception);
     }

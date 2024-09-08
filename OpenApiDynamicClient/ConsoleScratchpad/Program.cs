@@ -46,8 +46,15 @@ internal class Program
         //await client.AddPetAsync(new Pet());
 
         var pet = await client.GetPetByIdAsync(2999);
+        LogResponse(pet);
 
         var pets = await client.FindPetsByStatusAsync([Anonymous.Sold]);
+        LogResponse(pets);
+
+        static void LogResponse(object response)
+        {
+            Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+        }
     }
 
     private static async Task InvokeGeneratedOpenApiClientAsync()

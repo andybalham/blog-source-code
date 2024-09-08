@@ -210,7 +210,7 @@ public class OpenApiClientV2
 
         // FUTURE: Use the OpenAPI document to validate the response
 
-        var jsonResponse = GetJsonResponse(restResponse);
+        var jsonResponse = GetJsonResponse(clientOperation, restResponse);
 
         return jsonResponse;
     }
@@ -437,18 +437,20 @@ public class OpenApiClientV2
         return parameterValues;
     }
 
-    private static JsonResponse GetJsonResponse(RestResponse restResponse)
+    private static JsonResponse GetJsonResponse(
+        ClientOperation clientOperation,
+        RestResponse restResponse)
     {
         HttpStatusCode? httpStatusCode =
             restResponse.ResponseStatus == ResponseStatus.Completed
                 ? restResponse.StatusCode
                 : null;
 
-        // FUTURE: Add a failure reason for non-success HTTP status code
-
         IEnumerable<string> failureReasons =
             restResponse.ResponseStatus == ResponseStatus.Completed
-                ? []
+                ? restResponse.IsSuccessful
+                    ? []
+                    : [GetResponseDescription(restResponse.StatusCode, clientOperation)]
                 : restResponse.ErrorException?.InnerException == null
                     ? [restResponse.ErrorMessage]
                     : [restResponse.ErrorException.InnerException.Message];
@@ -465,6 +467,19 @@ public class OpenApiClientV2
             };
 
         return jsonResponse;
+    }
+
+    private static string GetResponseDescription(
+        HttpStatusCode statusCode,
+        ClientOperation clientOperation)
+    {
+        if (clientOperation.Operation.Responses.TryGetValue(
+            ((int)statusCode).ToString(), out var openApiResponse))
+        {
+            return openApiResponse.Description;
+        }
+        
+        return statusCode.ToString();
     }
 
     private static Method GetMethod(OperationType operationType) =>
