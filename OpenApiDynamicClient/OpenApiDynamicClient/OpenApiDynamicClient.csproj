@@ -37,11 +37,11 @@
     <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.8.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.OpenApi, Version=1.6.17.0, Culture=neutral, PublicKeyToken=3f5743946376f042, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.OpenApi.1.6.17\lib\netstandard2.0\Microsoft.OpenApi.dll</HintPath>
+    <Reference Include="Microsoft.OpenApi, Version=1.6.21.0, Culture=neutral, PublicKeyToken=3f5743946376f042, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.OpenApi.1.6.21\lib\netstandard2.0\Microsoft.OpenApi.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.OpenApi.Readers, Version=1.6.17.0, Culture=neutral, PublicKeyToken=3f5743946376f042, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.OpenApi.Readers.1.6.17\lib\netstandard2.0\Microsoft.OpenApi.Readers.dll</HintPath>
+    <Reference Include="Microsoft.OpenApi.Readers, Version=1.6.21.0, Culture=neutral, PublicKeyToken=3f5743946376f042, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.OpenApi.Readers.1.6.21\lib\netstandard2.0\Microsoft.OpenApi.Readers.dll</HintPath>
     </Reference>
     <Reference Include="Namotion.Reflection, Version=3.1.1.0, Culture=neutral, PublicKeyToken=c2f9c3bdfae56102, processorArchitecture=MSIL">
       <HintPath>..\packages\Namotion.Reflection.3.1.1\lib\net462\Namotion.Reflection.dll</HintPath>
@@ -55,8 +55,8 @@
     <Reference Include="NJsonSchema.Annotations, Version=11.0.2.0, Culture=neutral, PublicKeyToken=c2f9c3bdfae56102, processorArchitecture=MSIL">
       <HintPath>..\packages\NJsonSchema.Annotations.11.0.2\lib\net462\NJsonSchema.Annotations.dll</HintPath>
     </Reference>
-    <Reference Include="RestSharp, Version=111.4.1.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
-      <HintPath>..\packages\RestSharp.111.4.1\lib\net48\RestSharp.dll</HintPath>
+    <Reference Include="RestSharp, Version=112.0.0.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
+      <HintPath>..\packages\RestSharp.112.0.0\lib\net48\RestSharp.dll</HintPath>
     </Reference>
     <Reference Include="SharpYaml, Version=2.0.0.0, Culture=neutral, PublicKeyToken=1ced8108e942bc02, processorArchitecture=MSIL">
       <HintPath>..\packages\SharpYaml.2.1.1\lib\netstandard2.0\SharpYaml.dll</HintPath>
@@ -65,7 +65,11 @@
     <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
     </Reference>
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Diagnostics.DiagnosticSource, Version=8.0.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Diagnostics.DiagnosticSource.8.0.1\lib\net462\System.Diagnostics.DiagnosticSource.dll</HintPath>
+    </Reference>
     <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
     </Reference>

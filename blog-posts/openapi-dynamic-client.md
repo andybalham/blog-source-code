@@ -241,3 +241,30 @@ public static async Task<OpenApiClientV2> CreateAsync(string openApiJson, Uri do
 This wasn't a big deal, but is something to be aware of if you are using `OpenApiDocument`. Another example is `collectionFormat`, which specifies how a collection of parameters is packaged.
 
 ## Chapter 5
+
+TODO: Compare with statically-generated client
+
+![Adding a connected service in Visual Studio](adding-a-connected-service.png)
+
+![Connected service list](connected-service-list.png)
+
+TODO: Do we need the following?
+
+![Selecting a connected service](selecting-a-connected-service.png)
+
+![Adding a new OpenAPI service](adding-a-new-openapi-service.png)
+
+![Generated petstore classes](generated-petstore-classes.png)
+
+![Data annotations missing](data-annotations-missing.png)
+
+## Compare and contrast
+
+- `ApiException` and `WebException` vs `IsSuccessful`
+- Compile-time parameter checking vs runtime checking
+- For body validation, `JsonSerializationException` thrown vs schema errors
+- 
+
+## Links
+
+- [Generating HTTP API clients using Visual Studio Connected Services](https://devblogs.microsoft.com/dotnet/generating-http-api-clients-using-visual-studio-connected-services/)

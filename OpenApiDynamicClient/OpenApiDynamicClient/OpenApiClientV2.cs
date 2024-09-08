@@ -12,11 +12,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace OpenApiDynamicClient;
 
@@ -26,6 +24,9 @@ public class OpenApiClientV2
 
     private readonly IDictionary<string, ClientOperation> _clientOperations;
     private readonly RestClient _restClient;
+
+    public Action<JsonResponse> OnSuccess { get; set; }
+    public Action<JsonResponse> OnFailure { get; set; }
 
     #endregion
 
@@ -43,6 +44,8 @@ public class OpenApiClientV2
 
     #region Public
 
+    // TODO: How can we have a derived class? Would we want to have a derived class? No - Compose
+
     public static async Task<OpenApiClientV2> CreateAsync(string openApiJson, Uri domainUri)
     {
         using var openApiJsonStream =
@@ -55,6 +58,8 @@ public class OpenApiClientV2
 
         var clientOperations = await BuildClientOperationsAsync(openApiDocument);
 
+        // TODO: Get the host as well
+
         var basePath = SelectBasePath(openApiJson); // basePath not in OpenApiDocument
         var baseUri = new Uri(domainUri, basePath);
 
@@ -65,19 +70,34 @@ public class OpenApiClientV2
         string operationId,
         IEnumerable<(string, string)> parameters)
     {
+        JsonResponse response;
+
         if (_clientOperations.TryGetValue(operationId, out var clientOperation))
         {
-            var jsonResponse = 
+            response = 
                 await PerformClientOperationAsync(clientOperation, parameters);
-            return jsonResponse;
+        }
+        else
+        {
+            response =
+                new JsonResponse
+                {
+                    IsSuccessful = false,
+                    FailureReasons = [$"Invalid operation id: {operationId}"],
+                };
         }
 
-        return 
-            new JsonResponse
-            {
-                IsSuccessful = false,
-                FailureReasons = [$"Invalid operation id: {operationId}"],
-            };
+        if (response.IsSuccessful && OnSuccess != null)
+        {
+            OnSuccess(response);
+        }
+
+        if (!response.IsSuccessful && OnFailure != null)
+        {
+            OnFailure(response);
+        }
+
+        return response;
     }
 
     #endregion
@@ -425,7 +445,7 @@ public class OpenApiClientV2
                 HttpResponseStatus = restResponse.ResponseStatus.ToString(),
                 HttpStatusCode = httpStatusCode,
                 FailureReasons = failureReasons,
-                BodyJson = restResponse.Content,
+                Payload = restResponse.Content,
             };
 
         return jsonResponse;

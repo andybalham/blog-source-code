@@ -208,7 +208,7 @@ public class OpenApiClientV1
             HttpResponseStatus = response.ResponseStatus.ToString(),
             HttpStatusCode = httpStatusCode,
             FailureReasons = failureReasons,
-            BodyJson = response.Content,
+            Payload = response.Content,
         };
     }
 
