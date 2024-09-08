@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using OpenApiDynamicClient;
+﻿using OpenApiDynamicClient;
 using System;
 using System.Collections.Generic;
 using System.IO;
