@@ -205,7 +205,7 @@ public class OpenApiClientV1
         return new JsonResponse
         {
             IsSuccessful = response.IsSuccessful,
-            HttpResponseStatus = response.ResponseStatus.ToString(),
+            ResponseStatus = response.ResponseStatus.ToString(),
             HttpStatusCode = httpStatusCode,
             FailureReasons = failureReasons,
             Payload = response.Content,

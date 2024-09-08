@@ -9,8 +9,6 @@ using System.Threading.Tasks;
 
 namespace ConsoleScratchpad
 {
-    // TODO: How can we have a base DynamicClient? Would we want to?
-
     public class PetstoreDynamicClient
     {
         private readonly OpenApiClientV2 _client;
@@ -39,14 +37,18 @@ namespace ConsoleScratchpad
             return new PetstoreDynamicClient(client);
         }
 
-        private static void OnSuccess(JsonResponse response)
+        public static void OnSuccess(
+            string operationId,
+            IEnumerable<(string, string)> parameters,
+            JsonResponse response)
         {
-            // TODO: Add logging
         }
 
-        private static void OnFailure(JsonResponse response)
+        public static void OnFailure(
+            string operationId,
+            IEnumerable<(string, string)> parameters,
+            JsonResponse response)
         {
-            // TODO: Add logging and raise specific exception
             throw new Exception(string.Join("\n", response.FailureReasons));
         }
 
@@ -60,6 +62,8 @@ namespace ConsoleScratchpad
             return JsonConvert.DeserializeObject<T>(response.Payload, _serializerSettings);
         }
 
+        #region API operations
+
         public async Task AddPetAsync(Pet body)
         {
             await _client.PerformAsync("addPet", [("body", Serialize(body))]);
@@ -72,5 +76,7 @@ namespace ConsoleScratchpad
 
             return Deserialize<Pet>(response);
         }
+
+        #endregion
     }
 }

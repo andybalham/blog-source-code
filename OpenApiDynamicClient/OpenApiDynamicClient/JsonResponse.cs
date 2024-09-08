@@ -10,8 +10,9 @@ namespace OpenApiDynamicClient;
 public record JsonResponse
 {
     public bool IsSuccessful { get; internal set; }
-    public string HttpResponseStatus { get; internal set; }
+    public string ResponseStatus { get; internal set; }
     public HttpStatusCode? HttpStatusCode { get; internal set; }
     public string Payload { get; internal set; }
     public IEnumerable<string> FailureReasons { get; internal set; }
+    public Exception Exception { get; internal set; }
 }

@@ -132,6 +132,7 @@
     <Compile Include="OpenApiSchemaValidator.cs" />
     <Compile Include="OpenAPIs\petstore.swagger.cs" />
     <Compile Include="PetstoreDynamicClient.cs" />
+    <Compile Include="PetstoreHybridClient.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

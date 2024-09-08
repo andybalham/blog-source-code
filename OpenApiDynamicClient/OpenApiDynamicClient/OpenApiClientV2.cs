@@ -25,8 +25,8 @@ public class OpenApiClientV2
     private readonly IDictionary<string, ClientOperation> _clientOperations;
     private readonly RestClient _restClient;
 
-    public Action<JsonResponse> OnSuccess { get; set; }
-    public Action<JsonResponse> OnFailure { get; set; }
+    public Action<string, IEnumerable<(string, string)>, JsonResponse> OnSuccess { get; set; }
+    public Action<string, IEnumerable<(string, string)>, JsonResponse> OnFailure { get; set; }
 
     #endregion
 
@@ -74,8 +74,21 @@ public class OpenApiClientV2
 
         if (_clientOperations.TryGetValue(operationId, out var clientOperation))
         {
-            response = 
-                await PerformClientOperationAsync(clientOperation, parameters);
+            try
+            {
+                response =
+                    await PerformClientOperationAsync(clientOperation, parameters);
+            }
+            catch (Exception ex)
+            {
+                response =
+                    new JsonResponse
+                    {
+                        IsSuccessful = false,
+                        FailureReasons = [$"{ex.GetType().FullName}: {ex.Message}"],
+                        Exception = ex,
+                    };
+            }
         }
         else
         {
@@ -89,12 +102,12 @@ public class OpenApiClientV2
 
         if (response.IsSuccessful && OnSuccess != null)
         {
-            OnSuccess(response);
+            OnSuccess(operationId, parameters, response);
         }
 
         if (!response.IsSuccessful && OnFailure != null)
         {
-            OnFailure(response);
+            OnFailure(operationId, parameters, response);
         }
 
         return response;
@@ -431,6 +444,8 @@ public class OpenApiClientV2
                 ? restResponse.StatusCode
                 : null;
 
+        // FUTURE: Add a failure reason for non-success HTTP status code
+
         IEnumerable<string> failureReasons =
             restResponse.ResponseStatus == ResponseStatus.Completed
                 ? []
@@ -442,10 +457,11 @@ public class OpenApiClientV2
             new JsonResponse
             {
                 IsSuccessful = restResponse.IsSuccessful,
-                HttpResponseStatus = restResponse.ResponseStatus.ToString(),
+                ResponseStatus = restResponse.ResponseStatus.ToString(),
                 HttpStatusCode = httpStatusCode,
                 FailureReasons = failureReasons,
                 Payload = restResponse.Content,
+                Exception = restResponse.ErrorException,
             };
 
         return jsonResponse;
@@ -516,14 +532,17 @@ public class OpenApiClientV2
     {
         if (schema.Enum != null)
         {
-            return schema.Enum.Contains(new OpenApiString(value));
+            var enumContainsValue = 
+                schema.Enum.Any(e => ((OpenApiString)e).Value == value);
+            return enumContainsValue;
         }
 
         if (schema.Pattern != null)
         {
             // Mitigate against ReDOS (Regular Expression Denial of Service)
             var safePattern = LimitGreedyQuantifiers(schema.Pattern);
-            return Regex.IsMatch(value, safePattern);
+            var regexIsMatch = Regex.IsMatch(value, safePattern);
+            return regexIsMatch;
         }
 
         if (schema.MinLength.HasValue && value.Length < schema.MinLength.Value)

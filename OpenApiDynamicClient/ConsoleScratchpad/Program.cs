@@ -31,14 +31,23 @@ internal class Program
 
         //await InvokeGeneratedOpenApiClientAsync();
 
-        var client =
-            await PetstoreDynamicClient.CreateAsync(
-                new Uri("http://petstore.swagger.io"));
-
-        await client.AddPetAsync(new Pet());
+        await InvokePetstoreHybridOpenApiClientAsync();
 
         Console.WriteLine("Hit return to exit...");
         Console.ReadLine();
+    }
+
+    private static async Task InvokePetstoreHybridOpenApiClientAsync()
+    {
+        var client =
+            await PetstoreHybridOpenApiClient.CreateAsync(
+                new Uri("http://petstore.swagger.io"));
+
+        //await client.AddPetAsync(new Pet());
+
+        var pet = await client.GetPetByIdAsync(2999);
+
+        var pets = await client.FindPetsByStatusAsync([Anonymous.Sold]);
     }
 
     private static async Task InvokeGeneratedOpenApiClientAsync()
