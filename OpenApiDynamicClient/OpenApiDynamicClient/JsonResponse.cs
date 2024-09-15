@@ -15,4 +15,5 @@ public record JsonResponse
     public string Payload { get; internal set; }
     public IEnumerable<string> FailureReasons { get; internal set; }
     public Exception Exception { get; internal set; }
+    public long ElapsedMilliseconds { get; internal set; }
 }

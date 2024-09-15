@@ -1,38 +1,5 @@
 # Using Microsoft.OpenApiReader to create a dynamic client
 
-[microsoft / kiota](https://github.com/microsoft/kiota)
-
-The key here is what is the interesting thing about developing the client?
-
-- Is it exploring the OpenApiReader?
-- Is it the process of creating something that works, then something that is neater?
-- Is it how easy it is to use OpenAPI, `Microsoft.OpenApi`, `NJsonSchema`, and `RestSharp` to create a dynamic client?
-  - I.e., create the best client we can and show how well they fit together.
-
-I think it is the latter. We can point to the first iteration and refer back to [Software in 3 steps: Make it run, make it right, make it fast](https://www.10printiamcool.com/software-in-3-steps-make-it-run-make-it-right-make-it-fast).
-
-![Swagger definition with baseUrl highlighted](swagger-with-baseurl-highlighted.png)
-
-![Quick Watch showing no baseUrl in OpenApiDocument](quick-watch-showing-no-baseurl-in-openapi-document.png)
-
-Talk about how to invert the OpenApi document to index by `operationId` and not path.
-
-Q: Does an Operation have a method?
-A: No, so we need something like...
-
-```csharp
-class ClientOperation { // Name?
-  public OpenApiOperation Operation { get; }
-  public OperationType OperationType { get; }
-  public string Path { get; }
-  // Request schema?
-  // Response schemas by response?
-  // IsRequestBodyRequired?
-}
-```
-
----
-
 In my [previous post](<[TOO](https://www.10printiamcool.com/validating-json-requests-using-c-and-openapiswagger)>), I discovered the [Microsoft.OpenApi](https://github.com/microsoft/OpenAPI.NET) packages and used them to extract JSON schemas from an Open API document.
 
 At the end of that post, I pondered if it would be possible to build on my experience to create a client that could be used as follows.
@@ -75,6 +42,208 @@ Now, there are many good options for creating static clients. According to [Clau
 Claude.ai also reminded me that Visual Studio Connected Services is built into Visual Studio, and it can generate C# clients from OpenAPI specifications.
 
 Although I would probably go down the static route for a production system, I was still intrigued by the idea of having a single class that I could configure dynamically configure with just the OpenAPI document. Given this I decided to press on.
+
+## How did I get on?
+
+In short, I succeeded. The result can be found in GitHub [here](https://github.com/andybalham/blog-source-code/blob/master/OpenApiDynamicClient/OpenApiDynamicClient/OpenApiClientV2.cs).
+
+Example usage can be seen below:
+
+```csharp
+var petStoreClient =
+    await OpenApiClientV2.CreateAsync(
+        File.ReadAllText("petstore.swagger.json"),
+        new Uri("https://petstore.swagger.io"));
+
+var getPetByIdResponse =
+    await petStoreClient.PerformAsync("getPetById", [("petId", "2")]);
+
+if (getPetByIdResponse.IsSuccessful)
+    Console.WriteLine(getPetByIdResponse.Payload);
+```
+
+In addition to using [NJsonSchema](TODO) to validate the request bodies, I used the popular [RestSharp](TODO) package to make the HTTP calls. The main routine panned out as follows.
+
+```csharp
+private async Task<JsonResponse> PerformClientOperationAsync(
+    ClientOperation clientOperation,
+    IEnumerable<(string, string)> parameters)
+{
+    var restRequest =
+        new RestRequest(
+            clientOperation.Path, GetMethod(clientOperation.OperationType));
+
+    var parameterErrors = new List<string>();
+
+    SetNonBodyParameters(clientOperation, parameters, restRequest, parameterErrors);
+
+    SetBodyParameter(clientOperation, parameters, restRequest, parameterErrors);
+
+    if (parameterErrors.Count > 0)
+    {
+        return GetJsonResponse(parameterErrors);
+    }
+
+    var restResponse = await _restClient.ExecuteAsync(restRequest);
+
+    var jsonResponse = GetJsonResponse(clientOperation, restResponse);
+
+    return jsonResponse;
+}
+```
+
+By the time this method is called, the OpenAPI document had been pre-processed
+
+The `ClientOperation` class encapsulates the details for a particular operation, as defined in the OpenAPI document. The OpenAPI document is processed as part of the `OpenApiClientV2.CreateAsync` method, and a dictionary of `ClientOperation` instances indexed by operation id is created. This processing allows an efficient use of the operation details to validate the body and non-body parameters. For example, the JSON schemas for request bodies are generated at the point, to be reused as long as the client instance is held.
+
+`RestSharp` greatly simplified the client development. In particular, the `AddUrlSegment` method allowed me to set the request parameters without having to worry about any string parsing or encoding.
+
+```csharp
+private static void AddPathParameter(
+    OpenApiParameter openApiParameter,
+    IEnumerable<string> parameterValues,
+    RestRequest restRequest,
+    List<string> parameterErrors)
+{
+    if (parameterValues.Count() > 1)
+    {
+        parameterErrors.Add(
+            $"{openApiParameter.Name} path parameter has multiple values");
+        return;
+    }
+
+    restRequest.AddUrlSegment(openApiParameter.Name, parameterValues.First());
+}
+```
+
+It was a similar situation for the other types of parameters. I could write my code without worrying about encodings, so keeping it nice and clean.
+
+```csharp
+restRequest.AddQueryParameter(openApiParameter.Name, parameterValue);
+restRequest.AddHeader(openApiParameter.Name, parameterValues.First());
+```
+
+I do confess to only going so far with validating the non-body parameters. My code does check string lengths and apply the supplied regular expression, if available. However, I did not implement numerical limit checks or support for mixed types as mentioned in the [Swagger data types specification](https://swagger.io/docs/specification/data-models/data-types/).
+
+I also left placeholders for extension points. These would allow customisation of the headers supplied for each call. The idea being that this would allow the appropriate authorisation headers to be set for each call.
+
+One thing that did become apparent during development, was that the `OpenApiDocument` implementation does not contain all possible OpenAPI properties. For example, the `basePath` property is specified in the Petstore example:
+
+![Swagger definition with baseUrl highlighted](swagger-with-baseurl-highlighted.png)
+
+However, when inspecting the `OpenApiDocument` instance, it was nowhere to be seen:
+
+![Quick Watch showing no baseUrl in OpenApiDocument](quick-watch-showing-no-baseurl-in-openapi-document.png)
+
+As a result, I had to add a `SelectBasePath` method that parsed the OpenAPI document JSON and extracted the value.
+
+```csharp
+public static async Task<OpenApiClientV2> CreateAsync(string openApiJson, Uri domainUri)
+{
+    // <snip>
+
+    var basePath = SelectBasePath(openApiJson); // basePath not in OpenApiDocument
+    var baseUri = new Uri(domainUri, basePath);
+
+    return new OpenApiClientV2(clientOperations, baseUri);
+}
+```
+
+This wasn't a big deal, but is something to be aware of if you are using `OpenApiDocument`. Another example is `collectionFormat`, which specifies how a collection of parameters is packaged.
+
+Overall, I was quite pleased with the final result and felt it had quite a bit of promise.
+
+## Comparing with a statically-generated client
+
+TODO: Compare with statically-generated client
+
+![Adding a connected service in Visual Studio](adding-a-connected-service.png)
+
+![Connected service list](connected-service-list.png)
+
+TODO: Do we need the following?
+
+![Selecting a connected service](selecting-a-connected-service.png)
+
+![Adding a new OpenAPI service](adding-a-new-openapi-service.png)
+
+![Generated petstore classes](generated-petstore-classes.png)
+
+![Data annotations missing](data-annotations-missing.png)
+
+![Snippet of auto-generated client code](snippet-of-auto-generated-client-code.png)
+
+```csharp
+var httpClient = new HttpClient();
+
+var petstoreClient = new PetstoreClient(httpClient);
+
+var getPetByIdResponse = await petstoreClient.GetPetByIdAsync(2);
+```
+
+## Compare and contrast
+
+- `ApiException` and `WebException` vs `IsSuccessful`
+- Compile-time parameter checking vs runtime checking
+- For body validation, `JsonSerializationException` thrown vs schema errors
+- Have some code snippets that highlight the code that you have to own
+
+## A hybrid experiment
+
+I liked the strong typing that you get with the static clients, but I was not too keen on having to own the client code. So I wondered if I could make a hybrid client.
+
+Something could use the automatically-generated models and would have a usage as follows:
+
+```csharp
+var client =
+    await PetstoreHybridOpenApiClient.CreateAsync(
+        new Uri("http://petstore.swagger.io"));
+
+await client.AddPetAsync(new Pet { Name = "Luna" });
+
+Pet pet = await client.GetPetByIdAsync(2999);
+
+ICollection<Pet> pets = await client.FindPetsByStatusAsync([Anonymous.Sold]);
+```
+
+As a secondary challenge, I wanted to avoid inheritance and only use composition in my solution. Why? Just for the intellectual challenge and to see what the resulting solution looks and feels like.
+
+## Links
+
+- [Generating HTTP API clients using Visual Studio Connected Services](https://devblogs.microsoft.com/dotnet/generating-http-api-clients-using-visual-studio-connected-services/)
+
+---
+
+[microsoft / kiota](https://github.com/microsoft/kiota)
+
+The key here is what is the interesting thing about developing the client?
+
+- Is it exploring the OpenApiReader?
+- Is it the process of creating something that works, then something that is neater?
+- Is it how easy it is to use OpenAPI, `Microsoft.OpenApi`, `NJsonSchema`, and `RestSharp` to create a dynamic client?
+  - I.e., create the best client we can and show how well they fit together.
+
+I think it is the latter. We can point to the first iteration and refer back to [Software in 3 steps: Make it run, make it right, make it fast](https://www.10printiamcool.com/software-in-3-steps-make-it-run-make-it-right-make-it-fast).
+
+![Swagger definition with baseUrl highlighted](swagger-with-baseurl-highlighted.png)
+
+![Quick Watch showing no baseUrl in OpenApiDocument](quick-watch-showing-no-baseurl-in-openapi-document.png)
+
+Talk about how to invert the OpenApi document to index by `operationId` and not path.
+
+Q: Does an Operation have a method?
+A: No, so we need something like...
+
+```csharp
+class ClientOperation { // Name?
+  public OpenApiOperation Operation { get; }
+  public OperationType OperationType { get; }
+  public string Path { get; }
+  // Request schema?
+  // Response schemas by response?
+  // IsRequestBodyRequired?
+}
+```
 
 ## Chapter 1
 
@@ -239,32 +408,3 @@ public static async Task<OpenApiClientV2> CreateAsync(string openApiJson, Uri do
 ```
 
 This wasn't a big deal, but is something to be aware of if you are using `OpenApiDocument`. Another example is `collectionFormat`, which specifies how a collection of parameters is packaged.
-
-## Chapter 5
-
-TODO: Compare with statically-generated client
-
-![Adding a connected service in Visual Studio](adding-a-connected-service.png)
-
-![Connected service list](connected-service-list.png)
-
-TODO: Do we need the following?
-
-![Selecting a connected service](selecting-a-connected-service.png)
-
-![Adding a new OpenAPI service](adding-a-new-openapi-service.png)
-
-![Generated petstore classes](generated-petstore-classes.png)
-
-![Data annotations missing](data-annotations-missing.png)
-
-## Compare and contrast
-
-- `ApiException` and `WebException` vs `IsSuccessful`
-- Compile-time parameter checking vs runtime checking
-- For body validation, `JsonSerializationException` thrown vs schema errors
-- 
-
-## Links
-
-- [Generating HTTP API clients using Visual Studio Connected Services](https://devblogs.microsoft.com/dotnet/generating-http-api-clients-using-visual-studio-connected-services/)

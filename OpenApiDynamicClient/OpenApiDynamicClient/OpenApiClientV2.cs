@@ -9,6 +9,7 @@ using NJsonSchema.Validation;
 using RestSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -43,8 +44,6 @@ public class OpenApiClientV2
     #endregion
 
     #region Public
-
-    // TODO: How can we have a derived class? Would we want to have a derived class? No - Compose
 
     public static async Task<OpenApiClientV2> CreateAsync(string openApiJson, Uri domainUri)
     {
@@ -184,35 +183,45 @@ public class OpenApiClientV2
         ClientOperation clientOperation,
         IEnumerable<(string, string)> parameters)
     {
-        var restRequest =
-            new RestRequest(
-                clientOperation.Path, GetMethod(clientOperation.OperationType));
+        var stopwatch = new Stopwatch();
 
-        var parameterErrors = new List<string>();
-
-        SetNonBodyParameters(clientOperation, parameters, restRequest, parameterErrors);
-
-        SetBodyParameter(clientOperation, parameters, restRequest, parameterErrors);
-
-        // FUTURE: Allow additional headers to be added, if not part of the specification
-
-        if (parameterErrors.Count > 0)
+        try
         {
-            return 
-                new JsonResponse
-                {
-                    IsSuccessful = false,
-                    FailureReasons = parameterErrors,
-                };
+            var restRequest =
+                new RestRequest(
+                    clientOperation.Path, GetMethod(clientOperation.OperationType));
+
+            var parameterErrors = new List<string>();
+
+            SetNonBodyParameters(clientOperation, parameters, restRequest, parameterErrors);
+
+            SetBodyParameter(clientOperation, parameters, restRequest, parameterErrors);
+
+            // FUTURE: Allow additional headers to be added, if not part of the specification
+
+            if (parameterErrors.Count > 0)
+            {
+                return GetJsonResponse(parameterErrors);
+            }
+
+            stopwatch.Start();
+
+            var restResponse = await _restClient.ExecuteAsync(restRequest);
+
+            stopwatch.Stop();
+
+            // FUTURE: Use the OpenAPI document to validate the response
+
+            return
+                GetJsonResponse(
+                    clientOperation, restResponse, stopwatch.ElapsedMilliseconds);
         }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
 
-        var restResponse = await _restClient.ExecuteAsync(restRequest);
-
-        // FUTURE: Use the OpenAPI document to validate the response
-
-        var jsonResponse = GetJsonResponse(clientOperation, restResponse);
-
-        return jsonResponse;
+            return GetJsonResponse(ex, stopwatch.ElapsedMilliseconds);
+        }
     }
 
     private static void SetBodyParameter(
@@ -437,9 +446,32 @@ public class OpenApiClientV2
         return parameterValues;
     }
 
+    private static JsonResponse GetJsonResponse(List<string> parameterErrors)
+    {
+        return
+            new JsonResponse
+            {
+                IsSuccessful = false,
+                FailureReasons = parameterErrors,
+            };
+    }
+
+    private JsonResponse GetJsonResponse(Exception ex, long elapsedMilliseconds)
+    {
+        return
+            new JsonResponse
+            {
+                IsSuccessful = false,
+                FailureReasons = [ex.Message],
+                Exception = ex,
+                ElapsedMilliseconds = elapsedMilliseconds,
+            };
+    }
+
     private static JsonResponse GetJsonResponse(
         ClientOperation clientOperation,
-        RestResponse restResponse)
+        RestResponse restResponse,
+        long elapsedMilliseconds)
     {
         HttpStatusCode? httpStatusCode =
             restResponse.ResponseStatus == ResponseStatus.Completed
@@ -464,6 +496,7 @@ public class OpenApiClientV2
                 FailureReasons = failureReasons,
                 Payload = restResponse.Content,
                 Exception = restResponse.ErrorException,
+                ElapsedMilliseconds = elapsedMilliseconds,
             };
 
         return jsonResponse;

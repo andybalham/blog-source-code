@@ -43,13 +43,13 @@ internal class Program
             await PetstoreHybridOpenApiClient.CreateAsync(
                 new Uri("http://petstore.swagger.io"));
 
-        //await client.AddPetAsync(new Pet());
+        //await client.AddPetAsync(new Pet { Name = "Luna" });
 
-        var pet = await client.GetPetByIdAsync(2999);
+        Pet pet = await client.GetPetByIdAsync(2999);
         LogResponse(pet);
 
-        var pets = await client.FindPetsByStatusAsync([Anonymous.Sold]);
-        LogResponse(pets);
+        //ICollection<Pet> pets = await client.FindPetsByStatusAsync([Anonymous.Sold]);
+        //LogResponse(pets);
 
         static void LogResponse(object response)
         {
@@ -67,8 +67,8 @@ internal class Program
 
             //petstoreClient.BaseUrl = "https://xxx-petstore.swagger.io/v2";
 
-            //var getPetByIdResponse = await petstoreClient.GetPetByIdAsync(2);
-            //LogResponse(getPetByIdResponse);
+            var getPetByIdResponse = await petstoreClient.GetPetByIdAsync(2);
+            LogResponse(getPetByIdResponse);
 
             await petstoreClient.AddPetAsync(new Pet());
         }
@@ -233,8 +233,13 @@ internal class Program
         var invalidAddPetResponse = await petStoreClient.PerformAsync("addPet", [("body", "{}")]);
         LogResponse(invalidAddPetResponse);
 
-        //var getPetByIdResponse =
-        //    await petStoreClient.PerformAsync("getPetById", [("petId", "2")]);
+        var getPetByIdResponse =
+            await petStoreClient.PerformAsync("getPetById", [("petId", "2")]);
+
+        if (getPetByIdResponse.IsSuccessful)
+        {
+            Console.WriteLine(getPetByIdResponse.Payload);
+        }
         //LogResponse(getPetByIdResponse);
 
         //var invalidGetPetByIdResponse1 =

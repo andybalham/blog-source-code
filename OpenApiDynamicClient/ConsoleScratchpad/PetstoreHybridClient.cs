@@ -12,7 +12,25 @@ public class PetstoreHybridOpenApiClient
     #region Member variables, constructor, and factory method
 
     private readonly OpenApiClientV2 _client;
-    private PetstoreHybridOpenApiClient(OpenApiClientV2 client) => _client = client;
+
+    private PetstoreHybridOpenApiClient(OpenApiClientV2 client)
+    {
+        _client = client;
+
+        _client.OnSuccess = 
+            (string o, IEnumerable<(string, string)> p, JsonResponse r) =>
+                {
+                    OnSuccess(o);
+                    HybridOpenApiClient.OnSuccess(o, p, r);
+                };
+
+        _client.OnFailure =
+            (string o, IEnumerable<(string, string)> p, JsonResponse r) =>
+            {
+                OnFailure(o);
+                HybridOpenApiClient.OnFailure(o, p, r);
+            };
+    }
 
     public static async Task<PetstoreHybridOpenApiClient> CreateAsync(Uri domainUri)
     {
@@ -20,6 +38,20 @@ public class PetstoreHybridOpenApiClient
             client => new PetstoreHybridOpenApiClient(client),
             File.ReadAllText("petstore.swagger.json"),
             domainUri);
+    }
+
+    #endregion
+
+    #region Customisations
+
+    private void OnSuccess(string operationId)
+    {
+        Console.WriteLine($"{operationId} succeeded");
+    }
+
+    private void OnFailure(string operationId)
+    {
+        Console.WriteLine($"{operationId} failed");
     }
 
     #endregion

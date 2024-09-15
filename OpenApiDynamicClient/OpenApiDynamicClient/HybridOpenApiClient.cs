@@ -25,9 +25,17 @@ public class HybridOpenApiClient
     {
         var client = await OpenApiClientV2.CreateAsync(openApiJson, domainUri);
 
+        client.OnSuccess = OnSuccess;
         client.OnFailure = OnFailure;
 
         return newHybridClient(client);
+    }
+
+    public static void OnSuccess(
+        string operationId,
+        IEnumerable<(string, string)> parameters,
+        JsonResponse response)
+    {
     }
 
     public static void OnFailure(
