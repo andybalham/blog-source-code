@@ -96,7 +96,7 @@ By the time this method is called, the OpenAPI document had been pre-processed
 
 The `ClientOperation` class encapsulates the details for a particular operation, as defined in the OpenAPI document. The OpenAPI document is processed as part of the `OpenApiClientV2.CreateAsync` method, and a dictionary of `ClientOperation` instances indexed by operation id is created. This processing allows an efficient use of the operation details to validate the body and non-body parameters. For example, the JSON schemas for request bodies are generated at the point, to be reused as long as the client instance is held.
 
-`RestSharp` greatly simplified the client development. In particular, the `AddUrlSegment` method allowed me to set the request parameters without having to worry about any string parsing or encoding.
+The `RestSharp` package greatly simplified the client development. In particular, the `AddUrlSegment` method allowed me to set the request parameters without having to worry about any string parsing or encoding.
 
 ```csharp
 private static void AddPathParameter(
@@ -155,40 +155,71 @@ Overall, I was quite pleased with the final result and felt it had quite a bit o
 
 ## Comparing with a statically-generated client
 
-TODO: Compare with statically-generated client
+I thought it would be interesting to compare my dynamic client with a statically-generated client. To do this, I thought I would use the built in functionality in Visual Studio.
+
+This is done by right-clicking on a project and adding a connected service.
 
 ![Adding a connected service in Visual Studio](adding-a-connected-service.png)
 
+The next step is to select the type of connected service. This will depending on the type of your Visual Studio project. I was working with a .NET Framework project, so I only got the option for OpenAPI.
+
 ![Connected service list](connected-service-list.png)
 
-TODO: Do we need the following?
+For .NET Core projects, I believe you get the option of [gRPC](TODO) and perhaps others.
 
-![Selecting a connected service](selecting-a-connected-service.png)
+Adding an OpenAPI service is as simple as pointing the wizard to the OpenAPI document and providing the namespace, class name, and language of your choice.
 
 ![Adding a new OpenAPI service](adding-a-new-openapi-service.png)
 
+After the wizard runs, we see a single `.cs` file containing multiple classes for the API client, the API models, and other sundries.
+
 ![Generated petstore classes](generated-petstore-classes.png)
+
+The wizard adds a number of NuGet packages, but still doesn't compile. For some reason, it fails to add the `System.ComponentModel.DataAnnotations` package.
 
 ![Data annotations missing](data-annotations-missing.png)
 
-![Snippet of auto-generated client code](snippet-of-auto-generated-client-code.png)
+Adding this package was all that was required to get the code compiling and ready for use, an example of which is shown below.
 
 ```csharp
-var httpClient = new HttpClient();
+HttpClient httpClient = new();
 
-var petstoreClient = new PetstoreClient(httpClient);
+PetstoreClient petstoreClient = new(httpClient);
 
-var getPetByIdResponse = await petstoreClient.GetPetByIdAsync(2);
+Pet getPetByIdResponse = await petstoreClient.GetPetByIdAsync(2);
 ```
 
-## Compare and contrast
+I am generally a fan of strong-typing, so this usage does appeal to me.
 
-- `ApiException` and `WebException` vs `IsSuccessful`
-- Compile-time parameter checking vs runtime checking
-- For body validation, `JsonSerializationException` thrown vs schema errors
-- Have some code snippets that highlight the code that you have to own
+## Comparing and contrasting the two approaches
+
+### Success Flag vs Exceptions
+
+The dynamic client catches all failures and returns an envelope class with a `IsSuccessful` flag. This includes all parameter validation errors, non-success HTTP status codes, and any exceptions. This provides consistency for the calling code, making the code cleaner.
+
+Depending of the failure mode, the static client throws a variety of exceptions. For example, if you supply an invalid request body then you get a `JsonSerializationException` thrown. If the domain is incorrect, you get a `WebException`, and if you get a non-success HTTP status code then an `ApiException` is thrown. There may be others that I did not find. This does mean that the calling code has to be aware of all of these, if it wants to make the most of them when handling them.
+
+I do like consistency, so here I favoured the approach taken by my dynamic client.
+
+### Runtime checking vs compile-time parameter checking
+
+One clear difference between the two approaches is in the type checking. The dynamic client fits the scenario I had, where the calling code was generating JSON. However, in general, I would favour leaning on the compiler to verify types wherever I can. With this in mind, as a user, I would prefer the static client.
+
+### Code ownership
+
+It was interesting to have a look at the generated code. Below is a snippet from one of the implemented operations. As you can see, there is quite a bit of code and this is largely repeated in each method.
+
+![Snippet of auto-generated client code](snippet-of-auto-generated-client-code.png)
+
+I have underlined in green the handling of non-success HTTP status codes, which - as mentioned above - results in `ApiException` instances being thrown.
+
+I have also underlined, this time in red, some of the extension points that are available to you. The client is generated as a [partial class](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/partial-classes-and-methods). This allows you to create your own partial class to provides your own custom implementations for these methods. This allows the generated client class to be regenerated at any time and also avoids using inheritance to provide the extension points.
+
+What struck me about the generate code, was that there was quite a bit of it, and I would have to own it all if it was part of my project. I am not sure whether I would be overly comfortable with that. On the other hand, the dynamic client has much less code. Once the single class has been tested thoroughly, I would feel happier to use that rather than lots of generated code.
 
 ## A hybrid experiment
+
+TODO
 
 I liked the strong typing that you get with the static clients, but I was not too keen on having to own the client code. So I wondered if I could make a hybrid client.
 

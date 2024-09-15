@@ -2,12 +2,12 @@
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace OpenApiDynamicClient;
 
-public class HybridOpenApiClient
+public static class HybridOpenApiClient
 {
     private static readonly JsonSerializerSettings _serializerSettings =
         new()
@@ -19,10 +19,11 @@ public class HybridOpenApiClient
 
     public static async Task<T> CreateAsync<T>(
         Func<OpenApiClientV2, T> newHybridClient,
-        string openApiJson,
         Uri domainUri)
         where T : class
     {
+        var openApiJson = LoadOpenApiJsonForType<T>();
+
         var client = await OpenApiClientV2.CreateAsync(openApiJson, domainUri);
 
         client.OnSuccess = OnSuccess;
@@ -47,7 +48,8 @@ public class HybridOpenApiClient
         {
             throw new OpenApiException(
                 $"{operationId} received {(int)response.HttpStatusCode}: " +
-                $"{string.Join(", ", response.FailureReasons)}");
+                    $"{string.Join(", ", response.FailureReasons)}",
+                response.HttpStatusCode.Value);
         }
 
         throw new OpenApiException(
@@ -78,5 +80,22 @@ public class HybridOpenApiClient
     public static T Deserialize<T>(JsonResponse response)
     {
         return JsonConvert.DeserializeObject<T>(response.Payload, _serializerSettings);
+    }
+
+    private static string LoadOpenApiJsonForType<T>()
+    {
+        var type = typeof(T);
+        var typeName = type.Name;
+        var assembly = type.Assembly;
+        
+        var resourceName = $"{type.Namespace}.{typeName}.OpenAPI.json";
+
+        using var stream = 
+            assembly.GetManifestResourceStream(resourceName) 
+            ?? throw new FileNotFoundException($"Embedded resource not found: {resourceName}");
+
+        using StreamReader reader = new(stream);
+
+        return reader.ReadToEnd();
     }
 }

@@ -7,51 +7,37 @@ using System.Threading.Tasks;
 
 namespace ConsoleScratchpad;
 
-public class PetstoreHybridOpenApiClient
+public class PetstoreHybridClient
 {
     #region Member variables, constructor, and factory method
 
     private readonly OpenApiClientV2 _client;
 
-    private PetstoreHybridOpenApiClient(OpenApiClientV2 client)
+    private PetstoreHybridClient(OpenApiClientV2 client)
     {
         _client = client;
 
         _client.OnSuccess = 
             (string o, IEnumerable<(string, string)> p, JsonResponse r) =>
                 {
-                    OnSuccess(o);
+                    HybridClientHelpers.LogSuccess(o);
                     HybridOpenApiClient.OnSuccess(o, p, r);
                 };
 
         _client.OnFailure =
             (string o, IEnumerable<(string, string)> p, JsonResponse r) =>
             {
-                OnFailure(o);
+                HybridClientHelpers.LogFailure(o);
                 HybridOpenApiClient.OnFailure(o, p, r);
             };
     }
 
-    public static async Task<PetstoreHybridOpenApiClient> CreateAsync(Uri domainUri)
+    public static async Task<PetstoreHybridClient> CreateAsync(Uri domainUri)
     {
-        return await HybridOpenApiClient.CreateAsync(
-            client => new PetstoreHybridOpenApiClient(client),
-            File.ReadAllText("petstore.swagger.json"),
-            domainUri);
-    }
-
-    #endregion
-
-    #region Customisations
-
-    private void OnSuccess(string operationId)
-    {
-        Console.WriteLine($"{operationId} succeeded");
-    }
-
-    private void OnFailure(string operationId)
-    {
-        Console.WriteLine($"{operationId} failed");
+        return 
+            await HybridOpenApiClient.CreateAsync(
+                client => new PetstoreHybridClient(client),
+                domainUri);
     }
 
     #endregion

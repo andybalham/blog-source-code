@@ -40,12 +40,12 @@ internal class Program
     private static async Task InvokePetstoreHybridOpenApiClientAsync()
     {
         var client =
-            await PetstoreHybridOpenApiClient.CreateAsync(
+            await PetstoreHybridClient.CreateAsync(
                 new Uri("http://petstore.swagger.io"));
 
         //await client.AddPetAsync(new Pet { Name = "Luna" });
 
-        Pet pet = await client.GetPetByIdAsync(2999);
+        Pet pet = await client.GetPetByIdAsync(2);
         LogResponse(pet);
 
         //ICollection<Pet> pets = await client.FindPetsByStatusAsync([Anonymous.Sold]);
@@ -61,13 +61,13 @@ internal class Program
     {
         try
         {
-            var httpClient = new HttpClient();
+            HttpClient httpClient = new();
 
-            var petstoreClient = new PetstoreClient(httpClient);
+            PetstoreClient petstoreClient = new(httpClient);
 
             //petstoreClient.BaseUrl = "https://xxx-petstore.swagger.io/v2";
 
-            var getPetByIdResponse = await petstoreClient.GetPetByIdAsync(2);
+            Pet getPetByIdResponse = await petstoreClient.GetPetByIdAsync(2);
             LogResponse(getPetByIdResponse);
 
             await petstoreClient.AddPetAsync(new Pet());

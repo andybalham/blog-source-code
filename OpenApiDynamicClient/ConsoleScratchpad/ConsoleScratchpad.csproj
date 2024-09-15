@@ -126,6 +126,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="HybridClientHelpers.cs" />
     <Compile Include="NJsonSchemaValidator2.cs" />
     <Compile Include="NJsonSchemaValidator1.cs" />
     <Compile Include="OpenApiSchemaValidationResult.cs" />
@@ -147,6 +148,9 @@
     <None Include="invalid.swagger.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <EmbeddedResource Include="PetstoreHybridClient.OpenAPI.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
     <None Include="petstore.swagger.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
