@@ -1,6 +1,6 @@
 # Using Microsoft.OpenApiReader to create a dynamic client
 
-In my [previous post](<[TOO](https://www.10printiamcool.com/validating-json-requests-using-c-and-openapiswagger)>), I discovered the [Microsoft.OpenApi](https://github.com/microsoft/OpenAPI.NET) packages and used them to extract JSON schemas from an Open API document.
+In my [previous post](https://www.10printiamcool.com/validating-json-requests-using-c-and-openapiswagger), I discovered the [Microsoft.OpenApi](https://github.com/microsoft/OpenAPI.NET) packages and used them to extract JSON schemas from an Open API document.
 
 At the end of that post, I pondered if it would be possible to build on my experience to create a client that could be used as follows.
 
