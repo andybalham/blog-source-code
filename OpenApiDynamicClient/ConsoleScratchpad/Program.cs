@@ -39,8 +39,12 @@ internal class Program
 
     private static async Task InvokePetstoreHybridOpenApiClientAsync()
     {
+        //var client =
+        //    await PetstoreHybridClient.CreateAsync(
+        //        new Uri("http://petstore.swagger.io"));
+
         var client =
-            await PetstoreHybridClient.CreateAsync(
+            await HybridOpenApiClientBase.CreateAsync<PetstoreHybridClientSubclass>(
                 new Uri("http://petstore.swagger.io"));
 
         //await client.AddPetAsync(new Pet { Name = "Luna" });

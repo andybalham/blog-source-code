@@ -23,11 +23,16 @@ public class OpenApiClientV2
 {
     #region Members
 
+    public delegate void ResponseHandler(
+        string operationId,
+        IEnumerable<(string, string)> parameters,
+        JsonResponse response);
+
     private readonly IDictionary<string, ClientOperation> _clientOperations;
     private readonly RestClient _restClient;
 
-    public Action<string, IEnumerable<(string, string)>, JsonResponse> OnSuccess { get; set; }
-    public Action<string, IEnumerable<(string, string)>, JsonResponse> OnFailure { get; set; }
+    public ResponseHandler OnSuccess { get; set; }
+    public ResponseHandler OnFailure { get; set; }
 
     #endregion
 

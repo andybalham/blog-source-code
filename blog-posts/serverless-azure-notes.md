@@ -1,3 +1,22 @@
+- [Learning Azure - The Project](#learning-azure---the-project)
+  - [What do we want to build?](#what-do-we-want-to-build)
+    - [Feature definition](#feature-definition)
+  - [Skeleton architecture](#skeleton-architecture)
+  - [Build order (ClickOps)](#build-order-clickops)
+  - [Function App (Validate and Store)](#function-app-validate-and-store)
+  - [Links](#links)
+  - [Chats](#chats)
+    - [Instructions to Deploy This Bicep File](#instructions-to-deploy-this-bicep-file)
+    - [Azure CLI](#azure-cli)
+    - [Continuous Integration/Continuous Deployment (CI/CD)](#continuous-integrationcontinuous-deployment-cicd)
+    - [Additional Notes](#additional-notes)
+  - [Unit testing by mocking the Azure SDK](#unit-testing-by-mocking-the-azure-sdk)
+  - [First Azure Function post - DONE](#first-azure-function-post---done)
+  - [Purpose of `.pubxml` File](#purpose-of-pubxml-file)
+    - [Reasons Not to Check `.pubxml` into Source Control](#reasons-not-to-check-pubxml-into-source-control)
+      - [Best Practices](#best-practices)
+      - [Conclusion](#conclusion)
+
 # Learning Azure - The Project
 
 Main ChatGPT chat: [Azure Functions with Bicep](https://chat.openai.com/share/98be1e01-55f9-4b1a-8768-7287bb9c499a)
@@ -79,6 +98,11 @@ In response to "From an Azure function, how can I identify the caller from the A
 > This process will require custom code within your Azure Function to handle the extraction and lookup operations. Be sure to secure your API keys and the mapping data, as this is sensitive information.
 
 So, in practise, I think we would issue API keys and client secrets and use the client secret to verify that they are who they say they are. You could then rotate the API keys.
+
+## Links
+
+- [Using Azure Storage Queue messages with Azure Functions and [QueueTrigger] ](https://andrewlock.net/using-azure-storage-queues-with-azure-functions-and-queuetrigger/)
+-
 
 ## Chats
 

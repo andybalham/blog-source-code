@@ -7,37 +7,26 @@ using System.Threading.Tasks;
 
 namespace ConsoleScratchpad;
 
-public class PetstoreHybridClient
+public class PetstoreHybridClientSubclass : HybridOpenApiClientBase
 {
-    #region Member variables, constructor, and factory method
+    #region Overrides
 
-    private readonly OpenApiClientV2 _client;
-
-    private PetstoreHybridClient(OpenApiClientV2 client)
+    protected override void OnSuccess(
+        string operationId,
+        IEnumerable<(string, string)> parameters,
+        JsonResponse response)
     {
-        _client = client;
-
-        _client.OnSuccess = 
-            (o, p, r) =>
-                {
-                    MyHybridClientHelpers.LogSuccess(o);
-                    HybridOpenApiClient.OnSuccess(o, p, r);
-                };
-
-        _client.OnFailure =
-            (o, p, r) =>
-            {
-                MyHybridClientHelpers.LogFailure(o);
-                HybridOpenApiClient.OnFailure(o, p, r);
-            };
+        MyHybridClientHelpers.LogSuccess(operationId);
+        base.OnSuccess(operationId, parameters, response);
     }
 
-    public static async Task<PetstoreHybridClient> CreateAsync(Uri domainUri)
+    protected override void OnFailure(
+        string operationId,
+        IEnumerable<(string, string)> parameters,
+        JsonResponse response)
     {
-        return 
-            await HybridOpenApiClient.CreateAsync(
-                client => new PetstoreHybridClient(client),
-                domainUri);
+        MyHybridClientHelpers.LogFailure(operationId);
+        base.OnFailure(operationId, parameters, response);
     }
 
     #endregion

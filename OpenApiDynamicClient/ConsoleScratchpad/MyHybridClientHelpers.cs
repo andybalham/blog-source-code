@@ -2,7 +2,7 @@
 
 namespace ConsoleScratchpad;
 
-public static class HybridClientHelpers
+public static class MyHybridClientHelpers
 {
     public static void LogFailure(string operationId)
     {

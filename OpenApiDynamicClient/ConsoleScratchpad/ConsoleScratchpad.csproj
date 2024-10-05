@@ -126,13 +126,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HybridClientHelpers.cs" />
+    <Compile Include="HybridOpenApiClientBase.cs" />
+    <Compile Include="MyHybridClientHelpers.cs" />
     <Compile Include="NJsonSchemaValidator2.cs" />
     <Compile Include="NJsonSchemaValidator1.cs" />
     <Compile Include="OpenApiSchemaValidationResult.cs" />
     <Compile Include="OpenApiSchemaValidator.cs" />
     <Compile Include="OpenAPIs\petstore.swagger.cs" />
     <Compile Include="PetstoreDynamicClient.cs" />
+    <Compile Include="PetstoreHybridClientSubclass.cs" />
     <Compile Include="PetstoreHybridClient.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -154,6 +156,9 @@
     <None Include="petstore.swagger.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <EmbeddedResource Include="PetstoreHybridClientSubclass.OpenAPI.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
     <None Include="swagger.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
