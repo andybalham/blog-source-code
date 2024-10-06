@@ -126,7 +126,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HybridOpenApiClientBase.cs" />
     <Compile Include="MyHybridClientHelpers.cs" />
     <Compile Include="NJsonSchemaValidator2.cs" />
     <Compile Include="NJsonSchemaValidator1.cs" />

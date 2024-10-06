@@ -103,6 +103,7 @@
   <ItemGroup>
     <Compile Include="ClientOperation.cs" />
     <Compile Include="HybridOpenApiClient.cs" />
+    <Compile Include="HybridOpenApiClientBase.cs" />
     <Compile Include="OpenApiClientV1.cs" />
     <Compile Include="JsonResponse.cs" />
     <Compile Include="OpenApiClientV2.cs" />

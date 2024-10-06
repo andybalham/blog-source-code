@@ -29,4 +29,3 @@
     > - The derived class can have all the functionality of the base class
     >
     > For all other instances, the composition is the preferred choice.
-

@@ -36,10 +36,10 @@ public class PetstoreHybridClientSubclass : HybridOpenApiClientBase
     public async Task AddPetAsync(
         Pet body)
     {
-        await _client.PerformAsync(
+        await Client.PerformAsync(
             "addPet", 
             [
-                ("body", HybridOpenApiClient.Serialize(body)),
+                ("body", Serialize(body)),
             ]);
     }
 
@@ -47,13 +47,13 @@ public class PetstoreHybridClientSubclass : HybridOpenApiClientBase
         long petId)
     {
         var response =
-            await _client.PerformAsync(
+            await Client.PerformAsync(
                 "getPetById", 
                 [
-                    ("petId", HybridOpenApiClient.Serialize(petId)),
+                    ("petId", Serialize(petId)),
                 ]);
 
-        return HybridOpenApiClient.Deserialize<Pet>(response);
+        return Deserialize<Pet>(response);
     }
 
     public async Task<ICollection<Pet>> FindPetsByStatusAsync(
@@ -63,13 +63,13 @@ public class PetstoreHybridClientSubclass : HybridOpenApiClientBase
         // A: "parameters": [ { "type": "array" } ]
 
         var response = 
-            await _client.PerformAsync(
+            await Client.PerformAsync(
                 "findPetsByStatus", 
                 [
-                    ..status.Select(s => ("status", HybridOpenApiClient.Serialize(s))),
+                    ..status.Select(s => ("status", Serialize(s))),
                 ]);
 
-        return HybridOpenApiClient.Deserialize<ICollection<Pet>>(response);
+        return Deserialize<ICollection<Pet>>(response);
     }
 
     #endregion
