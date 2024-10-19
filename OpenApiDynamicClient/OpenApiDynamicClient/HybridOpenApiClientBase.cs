@@ -18,14 +18,14 @@ public abstract class HybridOpenApiClientBase
     {
         return
             await HybridOpenApiClient.CreateAsync(
+                domainUri,
                 client =>
                 {
                     var hybridClient = new T { Client = client };
                     client.OnSuccess = hybridClient.OnSuccess;
                     client.OnFailure = hybridClient.OnFailure;
                     return hybridClient;
-                },
-                domainUri);
+                });
     }
 
     protected virtual void OnSuccess(

@@ -33,16 +33,34 @@ internal class Program
 
         await InvokePetstoreHybridOpenApiClientAsync();
 
+        //await InvokePetstoreHybridOpenApiClientBaseAsync();
+
         Console.WriteLine("Hit return to exit...");
         Console.ReadLine();
     }
 
     private static async Task InvokePetstoreHybridOpenApiClientAsync()
     {
-        //var client =
-        //    await PetstoreHybridClient.CreateAsync(
-        //        new Uri("http://petstore.swagger.io"));
+        var client =
+            await PetstoreHybridClient.CreateAsync(
+                new Uri("http://petstore.swagger.io"));
 
+        //await client.AddPetAsync(new Pet { Name = "Luna" });
+
+        Pet pet = await client.GetPetByIdAsync(2);
+        LogResponse(pet);
+
+        //ICollection<Pet> pets = await client.FindPetsByStatusAsync([Anonymous.Sold]);
+        //LogResponse(pets);
+
+        static void LogResponse(object response)
+        {
+            Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+        }
+    }
+
+    private static async Task InvokePetstoreHybridOpenApiClientBaseAsync()
+    {
         var client =
             await HybridOpenApiClientBase.CreateAsync<PetstoreHybridClientSubclass>(
                 new Uri("http://petstore.swagger.io"));

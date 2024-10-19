@@ -149,15 +149,11 @@
     <None Include="invalid.swagger.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <EmbeddedResource Include="PetstoreHybridClient.OpenAPI.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </EmbeddedResource>
+    <EmbeddedResource Include="PetstoreHybridClient.OpenAPI.json" />
     <None Include="petstore.swagger.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <EmbeddedResource Include="PetstoreHybridClientSubclass.OpenAPI.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </EmbeddedResource>
+    <EmbeddedResource Include="PetstoreHybridClientSubclass.OpenAPI.json" />
     <None Include="swagger.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

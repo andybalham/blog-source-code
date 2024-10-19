@@ -20,24 +20,23 @@ public class PetstoreHybridClient
         _client.OnSuccess = 
             (o, p, r) =>
                 {
-                    MyHybridClientHelpers.LogSuccess(o);
+                    MyHybridClientHelpers.LogSuccess(o, r);
                     HybridOpenApiClient.OnSuccess(o, p, r);
                 };
 
         _client.OnFailure =
             (o, p, r) =>
             {
-                MyHybridClientHelpers.LogFailure(o);
+                MyHybridClientHelpers.LogFailure(o, r);
                 HybridOpenApiClient.OnFailure(o, p, r);
             };
     }
 
-    public static async Task<PetstoreHybridClient> CreateAsync(Uri domainUri)
+    public static async Task<PetstoreHybridClient>CreateAsync(Uri domainUri)
     {
         return 
             await HybridOpenApiClient.CreateAsync(
-                client => new PetstoreHybridClient(client),
-                domainUri);
+                domainUri, client => new PetstoreHybridClient(client));
     }
 
     #endregion

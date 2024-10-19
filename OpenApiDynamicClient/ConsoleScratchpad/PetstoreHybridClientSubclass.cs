@@ -16,7 +16,7 @@ public class PetstoreHybridClientSubclass : HybridOpenApiClientBase
         IEnumerable<(string, string)> parameters,
         JsonResponse response)
     {
-        MyHybridClientHelpers.LogSuccess(operationId);
+        MyHybridClientHelpers.LogSuccess(operationId, response);
         base.OnSuccess(operationId, parameters, response);
     }
 
@@ -25,7 +25,7 @@ public class PetstoreHybridClientSubclass : HybridOpenApiClientBase
         IEnumerable<(string, string)> parameters,
         JsonResponse response)
     {
-        MyHybridClientHelpers.LogFailure(operationId);
+        MyHybridClientHelpers.LogFailure(operationId, response);
         base.OnFailure(operationId, parameters, response);
     }
 

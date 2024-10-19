@@ -18,9 +18,7 @@ public static class HybridOpenApiClient
         };
 
     public static async Task<T> CreateAsync<T>(
-        Func<OpenApiClientV2, T> newHybridClient,
-        Uri domainUri)
-        where T : class
+        Uri domainUri, Func<OpenApiClientV2, T> newHybridClient) where T : class
     {
         var openApiJson = LoadOpenApiJsonForType<T>();
 
