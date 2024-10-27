@@ -18,7 +18,7 @@ public static class HybridOpenApiClient
         };
 
     public static async Task<T> CreateAsync<T>(
-        Uri domainUri, Func<OpenApiClientV2, T> newHybridClient) where T : class
+        Uri domainUri, Func<OpenApiClientV2, T> createHybridClient) where T : class
     {
         var openApiJson = LoadOpenApiJsonForType<T>();
 
@@ -27,7 +27,7 @@ public static class HybridOpenApiClient
         client.OnSuccess = OnSuccess;
         client.OnFailure = OnFailure;
 
-        return newHybridClient(client);
+        return createHybridClient(client);
     }
 
     public static void OnSuccess(

@@ -36,7 +36,7 @@ public class PetstoreHybridClient
     {
         return 
             await HybridOpenApiClient.CreateAsync(
-                domainUri, client => new PetstoreHybridClient(client));
+                domainUri, (client) => new PetstoreHybridClient(client));
     }
 
     #endregion
