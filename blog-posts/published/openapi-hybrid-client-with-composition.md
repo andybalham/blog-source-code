@@ -28,7 +28,7 @@ var client = await OpenApiClientV2.CreateAsync(openApiJson, domainUri);
 
 This relies on the calling code reading the OpenAPI document into a JSON string and passing it to the method. For the hybrid client, I decided that I would use a convention instead. The OpenAPI document would be an embedded resource, with the same name as the client class, but with a `.OpenAPI.json` extension.
 
-![Properties of the OpenAPI document file](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/openapi-posts/openapi-document-file-properties?raw=true)
+![Properties of the OpenAPI document file](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/openapi-posts/openapi-document-file-properties.png?raw=true)
 
 This meant that the factory method calling code would be simplified, with just the domain URI being required.
 
