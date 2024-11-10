@@ -2,6 +2,9 @@
 
 - [Chats and Links](#chats-and-links)
   - [Links](#links)
+    - [Azure Event Grid event schema](#azure-event-grid-event-schema)
+    - [CloudEvents v1.0 schema with Azure Event Grid](#cloudevents-v10-schema-with-azure-event-grid)
+    - [Debugging Azure Function Event Grid Triggers Locally](#debugging-azure-function-event-grid-triggers-locally)
     - [Reacting to Blob storage events](#reacting-to-blob-storage-events)
     - [Azure Blob storage trigger for Azure Functions](#azure-blob-storage-trigger-for-azure-functions)
     - [**Tutorial: Trigger Azure Functions on blob containers using an event subscription**](#tutorial-trigger-azure-functions-on-blob-containers-using-an-event-subscription)
@@ -16,6 +19,28 @@
     - [How can an Azure Function receive messages from an Azure Storage Queue?](#how-can-an-azure-function-receive-messages-from-an-azure-storage-queue)
 
 ## Links
+
+### [Azure Event Grid event schema](https://learn.microsoft.com/en-us/azure/event-grid/event-schema)
+
+This mentions:
+
+> The support for Event Grid event schema isn't going to be retired, but we won't be making any major improvements to it in the future. We recommend that you use CloudEvents schema, which provides a standardized and protocol-agnostic definition of the structure and metadata description of events. For more information, see [CloudEvents v1.0 schema with Azure Event Grid](https://learn.microsoft.com/en-us/azure/event-grid/cloud-event-schema).
+
+And:
+
+> You can find the JSON schema for the Event Grid event and each Azure publisher's data payload in the [Event Schema store](https://github.com/Azure/azure-rest-api-specs/tree/master/specification/eventgrid/data-plane).
+
+### [CloudEvents v1.0 schema with Azure Event Grid](https://learn.microsoft.com/en-us/azure/event-grid/cloud-event-schema)
+
+> Azure Event Grid natively supports events in the JSON implementation of CloudEvents v1.0 and HTTP protocol binding. CloudEvents is an open specification for describing event data. CloudEvents simplifies interoperability by providing a common event schema for publishing, and consuming cloud based events. This schema allows for uniform tooling, standard ways of routing & handling events, and universal ways of deserializing the outer event schema. With a common schema, you can more easily integrate work across platforms.
+
+### [Debugging Azure Function Event Grid Triggers Locally](https://harrybellamy.com/posts/debugging-azure-function-event-grid-triggers-locally/)
+
+Azure Event Grid is a asynchronous communication technology that uses a ‘push-push’ form of communication. This means that it lends itself to communicating with stateless services, as no listener needs to be setup.
+
+Azure Functions is the obvious candidate here, especially as there is an out-of-the-box integration with Azure Event Grid.
+
+However, when running an Azure Function locally with an Event Grid trigger, there are a few things to be aware of before you can get it working.
 
 ### [Reacting to Blob storage events](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blob-event-overview)
 
