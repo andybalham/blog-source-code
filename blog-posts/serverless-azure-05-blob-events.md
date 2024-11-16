@@ -1,17 +1,84 @@
 # Reacting to Blob Storage events
 
+- [Reacting to Blob Storage events](#reacting-to-blob-storage-events)
+  - [What are we to include in each post?](#what-are-we-to-include-in-each-post)
+    - [First post](#first-post)
+    - [Second post](#second-post)
+  - [Dilemma](#dilemma)
+  - [Further thoughts](#further-thoughts)
+  - [Initial findings](#initial-findings)
+  - [cloudevents.io](#cloudeventsio)
+  - [Using TryGetSystemEventData()](#using-trygetsystemeventdata)
+  - [Links @ 24-11-10](#links--24-11-10)
+  - [EventGrid vs BlobTrigger](#eventgrid-vs-blobtrigger)
+  - [Comparing EventGrid schema and CloudEvents schema for Blob storage events](#comparing-eventgrid-schema-and-cloudevents-schema-for-blob-storage-events)
+    - [EventGrid Schema](#eventgrid-schema)
+    - [CloudEvents Schema](#cloudevents-schema)
+
 ## What are we to include in each post?
 
 What topics to cover?
 
 - First post
-  - EventGrid vs polling (TODO - link)
+
+  - Polling vs EventGrid
+
+    - [Azure Blob storage trigger for Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-storage-blob-trigger?tabs=python-v2%2Cisolated-process%2Cnodejs-v4%2Cextensionv5&pivots=programming-language-csharp)
+      - `[BlobTrigger("test-samples-trigger/{name}")] string myTriggerItem`
+      - > Tip: There are several ways to execute your function code based on changes to blobs in a storage container. If you choose to use the Blob storage trigger, note that there are two implementations offered: a polling-based one (referenced in this article) and an event-based one. It is recommended that you use the event-based implementation as it has lower latency than the other. Also, the Flex Consumption plan supports only the event-based Blob storage trigger.
+    - [Use Azure Event Grid to route Blob storage events to web endpoint (Azure portal)](https://learn.microsoft.com/en-us/azure/event-grid/blob-event-quickstart-portal?tabs=dotnet)
+      - `[EventGridTrigger] EventGridEvent eventGridEvent`
+
   - EventGrid events vs CloudEvents (TODO - link)
+
+    - See [Comparing EventGrid schema and CloudEvents schema for Blob storage events](#comparing-eventgrid-schema-and-cloudevents-schema-for-blob-storage-events) below
+
+    - [CloudEvents v1.0 schema with Azure Event Grid](https://learn.microsoft.com/en-us/azure/event-grid/cloud-event-schema)
+
+      - > Azure Event Grid natively supports events in the JSON implementation of CloudEvents v1.0 and HTTP protocol binding. CloudEvents is an open specification for describing event data. CloudEvents simplifies interoperability by providing a common event schema for publishing, and consuming cloud based events. This schema allows for uniform tooling, standard ways of routing & handling events, and universal ways of deserializing the outer event schema. With a common schema, you can more easily integrate work across platforms.
+
+      - > The headers values for events delivered in the CloudEvents schema and the Event Grid schema are the same except for `content-type`. For CloudEvents schema, that header value is `"content-type":"application/cloudevents+json; charset=utf-8"`. For Event Grid schema, that header value is `"content-type":"application/json; charset=utf-8"`.
+
+  - TODO: Publish a basic function that reacts to the blob storage events
+
   - Local debugging
+
+    - [Debugging Azure Function Event Grid Triggers Locally](https://harrybellamy.com/posts/debugging-azure-function-event-grid-triggers-locally/)
+
+      ```csharp
+        // Default URL for triggering event grid function in the local environment.
+        // http://localhost:7071/runtime/webhooks/EventGrid?functionName=EventGridFunction
+      ```
+
+    - Didn't work until I found:
+
+      - [Unable to debug Event Grid Trigger Azure function locally](https://stackoverflow.com/questions/77543838/unable-to-debug-event-grid-trigger-azure-function-locally)
+      - [Azure Event Grid Trigger function is not working locally](https://github.com/Azure/Azure-Functions/issues/2426)
+
+    - See also [Test your Event Grid handler locally](https://learn.microsoft.com/en-us/azure/communication-services/how-tos/event-grid/local-testing-event-grid)
+
+      - > To help with testing, we show you how to use Postman to trigger your Azure Function with a payload that mimics the Event Grid event.
+
+        ```json
+        {
+          "profiles": {
+            "WebhookFunctionApp": {
+              "commandName": "Project",
+              "commandLineArgs": "--port 7089",
+              "launchBrowser": false
+            }
+          }
+        }
+        ```
+
 - Second post
+
   - Error handling, e.g. using dead letter queues
+
 - Third post?
+
   - Deduplication (using CosmosDB?)
+
 - Fourth post?
   - Alert on failed messages?
 
@@ -241,3 +308,266 @@ else
 - [Azure Event Grid bindings for Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-event-grid?tabs=isolated-process%2Cextensionv3&pivots=programming-language-csharp)
 - [Azure Event Grid trigger for Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-event-grid-trigger?tabs=python-v2%2Cisolated-process%2Cnodejs-v4%2Cextensionv3&pivots=programming-language-csharp#example)
 - [EventGridEvent Class](https://learn.microsoft.com/en-us/dotnet/api/azure.messaging.eventgrid.eventgridevent?view=azure-dotnet)
+
+## EventGrid vs BlobTrigger
+
+Let me break down the key differences between EventGrid triggers and BlobTriggers for Azure Blob Storage, as they serve different purposes:
+
+EventGrid Trigger:
+
+1. Performance & Scalability
+
+- Near real-time event delivery (typically milliseconds)
+- Push-based model - events are pushed to subscribers
+- No polling overhead
+- Better for high-volume scenarios
+- Can handle multiple storage accounts efficiently
+
+2. Event Types
+
+- Supports multiple event types (created, deleted, renamed)
+- Can filter events at the subscription level
+
+```json
+{
+  "filters": {
+    "includedEventTypes": ["Microsoft.Storage.BlobCreated"],
+    "advancedFilters": [
+      {
+        "operatorType": "StringEndsWith",
+        "key": "subject",
+        "values": [".jpg", ".png"]
+      }
+    ]
+  }
+}
+```
+
+3. Multiple Subscribers
+
+- One event can trigger multiple different systems
+- Fan-out pattern support
+- Example subscribers:
+  - Azure Functions
+  - Logic Apps
+  - Custom WebHooks
+  - Event Hubs
+  - Service Bus
+
+BlobTrigger:
+
+1. Operation
+
+- Uses storage polling ("storage logs") to detect changes
+- Built-in retry mechanism
+- Can have higher latency (scan interval)
+- More suitable for single-function scenarios
+
+2. Advantages
+
+- Simpler to set up
+- Built-in binding support for blob content
+- Better for processing blob content directly
+
+```csharp
+// BlobTrigger example
+public static void ProcessBlob(
+    [BlobTrigger("samples-workitems/{name}")] Stream myBlob,
+    string name,
+    ILogger log)
+{
+    log.LogInformation($"Blob\n  Name:{name} \n Size: {myBlob.Length} Bytes");
+}
+```
+
+Choose EventGrid when:
+
+1. You need near real-time processing
+2. Multiple systems need to react to the same event
+3. Processing high volumes of blobs
+4. You want to implement event-driven architectures
+
+```csharp
+// EventGrid trigger example
+[FunctionName("ProcessBlobEvent")]
+public static async Task Run(
+    [EventGridTrigger] EventGridEvent eventGridEvent,
+    [Blob("{data.url}", FileAccess.Read)] Stream blob,
+    ILogger log)
+{
+    var data = ((JObject)eventGridEvent.Data).ToObject<StorageBlobCreatedEventData>();
+    log.LogInformation($"Blob\n  Name:{data.Url} \n Size: {blob.Length} Bytes");
+}
+```
+
+Choose BlobTrigger when:
+
+1. Simple blob processing is needed
+2. You're working with smaller volumes
+3. Some latency is acceptable
+4. You need direct blob content access
+5. Retry handling is important
+
+Cost Considerations:
+
+1. EventGrid
+
+- Pay per event delivered
+- More cost-effective for high-volume scenarios
+
+2. BlobTrigger
+
+- Storage transaction costs for polling
+- Can be more expensive with multiple functions polling the same container
+
+## Comparing EventGrid schema and CloudEvents schema for Blob storage events
+
+### EventGrid Schema
+
+```json
+{
+  "topic": "/subscriptions/{subscription-id}/resourceGroups/storage/providers/Microsoft.Storage/storageAccounts/my-storage-account",
+  "subject": "/blobServices/default/containers/{container-name}/blobs/new-file.txt",
+  "eventType": "Microsoft.Storage.BlobCreated",
+  "eventTime": "2023-10-01T10:00:00.0000000Z",
+  "id": "9b87886d-8b7f-4d99-9ab5-de8e12345678",
+  "data": {
+    "api": "PutBlob",
+    "clientRequestId": "6d79eb1b-0e4d-4123-4567-89abcdef1234",
+    "requestId": "9b87886d-0e4d-4123-4567-89abcdef1234",
+    "eTag": "0x8D76C39E4407333",
+    "contentType": "text/plain",
+    "contentLength": 524288,
+    "blobType": "BlockBlob",
+    "url": "https://my-storage-account.blob.core.windows.net/container/new-file.txt",
+    "sequencer": "000000000000000000000000000099999999"
+  },
+  "dataVersion": "2",
+  "metadataVersion": "1"
+}
+```
+
+### CloudEvents Schema
+
+```json
+{
+  "specversion": "1.0",
+  "type": "Microsoft.Storage.BlobCreated",
+  "source": "/subscriptions/{subscription-id}/resourceGroups/storage/providers/Microsoft.Storage/storageAccounts/my-storage-account",
+  "id": "9b87886d-8b7f-4d99-9ab5-de8e12345678",
+  "time": "2023-10-01T10:00:00.0000000Z",
+  "subject": "/blobServices/default/containers/{container-name}/blobs/new-file.txt",
+  "data": {
+    "api": "PutBlob",
+    "clientRequestId": "6d79eb1b-0e4d-4123-4567-89abcdef1234",
+    "requestId": "9b87886d-0e4d-4123-4567-89abcdef1234",
+    "eTag": "0x8D76C39E4407333",
+    "contentType": "text/plain",
+    "contentLength": 524288,
+    "blobType": "BlockBlob",
+    "url": "https://my-storage-account.blob.core.windows.net/container/new-file.txt",
+    "sequencer": "000000000000000000000000000099999999"
+  }
+}
+```
+
+Key Differences:
+
+1. Schema Structure:
+
+- EventGrid: Uses Azure-specific field names (topic, eventType)
+- CloudEvents: Uses standardized field names (source, type)
+
+2. Version Handling:
+
+- EventGrid: Has separate dataVersion and metadataVersion fields
+- CloudEvents: Uses single specversion field
+
+3. Code Examples:
+
+EventGrid Schema:
+
+```csharp
+[FunctionName("EventGridTrigger")]
+public static void Run(
+    [EventGridTrigger] EventGridEvent eventGridEvent,
+    ILogger log)
+{
+    log.LogInformation($"Event Type: {eventGridEvent.EventType}");
+    log.LogInformation($"Blob URL: {eventGridEvent.Data.ToString()}");
+
+    // Access specific fields
+    var blobUrl = JObject.Parse(eventGridEvent.Data.ToString())["url"].ToString();
+}
+```
+
+CloudEvents Schema:
+
+```csharp
+[FunctionName("CloudEventsTrigger")]
+public static void Run(
+    [EventGridTrigger] CloudEvent cloudEvent,
+    ILogger log)
+{
+    log.LogInformation($"Event Type: {cloudEvent.Type}");
+    log.LogInformation($"Source: {cloudEvent.Source}");
+
+    // Access specific fields
+    var data = cloudEvent.Data.ToObjectFromJson<BlobCreatedEventData>();
+    var blobUrl = data.Url;
+}
+```
+
+4. When to Use Each:
+
+EventGrid Schema:
+
+- Azure-native applications
+- When working primarily within Azure ecosystem
+- Need backward compatibility with existing Azure solutions
+
+CloudEvents Schema:
+
+- Cross-cloud applications
+- Multi-cloud environments
+- Following cloud-neutral standards
+- Future-proofing applications
+
+5. Configuration:
+
+EventGrid Schema:
+
+```json
+{
+  "type": "Microsoft.Storage/storageAccounts/blobServices/containers/blobs",
+  "properties": {
+    "eventDeliverySchema": "EventGridSchema"
+  }
+}
+```
+
+CloudEvents Schema:
+
+```json
+{
+  "type": "Microsoft.Storage/storageAccounts/blobServices/containers/blobs",
+  "properties": {
+    "eventDeliverySchema": "CloudEventSchema"
+  }
+}
+```
+
+6. Benefits:
+
+EventGrid Schema:
+
+- Native Azure integration
+- Familiar to Azure developers
+- Well-documented in Azure context
+
+CloudEvents Schema:
+
+- Industry standard (CNCF)
+- Portable across cloud providers
+- Better for hybrid cloud scenarios
+- More consistent event handling
