@@ -1,6 +1,84 @@
 # Reacting to Blob Storage events
 
-## Dilemma:
+## What are we to include in each post?
+
+What topics to cover?
+
+- First post
+  - EventGrid vs polling (TODO - link)
+  - EventGrid events vs CloudEvents (TODO - link)
+  - Local debugging
+- Second post
+  - Error handling, e.g. using dead letter queues
+- Third post?
+  - Deduplication (using CosmosDB?)
+- Fourth post?
+  - Alert on failed messages?
+
+We have ValidateAndStoreFunction, should we have DedupeAndForwardFunction?
+
+1. Ensure TryGetSystemEventData returns expected payload (permanent failure)
+2. Retrieve the message
+3. Calculate a hash of the message payload
+4. If hash has been seen before
+   1. Log that a duplicate has been received and return
+5. Resolve and invoke Endpoint(ContractId, TenantId) with payload
+6. If failure then what is the best approach?
+   - Throw an exception and let EventGrid retry? How many times?
+   - Should/Can we differentiate between temporary failures and permanent ones?
+     - Resolution failure (permanent)
+     - Bad request (permanent)
+     - Timeout (temporary)
+
+Q: How do we report permanent failure? Log an exception and have an alert on that? A metric?
+
+From Claude.ai:
+
+Key Differences and When to Use What:
+
+Azure Monitor Alerts:
+
+- Best for infrastructure-level monitoring
+- Platform-wide metrics
+- Resource utilization
+- Service health
+- Cost optimization
+
+Application Insights:
+
+- Application-specific monitoring
+- User behaviour analytics
+- Performance monitoring
+- Code-level diagnostics
+- Distributed tracing
+
+How do we use the following? What maps to the endpoint?
+
+- TenantId: This is who is receiving the message
+- SenderId: This is who is sending the message
+- ContractId: This is what the message contains
+
+Endpoint = fn(ContractId, TenantId)
+
+ASSUMPTIONS:
+
+- We have asserted that the sender is who they say they are (Authenticated)
+  - API key
+  - IP address
+- We have asserted that the sender can send a message with the contract to the tenant (Authorisation)
+  - Configuration lookup (not implemented)
+
+So at the point of DedupeAndForwardFunction, we expect the message to succeed.
+
+For the purposes of the blog posts, can we just have a single endpoint? Yes.
+
+- Have some canned response to simulate the various scenarios
+
+### First post
+
+### Second post
+
+## Dilemma
 
 - Deprecated polling approach vs. Event Grid push approach
 - React directly to events vs. writing to a queue
@@ -9,7 +87,7 @@
     - [Storage queues and Service Bus queues - compared and contrasted](https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-azure-and-service-bus-queues-compared-contrasted)
     - [What is Azure Queue Storage?](https://learn.microsoft.com/en-us/azure/storage/queues/storage-queues-introduction)
 
-## Further thoughts:
+## Further thoughts
 
 - Should we implement idempotency at the Validate and Store stage?
   - Or should we always store and de-dupe at the forward stage? E.g. using a hash of the message content before we write to the next queue?
@@ -153,5 +231,13 @@ else
             Console.WriteLine(egEvent.Data.ToString());
             break;
     }
-}```
+}
+```
 
+## Links @ 24-11-10
+
+- [Use Azure Event Grid to route Blob storage events to web endpoint (Azure portal)](https://learn.microsoft.com/en-us/azure/event-grid/blob-event-quickstart-portal?tabs=dotnet)
+- [Debugging Azure Function Event Grid Triggers Locally](https://harrybellamy.com/posts/debugging-azure-function-event-grid-triggers-locally/)
+- [Azure Event Grid bindings for Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-event-grid?tabs=isolated-process%2Cextensionv3&pivots=programming-language-csharp)
+- [Azure Event Grid trigger for Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-event-grid-trigger?tabs=python-v2%2Cisolated-process%2Cnodejs-v4%2Cextensionv3&pivots=programming-language-csharp#example)
+- [EventGridEvent Class](https://learn.microsoft.com/en-us/dotnet/api/azure.messaging.eventgrid.eventgridevent?view=azure-dotnet)
