@@ -426,11 +426,13 @@ Cost Considerations:
 
 ```json
 {
-  "topic": "/subscriptions/{subscription-id}/resourceGroups/storage/providers/Microsoft.Storage/storageAccounts/my-storage-account",
-  "subject": "/blobServices/default/containers/{container-name}/blobs/new-file.txt",
+  "dataVersion": "2",
+  "metadataVersion": "1",
   "eventType": "Microsoft.Storage.BlobCreated",
-  "eventTime": "2023-10-01T10:00:00.0000000Z",
+  "topic": "/subscriptions/{subscription-id}/resourceGroups/storage/providers/Microsoft.Storage/storageAccounts/my-storage-account",
   "id": "9b87886d-8b7f-4d99-9ab5-de8e12345678",
+  "eventTime": "2023-10-01T10:00:00.0000000Z",
+  "subject": "/blobServices/default/containers/{container-name}/blobs/new-file.txt",
   "data": {
     "api": "PutBlob",
     "clientRequestId": "6d79eb1b-0e4d-4123-4567-89abcdef1234",
@@ -441,9 +443,7 @@ Cost Considerations:
     "blobType": "BlockBlob",
     "url": "https://my-storage-account.blob.core.windows.net/container/new-file.txt",
     "sequencer": "000000000000000000000000000099999999"
-  },
-  "dataVersion": "2",
-  "metadataVersion": "1"
+  }
 }
 ```
 
