@@ -2,8 +2,6 @@
 
 - [Reacting to Blob Storage events](#reacting-to-blob-storage-events)
   - [What are we to include in each post?](#what-are-we-to-include-in-each-post)
-    - [First post](#first-post)
-    - [Second post](#second-post)
   - [Dilemma](#dilemma)
   - [Further thoughts](#further-thoughts)
   - [Initial findings](#initial-findings)
@@ -17,7 +15,9 @@
 
 ## What are we to include in each post?
 
-What topics to cover?
+![New Azure Function wizard eventgrid trigger selection](new-azure-function-wizard-eventgrid-trigger-option.png)
+
+![New Azure Function wizard blob trigger option](new-azure-function-blob-trigger-option.png)
 
 - First post
 
@@ -29,9 +29,9 @@ What topics to cover?
     - [Use Azure Event Grid to route Blob storage events to web endpoint (Azure portal)](https://learn.microsoft.com/en-us/azure/event-grid/blob-event-quickstart-portal?tabs=dotnet)
       - `[EventGridTrigger] EventGridEvent eventGridEvent`
 
-  - EventGrid events vs CloudEvents (TODO - link)
+  - EventGrid events vs CloudEvents
 
-    - See [Comparing EventGrid schema and CloudEvents schema for Blob storage events](#comparing-eventgrid-schema-and-cloudevents-schema-for-blob-storage-events) below
+    - See [Comparing EventGrid schema and CloudEvents schema for Blob storage events](#comparing-eventgrid-schema-and-cloudevents-schema-for-blob-storage-events) section down below
 
     - [CloudEvents v1.0 schema with Azure Event Grid](https://learn.microsoft.com/en-us/azure/event-grid/cloud-event-schema)
 
@@ -39,7 +39,7 @@ What topics to cover?
 
       - > The headers values for events delivered in the CloudEvents schema and the Event Grid schema are the same except for `content-type`. For CloudEvents schema, that header value is `"content-type":"application/cloudevents+json; charset=utf-8"`. For Event Grid schema, that header value is `"content-type":"application/json; charset=utf-8"`.
 
-  - TODO: Publish a basic function that reacts to the blob storage events
+  - Publish a basic function that reacts to the blob storage events logging out the event
 
   - Local debugging
 
@@ -70,6 +70,10 @@ What topics to cover?
           }
         }
         ```
+
+  - What is the point we want to get to in the first post?
+    - Post to MockWebhookEndpointFunction with an AcceptedPayload
+    - Log out the payload received
 
 - Second post
 
@@ -140,10 +144,6 @@ So at the point of DedupeAndForwardFunction, we expect the message to succeed.
 For the purposes of the blog posts, can we just have a single endpoint? Yes.
 
 - Have some canned response to simulate the various scenarios
-
-### First post
-
-### Second post
 
 ## Dilemma
 
