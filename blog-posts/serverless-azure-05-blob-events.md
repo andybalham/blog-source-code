@@ -5,9 +5,9 @@
   - [Creating an Event Grid function](#creating-an-event-grid-function)
   - [Cloud Events vs Event Grid Events](#cloud-events-vs-event-grid-events)
   - [Hooking up the function to events](#hooking-up-the-function-to-events)
-  - [Filtering events](#filtering-events)
-  - [Simulating events locally](#simulating-events-locally)
-  - [Processing events](#processing-events)
+  - [Adding an event filter](#adding-an-event-filter)
+  - [Debugging locally](#debugging-locally)
+  - [Processing system events](#processing-system-events)
   - [Summary and next steps](#summary-and-next-steps)
   - [What are we to include in each post?](#what-are-we-to-include-in-each-post)
   - [Dilemma](#dilemma)
@@ -101,7 +101,7 @@ Looking a bit deeper, the key differences appear to be:
 
 Although Visual Studio pushed me down the `CloudEvent` route, I decided to revert to using `EventGridEvent`. This was because I would be working within the Azure ecosystem and the examples and documentation also favour the use of `EventGridEvent`.
 
-So, the function code became the following:
+So, the function code became the following, with an extra statement added to output the event as JSON.
 
 ```csharp
 [Function(nameof(DedupeAndForwardFunction))]
@@ -110,6 +110,10 @@ public void Run([EventGridTrigger] EventGridEvent eventGridEvent)
     _logger.LogInformation(
         "Event type: {eventType}, Event subject: {subject}",
         eventGridEvent.EventType, eventGridEvent.Subject); // <-- EventType
+
+    _logger.LogDebug(
+        "EVENT: {event}",
+        JsonSerializer.Serialize(eventGridEvent));
 }
 ```
 
@@ -117,9 +121,19 @@ For more information on Cloud Events, see [cloudevents.io](https://cloudevents.i
 
 ## Hooking up the function to events
 
+The next step was to get events from Blob Storage triggering the Azure Function. To do this, I navigated to the storage account in the Azure Portal and clicked the 'Event Subscription' button.
+
 ![Adding a storage account event subscription in the portal](adding-a-storage-account-event-subscription-in-the-portal.png)
 
+I was then prompted to create an event subscription, specifying the name of the subscription and the schema type. It is here that you choose whether the event will be in the Event Grid schema or Cloud Event schema.
+
+I was also prompted for the name to the topic to which the storage account will publish events. It turned out that it looks like a storage account can only publish to one topic, so I chose a name to reflect the storage account. If you create further event subscriptions, then you are not prompted for this again.
+
+Below the topic name, you can select which events are to be published. In my case, I only wanted 'Blob Created' events. Finally, you select the endpoint for the event, which is the `DedupeAndForwardFunction` Azure Function I created and published earlier.
+
 ![Create event subscription in the portal](create-event-subscription-in-the-portal.png)
+
+With the event subscription in place, I sent a valid request to the `ValidateAndStoreFunction` Azure Function. The resulting Blob Storage event trigged the `DedupeAndForwardFunction` and the event below was logged.
 
 ```json
 {
@@ -147,7 +161,7 @@ For more information on Cloud Events, see [cloudevents.io](https://cloudevents.i
 }
 ```
 
-TODO: Hang on we are receiving events for rejected payloads too...
+This was all good, but I then sent an invalid request. As I expected, a Blob Storage event trigged the `DedupeAndForwardFunction` Azure Function even though the design requires that only valid requests are forwarded. We can see this by the `webhook-payloads-rejected` in the `subject`.
 
 ```json
 {
@@ -164,28 +178,92 @@ TODO: Hang on we are receiving events for rejected payloads too...
 }
 ```
 
-## Filtering events
+One possible solution would be to amend the `DedupeAndForwardFunction` Azure Function to introspect the event and ignore anything not from the `webhook-payloads-accepted` container. However, this would have cost each time it ran. A better way is to add an event filter.
 
-TODO: We need to edit the subscription...
+## Adding an event filter
+
+I went back into the Azure Portal and edited the subscription. Selecting the 'Filters' tab, I enabled subject filtering and added a prefix to match on `/blobServices/default/containers/webhook-payloads-accepted/blobs`. This is where having an example event from Azure proved very useful.
 
 ![Adding a subscription filter in the portal](adding-a-subscription-filter-in-the-portal.png)
+
+With the subscription updated, I ran my tests. First checking that a valid request triggered the function, then a second test checking that only the first Azure Function was triggered. Sure enough, all I saw in the logs was the following.
 
 ```text
 2024-11-19T19:12:32Z   [Information]   Executing 'Functions.ValidateAndStoreFunction' (Reason='This function was programmatically called via the host APIs.', Id=ab31e19f-eb17-42f1-891b-ae2bdb80bdab)
 2024-11-19T19:12:32Z   [Information]   Executed 'Functions.ValidateAndStoreFunction' (Succeeded, Id=ab31e19f-eb17-42f1-891b-ae2bdb80bdab, Duration=16ms)
 ```
 
-[Event subscription filter object](https://learn.microsoft.com/en-gb/azure/event-grid/subscription-creation-schema?WT.mc_id=Portal-Microsoft_Azure_EventGrid#filter-object)
+It would still be worth putting a check in the `DedupeAndForwardFunction` Azure Function. It should protect itself from misconfiguration, but log an error to indicate that there is a misconfiguration.
 
-Note: No wildcards
+The Microsoft [Event subscription filter object](https://learn.microsoft.com/en-gb/azure/event-grid/subscription-creation-schema?WT.mc_id=Portal-Microsoft_Azure_EventGrid#filter-object) article covers the various options available for filtering. One thing I did note, was that there is no support for wildcards.
 
-TODO
+## Debugging locally
 
-## Simulating events locally
+Now I had my Azure Function triggering, I could start on the actual functionality. Developing this would be much easier if I could run my code locally. A bit of searching turned up the article [Debugging Azure Function Event Grid Triggers Locally](https://harrybellamy.com/posts/debugging-azure-function-event-grid-triggers-locally/).
 
-TODO
+However, this did point me in the right direction, but still did not work. This prompted more searching which turned up the following two articles:
 
-## Processing events
+- [Unable to debug Event Grid Trigger Azure function locally](https://stackoverflow.com/questions/77543838/unable-to-debug-event-grid-trigger-azure-function-locally)
+- [Azure Event Grid Trigger function is not working locally](https://github.com/Azure/Azure-Functions/issues/2426)
+
+What turns out to be the misleading part, is this comment added by Visual Studio to the boilerplate Azure Function code.
+
+```csharp
+// Default URL for triggering event grid function in the local environment.
+// http://localhost:7071/runtime/webhooks/EventGrid?functionName={functionname}
+```
+
+It turns out that the port number is not always `7071`. To find out what it is, you need to look in the `launchSettings.json` file.
+
+![Launch settings file in Visual Studio](launch-settings-file-in-visual-studio.png)
+
+Here I could see that, in my case, the port was `7089`.
+
+```json
+{
+  "profiles": {
+    "WebhookFunctionApp": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7089",
+      "launchBrowser": false
+    }
+  }
+}
+```
+
+With this knowledge, I was able to hit `F5` and trigger my Azure Function locally with the following request. Note that the `aeg-event-type: Notification` header is required for this to work.
+
+```text
+POST http://localhost:7089/runtime/webhooks/EventGrid?functionName=EventGridFunction
+content-type: application/json
+aeg-event-type: Notification
+```
+
+```json
+{
+  "id": "0d666914-901e-0082-26b5-3ac1de067d1c",
+  "subject": "/blobServices/default/containers/webhook-payloads-accepted/blobs/LovelyLoans/QuickValuationCo/2024-11-19/2024-11-19T18:58:31UTC-be2f0960-ff56-4cab-8465-9ebd0f6b1d5c.json",
+  "<snip>": "...",
+  "eventType": "Microsoft.Storage.BlobCreated",
+  "eventTime": "2024-11-19T19:02:58.8654233Z",
+  "dataVersion": ""
+}
+```
+
+See also, the Microsoft article [Test your Event Grid handler locally](https://learn.microsoft.com/en-us/azure/communication-services/how-tos/event-grid/local-testing-event-grid) for more details local testing.
+
+## Processing system events
+
+```json
+{
+  "<snip>": "...",
+  "subject": "/devstoreaccount1/webhook-payloads-accepted/LovelyLoans/QuickValuationCo/2024-04-30/2024-04-30T18:13:03UTC-e2a8e023-079c-4ce5-ac0f-2021264f92fe.json",
+  "data": {
+    "<snip>": "...",
+    "url": "http://127.0.0.1:10000/devstoreaccount1/webhook-payloads-accepted/LovelyLoans/QuickValuationCo/2024-04-30/2024-04-30T18:13:03UTC-e2a8e023-079c-4ce5-ac0f-2021264f92fe.json"
+  }
+}
+```
 
 TODO
 
