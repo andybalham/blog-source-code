@@ -9,6 +9,7 @@
   - [Debugging locally](#debugging-locally)
   - [Processing system events](#processing-system-events)
   - [Summary and next steps](#summary-and-next-steps)
+  - [ConfigureFunctionsWebApplication](#configurefunctionswebapplication)
   - [What are we to include in each post?](#what-are-we-to-include-in-each-post)
   - [Dilemma](#dilemma)
   - [Further thoughts](#further-thoughts)
@@ -270,6 +271,27 @@ TODO
 ## Summary and next steps
 
 TODO
+
+## ConfigureFunctionsWebApplication
+
+![Visual Studio highlighting ConfigureFunctionsWorkerDefaults](visual-studio-highlighting-ConfigureFunctionsWorkerDefaults.png)
+
+> The registration for method 'ConfigureFunctionsWebApplication' is expected for ASP.NET Core Integration.
+
+> System.InvalidOperationException: Synchronous operations are disallowed. Call WriteAsync or set AllowSynchronousIO to true instead.
+
+[.NET 8 Azure Function.ConfigureFunctionsWebApplication() and synchronous operations are disallowed](https://stackoverflow.com/questions/78408121/net-8-azure-function-configurefunctionswebapplication-and-synchronous-operati)
+
+```csharp
+ services.AddOptions<KestrelServerOptions>()
+  .Configure<IConfiguration>((settings, configuration) =>
+    {
+        settings.AllowSynchronousIO = true;
+        configuration.Bind(settings);
+    });
+ ```
+
+---
 
 ## What are we to include in each post?
 
