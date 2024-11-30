@@ -112,7 +112,7 @@ For more information on Cloud Events, see [cloudevents.io](https://cloudevents.i
 
 The next step was to get events from Blob Storage triggering the Azure Function. To do this, I navigated to the storage account in the Azure Portal and clicked the 'Event Subscription' button.
 
-![Adding a storage account event subscription in the portal](adding-a-storage-account-event-subscription-in-the-portal.png)
+![Adding a storage account event subscription in the portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-05-blob-events/adding-a-storage-account-event-subscription-in-the-portal.png?raw=true)
 
 I was then prompted to create an event subscription, specifying the name of the subscription and the schema type. It is here that you choose whether the event will be in the Event Grid schema or Cloud Event schema.
 
@@ -120,7 +120,7 @@ I was also prompted for the name to the topic to which the storage account will 
 
 Below the topic name, you can select which events are to be published. In my case, I only wanted 'Blob Created' events. Finally, you select the endpoint for the event, which is the `DedupeAndForwardFunction` Azure Function I created and published earlier.
 
-![Create event subscription in the portal](create-event-subscription-in-the-portal.png)
+![Create event subscription in the portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-05-blob-events/create-event-subscription-in-the-portal.png?raw=true)
 
 With the event subscription in place, I sent a valid request to the `ValidateAndStoreFunction` Azure Function. The resulting Blob Storage event trigged the `DedupeAndForwardFunction` and the event below was logged.
 
@@ -173,7 +173,7 @@ One possible solution would be to amend the `DedupeAndForwardFunction` Azure Fun
 
 I went back into the Azure Portal and edited the subscription. Selecting the 'Filters' tab, I enabled subject filtering and added a prefix to match on `/blobServices/default/containers/webhook-payloads-accepted/blobs`. This is where having an example event from Azure proved very useful.
 
-![Adding a subscription filter in the portal](adding-a-subscription-filter-in-the-portal.png)
+![Adding a subscription filter in the portal](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-05-blob-events/adding-a-subscription-filter-in-the-portal.png?raw=true)
 
 With the subscription updated, I ran my tests. First checking that a valid request triggered the function, then a second test checking that only the first Azure Function was triggered. Sure enough, all I saw in the logs was the following.
 
@@ -204,7 +204,7 @@ What turns out to be the misleading part, is this comment added by Visual Studio
 
 It turns out that the port number is not always `7071`. To find out what it is, you need to look in the `launchSettings.json` file.
 
-![Launch settings file in Visual Studio](launch-settings-file-in-visual-studio.png)
+![Launch settings file in Visual Studio](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-05-blob-events/launch-settings-file-in-visual-studio.png?raw=true)
 
 Here I could see that, in my case, the port was `7089`.
 
@@ -328,4 +328,8 @@ This allowed me to test my function locally, by simply amending the URL in the e
 
 ## Summary and next steps
 
-TODO
+In this post, I looked at the options available for Azure Functions to react to Blob Storage events. I chose the event-driven option over polling. I also had to choose between Event Grid events and Cloud Events. Both of these choices highlights how often in the evolving cloud world, the software architect is faced with such dilemmas. What was best practise one day, may not be the next.
+
+With these choices, I was able to use to the Azure Portal to set up a subscription with a filter and have my Azure Function handling the events and forwarding on the original webhook calls. I was also able to test my function locally, after the Visual Studio boilerplate code had mislead me.
+
+To simplify the post, I did skip over was error handling and the deduplication of resent events. Both of these are critical to any code approaching production-level quality. I intend to return to these aspects in later posts.
