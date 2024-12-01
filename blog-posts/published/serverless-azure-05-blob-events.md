@@ -1,6 +1,6 @@
-# Reacting to Blob Storage events
+# Reacting to Blob Storage events in Azure Functions
 
-- [Reacting to Blob Storage events](#reacting-to-blob-storage-events)
+- [Reacting to Blob Storage events in Azure Functions](#reacting-to-blob-storage-events-in-azure-functions)
   - [Blob container polling vs. Event Grid events](#blob-container-polling-vs-event-grid-events)
   - [Creating an Event Grid function](#creating-an-event-grid-function)
   - [Cloud Events vs Event Grid Events](#cloud-events-vs-event-grid-events)
@@ -18,7 +18,7 @@ The first choice in our journey is how to react to the payloads being stored. Th
 
 The polling approach is covered in the Microsoft article [Azure Blob storage trigger for Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-storage-blob-trigger?tabs=python-v2%2Cisolated-process%2Cnodejs-v4%2Cextensionv5&pivots=programming-language-csharp).
 
-Below is an abbreviated version of the example given. The code uses the `BlobTrigger` and a path to match on:
+Below is an abbreviated version of the example given. The code uses the `BlobTrigger` attribute with the path to match on specified in the constructor:
 
 ```csharp
 public static class BlobFunction
@@ -116,7 +116,7 @@ The next step was to get events from Blob Storage triggering the Azure Function.
 
 I was then prompted to create an event subscription, specifying the name of the subscription and the schema type. It is here that you choose whether the event will be in the Event Grid schema or Cloud Event schema.
 
-I was also prompted for the name to the topic to which the storage account will publish events. It turned out that it looks like a storage account can only publish to one topic, so I chose a name to reflect the storage account. If you create further event subscriptions, then you are not prompted for this again.
+I was also prompted for the name to the topic to which the storage account will publish events. It turns out that a storage account can only publish to one topic, so given this I chose a name to reflect the storage account. If you create further event subscriptions, then you are not prompted for the topic name again.
 
 Below the topic name, you can select which events are to be published. In my case, I only wanted 'Blob Created' events. Finally, you select the endpoint for the event, which is the `DedupeAndForwardFunction` Azure Function I created and published earlier.
 
@@ -190,19 +190,19 @@ The Microsoft [Event subscription filter object](https://learn.microsoft.com/en-
 
 Now I had my Azure Function triggering, I could start on the actual functionality. Developing this would be much easier if I could run my code locally. A bit of searching turned up the article [Debugging Azure Function Event Grid Triggers Locally](https://harrybellamy.com/posts/debugging-azure-function-event-grid-triggers-locally/).
 
-However, this did point me in the right direction, but still did not work. This prompted more searching which turned up the following two articles:
+This did point me in the right direction, but I could not get it to work. More searching then turned up the following two articles:
 
 - [Unable to debug Event Grid Trigger Azure function locally](https://stackoverflow.com/questions/77543838/unable-to-debug-event-grid-trigger-azure-function-locally)
 - [Azure Event Grid Trigger function is not working locally](https://github.com/Azure/Azure-Functions/issues/2426)
 
-What turns out to be the misleading part, is this comment added by Visual Studio to the boilerplate Azure Function code.
+These both highlighted that this comment, added by Visual Studio to the boilerplate Azure Function code, is misleading.
 
 ```csharp
 // Default URL for triggering event grid function in the local environment.
 // http://localhost:7071/runtime/webhooks/EventGrid?functionName={functionname}
 ```
 
-It turns out that the port number is not always `7071`. To find out what it is, you need to look in the `launchSettings.json` file.
+The port number is not always `7071`. To find out what it is, you need to look in the `launchSettings.json` file.
 
 ![Launch settings file in Visual Studio](https://github.com/andybalham/blog-source-code/blob/master/blog-posts/images/serverless-azure-05-blob-events/launch-settings-file-in-visual-studio.png?raw=true)
 
@@ -243,7 +243,7 @@ See also, the Microsoft article [Test your Event Grid handler locally](https://l
 
 ## Processing system events
 
-The final step for this blog post was to process the events and forward the request on to a downstream endpoint. Guided by [Microsoft Learn](https://learn.microsoft.com/en-us/dotnet/api/overview/azure/messaging.eventgrid-readme?view=azure-dotnet#deserializing-event-data), I was pointed to the `TryGetSystemEventData()` method and the following abbreviated code.
+The final step for this blog post was to process the events and forward the request on to a downstream endpoint. Guided by the Microsoft [Azure Event Grid client library](https://learn.microsoft.com/en-us/dotnet/api/overview/azure/messaging.eventgrid-readme?view=azure-dotnet#deserializing-event-data) article, I was pointed to the `TryGetSystemEventData()` method and the following code.
 
 ```csharp
 foreach (EventGridEvent egEvent in egEvents)
@@ -274,9 +274,9 @@ foreach (EventGridEvent egEvent in egEvents)
 }
 ```
 
-Note here the handling of `SubscriptionValidationEventData`. When Azure Event Grid creates a webhook subscription, it sends a subscription validation event to verify the endpoint. The endpoint needs to respond with a specific validation response to confirm the webhook endpoint. However, it turns out you typically don't need to manually return the validation response for an Azure Function `EventGridTrigger`, as the Azure Functions runtime handles this automatically. We do still have to handle the event.
+Note here the handling of `SubscriptionValidationEventData`. When Azure Event Grid creates a webhook subscription, it sends a subscription validation event to verify the endpoint. The endpoint needs to respond with a specific validation response to confirm the webhook endpoint. However, it turns out you don't need to manually return the validation response for an Azure Function `EventGridTrigger`, as the Azure Functions runtime handles this automatically. We do still have to handle the event.
 
-Now that I knew how to handle the incoming events, I was able to extract the Blob Storage URL from the event, load the payload from Blob Storage, then use the details to resolve to the downstream endpoint and invoke it with the body of the original request.
+Now that I knew how to handle the incoming events, I was able to extract the Blob Storage URL from the event, load the payload from Blob Storage, then use the details to resolve to the downstream endpoint and invoke the endpoint with the body of the original request.
 
 ```csharp
 switch (systemEvent)
@@ -313,7 +313,7 @@ switch (systemEvent)
 
 I was able to take advantage of the work I did in my [Connecting to cloud Azure Blob Storage](https://www.10printiamcool.com/connecting-to-cloud-azure-blob-storage) post, which introduced an abstraction over Blob Storage that decouples the code from whether using local or cloud storage and avoids any connection strings.
 
-This allowed me to test my function locally, by simply amending the URL in the event to point to the local storage.
+This allowed me to test my function locally, by amending the `url` in the event to point to a local storage URL.
 
 ```json
 {
@@ -328,8 +328,8 @@ This allowed me to test my function locally, by simply amending the URL in the e
 
 ## Summary and next steps
 
-In this post, I looked at the options available for Azure Functions to react to Blob Storage events. I chose the event-driven option over polling. I also had to choose between Event Grid events and Cloud Events. Both of these choices highlights how often in the evolving cloud world, the software architect is faced with such dilemmas. What was best practise one day, may not be the next.
+In this post, I looked at the options available for Azure Functions to react to Blob Storage events. I chose the event-driven option over polling. I also had to choose between Event Grid events and Cloud Events. Both of these choices highlights how often in the evolving cloud world, the software architect is faced with such dilemmas. What was considered best practice one day, may well not be the next.
 
-With these choices, I was able to use to the Azure Portal to set up a subscription with a filter and have my Azure Function handling the events and forwarding on the original webhook calls. I was also able to test my function locally, after the Visual Studio boilerplate code had mislead me.
+I was able to use to the Azure Portal to set up a subscription with a filter, have my Azure Function handling the events, and then forwarding on the original webhook calls. I was also able to test my function locally, after working out that the Visual Studio boilerplate code had mislead me.
 
 To simplify the post, I did skip over was error handling and the deduplication of resent events. Both of these are critical to any code approaching production-level quality. I intend to return to these aspects in later posts.
